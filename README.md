@@ -1,4 +1,4 @@
-# TESS Photometric Characterization of TOI-3492.01
+# TOI-3492.01: A Short-Period Giant Planet Candidate Orbiting an Evolved F-type Subgiant
 
 An independent photometric analysis of TESS Object of Interest TOI-3492.01
 (TIC 81077799), a short-period giant-planet candidate around an evolved
@@ -75,22 +75,8 @@ This script independently recomputes all key parameters from local CSV/NPY/JSON
 and compares them against the LaTeX tables. It also runs the full numerical
 audit used for the checklist in `docs/`.
 
-## Build
-
-```bash
-cd data
-pdflatex oi3492.tex && bibtex oi3492 && pdflatex oi3492.tex && pdflatex oi3492.tex
-pdflatex oi3492_qa.tex && bibtex oi3492_qa && pdflatex oi3492_qa.tex && pdflatex oi3492_qa.tex
-```
-
-Or from root:
-```bash
-pdflatex arxiv_main.tex && bibtex arxiv_main && pdflatex arxiv_main.tex && pdflatex arxiv_main.tex
-```
-
 ## Dependencies
 
 - Python 3.9+: `numpy`, `scipy`, `pandas`, `matplotlib`, `corner`
 - Astronomy: `lightkurve`, `astroquery`, `batman-package`, `emcee`
 - Optional: `triceratops` (for screening run)
-- LaTeX: MiKTeX or TeX Live with `natbib`, `hyperref`, `geometry`, `microtype`, `booktabs`, `graphicx`, `amsmath`, `xcolor`

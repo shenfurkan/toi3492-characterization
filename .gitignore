@@ -62,8 +62,6 @@ literature/
 handover.md
 81077799_TRILEGAL.csv
 AstrophysicsResources/
-toi3492-characterization/
-oi3492_qa.pdf
 *.pk
 
 # Large binary data (re-downloadable from MAST)
@@ -72,3 +70,13 @@ data/spoc_dv/
 # Jupyter
 .ipynb_checkpoints/
 docs/arxiv_endorsement_email.txt
+docs/arxiv_checklist.md
+docs/process_log.md
+docs/arxiv_checklist.md
+docs/process_log.md
+docs/todo.md
+scripts/run_overnight_pipeline.ps1
+
+# Ignore docs and ps1 scripts
+docs/*.md
+*.ps1
