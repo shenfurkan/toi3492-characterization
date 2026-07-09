@@ -118,3 +118,4 @@ outputs/dilution_corrected_transit_params.json
 outputs/triceratops_120s_folded_binned.csv
 outputs/triceratops_probs_120s.csv
 outputs/ttv_analysis_120s.json
+human.txt
