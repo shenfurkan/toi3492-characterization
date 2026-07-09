@@ -25,12 +25,8 @@ RV confirmation and high-resolution imaging are still needed.
 
 ```
 .
-├── arxiv_main.tex       # Main paper (LaTeX)
 ├── references.bib       # BibTeX bibliography
 ├── data/
-│   ├── oi3492.tex       # Paper copy (uses ../figures)
-│   ├── oi3492_qa.tex    # Q&A document (Turkish)
-│   ├── references.bib   # Synced copy of bibliography
 │   ├── config.json      # Stellar params from TIC v8
 │   ├── config_corrected_120s.json  # Adopted transit solution
 │   ├── toi3492_120s_reference.csv  # Corrected 120s light curve
@@ -39,11 +35,13 @@ RV confirmation and high-resolution imaging are still needed.
 │   ├── audit_science_consistency.py  # Comprehensive verification
 │   ├── transit_model_120s_corrected.py  # MCMC transit fit
 │   └── ...              # Full pipeline (see below)
-├── figures/             # 9 paper figures + ancillaries
+├── figures/             # 14 diagnostic plots
 ├── outputs/             # JSON/CSV results from each pipeline step
-├── papers/              # PDF copies of cited references
-└── literature/          # Additional reading PDFs
+└── docs/                # Methodology notes and checklists
 ```
+
+> **Note:** LaTeX sources, compiled PDFs, and reference paper copies are
+> maintained locally and excluded from this repository via `.gitignore`.
 
 ## Pipeline (Reproducibility Order)
 
