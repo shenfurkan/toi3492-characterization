@@ -1,0 +1,11 @@
+# Linguist language overrides
+*.ps1 linguist-detectable=false
+*.ps1 linguist-language=Text
+
+# Binary files (prevent diff noise)
+*.npy binary
+*.png binary
+
+# Generated data (small diffs are meaningless)
+outputs/*.json -diff
+outputs/*.csv  -diff
