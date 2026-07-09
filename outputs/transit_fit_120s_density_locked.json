@@ -1,0 +1,23 @@
+{
+  "source": "Corrected 120s reference light curve; official ephemeris fixed; a/Rstar fixed by TIC stellar density",
+  "period": 9.2224171,
+  "t0": 2314.5211550001986,
+  "rp_rs": 0.058353540170058046,
+  "rp_rs_err": 0.0003257118823332683,
+  "a_rs": 7.689511792508893,
+  "impact_parameter": 0.8598715457909285,
+  "impact_parameter_err": 0.001962179031939293,
+  "inc": 83.57953127942861,
+  "inc_err": 0.014712574805358258,
+  "depth_ppm": 3405.135650378578,
+  "duration_hrs": 5.695387405507206,
+  "rp_earth": 16.505581384942424,
+  "rp_earth_err": 0.702655219330301,
+  "a_au": 0.09271168650681884,
+  "luminosity_lsun": 9.735002535382273,
+  "incident_flux_earth": 1132.5753528844589,
+  "teq_k": 1614.64303938146,
+  "mcmc_samples": 70200,
+  "mcmc_acceptance_fraction": 0.646919191919192,
+  "jitter_ppm": 120.0
+}

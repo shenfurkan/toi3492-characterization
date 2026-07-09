@@ -1,0 +1,73 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Virtual environments
+venv/
+.env/
+.venv/
+
+# LaTeX build artifacts
+*.aux
+*.bbl
+*.blg
+*.log
+*.out
+*.toc
+*.fls
+*.fdb_latexmk
+*.synctex.gz
+*.nav
+*.snm
+*.vrb
+*.run.xml
+*.bcf
+
+# LaTeX backup files
+*.bak
+*.sav
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE / Editor
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Backup / temp
+outputs/fresh_backup_*/
+outputs/night_runs/
+archive/
+
+# PDFs (compiled and reference copies)
+*.pdf
+papers/
+
+# Literature (reading PDFs)
+literature/
+
+# TeX / LaTeX sources (keep only Python + data + figures)
+*.tex
+
+# Miscellaneous
+handover.md
+81077799_TRILEGAL.csv
+AstrophysicsResources/
+toi3492-characterization/
+oi3492_qa.pdf
+*.pk
+
+# Large binary data (re-downloadable from MAST)
+data/spoc_dv/
+
+# Jupyter
+.ipynb_checkpoints/

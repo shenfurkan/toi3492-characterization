@@ -1,0 +1,84 @@
+{
+  "target": "TOI-3492.01 / TIC 81077799 / HD 96519",
+  "coordinates": {
+    "ra_deg": 166.636671,
+    "dec_deg": -53.73198
+  },
+  "search_radius_arcsec": 5.0,
+  "tic_v8_reference": {
+    "tmag": 8.4504,
+    "teff_k": 6332.0,
+    "teff_err_k": 133.626,
+    "logg": 3.7075,
+    "logg_err": 0.0835077,
+    "radius_rsun": 2.5926199,
+    "radius_err_rsun": 0.109417,
+    "distance_pc": 201.957,
+    "distance_err_pc": 1.274
+  },
+  "queries": {
+    "apogee_dr17": {
+      "status": "empty",
+      "n_results": 0,
+      "message": "No APOGEE star within 5 arcsec"
+    },
+    "lamost_dr10": {
+      "status": "empty",
+      "n_results": 0,
+      "message": "No LAMOST DR10 star within 5 arcsec"
+    },
+    "galah_dr3": {
+      "status": "empty",
+      "n_results": 0,
+      "message": "No GALAH DR3 star within 5 arcsec"
+    },
+    "rave_dr6": {
+      "status": "empty",
+      "n_results": 0,
+      "message": "No RAVE DR6 star within 5 arcsec"
+    }
+  },
+  "comparison": {
+    "tic_v8": {
+      "teff": 6332.0,
+      "teff_err": 133.626,
+      "logg": 3.7075,
+      "logg_err": 0.0835077,
+      "source": "TIC v8 (Stassun+2019)"
+    },
+    "gaia_gspphot": {
+      "teff": 6061.15,
+      "teff_err": null,
+      "logg": 3.8506,
+      "logg_err": null,
+      "source": "Gaia DR3 GSP-Phot",
+      "note": "Gaia GSP-Phot uncertainties are very small; systematic floor dominates."
+    },
+    "archives": [
+      {
+        "catalog": "APOGEE DR17",
+        "status": "no_match"
+      },
+      {
+        "catalog": "LAMOST DR10",
+        "status": "no_match"
+      },
+      {
+        "catalog": "GALAH DR3",
+        "status": "no_match"
+      },
+      {
+        "catalog": "RAVE DR6",
+        "status": "no_match"
+      }
+    ]
+  },
+  "a_rstar_implication": {
+    "tic_density_logg": 3.7075,
+    "tic_density_a_rs_prediction": 7.69,
+    "fitted_a_rs": 9.209,
+    "if_logg_4_0": "At logg=4.0 (dwarf), rho would be ~0.54 rho_sun, a/Rs prediction ~5.7 \u2014 worse.",
+    "if_logg_3_5": "At logg=3.5 (more evolved), rho would be ~0.023 rho_sun, a/Rs prediction ~10.9 \u2014 closer.",
+    "conclusion": "If archive logg is LOWER than 3.71, the tension REDUCES. If HIGHER, tension INCREASES."
+  }
+}

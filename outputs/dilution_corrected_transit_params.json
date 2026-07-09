@@ -1,0 +1,59 @@
+{
+  "source": "Dilution robustness from corrected 120 s transit parameters, SPOC CROWDSAP, ExoFOP contamination ratio, and Gaia DR3 G-band flux ratios",
+  "observed": {
+    "depth_ppm": 3165.408884197394,
+    "rp_rs": 0.05626196658665065,
+    "rp_earth": 15.91396966947635,
+    "rp_earth_err": 0.6836937892676295
+  },
+  "crowdsap": {
+    "n_sectors": 6,
+    "mean": 0.9764831966666668,
+    "min": 0.97304165,
+    "max": 0.98158622
+  },
+  "preferred_small_dilution_corrections": {
+    "spoc_crowdsap_mean": {
+      "label": "SPOC CROWDSAP mean",
+      "target_fraction": 0.9764831966666668,
+      "contamination_fraction_total_flux": 0.02351680333333317,
+      "contamination_ratio_vs_target": 0.02408316232538396,
+      "depth_correction_factor": 1.0240831623253839,
+      "radius_correction_factor": 1.0119699414139651,
+      "corrected_depth_ppm": 3241.6419401817325,
+      "corrected_rp_rs": 0.05693541903052732,
+      "corrected_rp_earth": 16.1044589540836,
+      "corrected_rp_earth_err": 0.6918775638702548
+    },
+    "exofop_tic_ratio": {
+      "label": "ExoFOP TIC contamination ratio",
+      "target_fraction": 0.9809008789852777,
+      "contamination_fraction_total_flux": 0.01909912101472233,
+      "contamination_ratio_vs_target": 0.01947099999999999,
+      "depth_correction_factor": 1.019471,
+      "radius_correction_factor": 1.0096885658459247,
+      "corrected_depth_ppm": 3227.0425605816013,
+      "corrected_rp_rs": 0.056807064354546626,
+      "corrected_rp_earth": 16.06815321248912,
+      "corrected_rp_earth_err": 0.6903178015633986
+    },
+    "gaia_42arcsec_gband": {
+      "label": "Gaia G-band neighbors within 42 arcsec",
+      "target_fraction": 0.9876800338707429,
+      "contamination_fraction_total_flux": 0.01231996612925712,
+      "contamination_ratio_vs_target": 0.012473640963435156,
+      "depth_correction_factor": 1.0124736409634352,
+      "radius_correction_factor": 1.0062174918790843,
+      "corrected_depth_ppm": 3204.8930581213403,
+      "corrected_rp_rs": 0.05661177490700446,
+      "corrected_rp_earth": 16.012914646660313,
+      "corrected_rp_earth_err": 0.6879446498501813
+    }
+  },
+  "interpretation": "The nominal SPOC/ExoFOP dilution corrections change the inferred radius by about 1 percent, so the candidate remains firmly giant-planet-size. Gaia 120 arcsec is an intentionally over-wide G-band scenario and should not be treated as the adopted TESS aperture correction.",
+  "outputs": {
+    "sector_csv": "dilution_summary_120s.csv",
+    "scenario_json": "dilution_worst_case_scenarios.json",
+    "figure": "figures\\toi3492_dilution_robustness.png"
+  }
+}

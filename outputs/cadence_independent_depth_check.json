@@ -1,0 +1,14 @@
+{
+  "source": "20 s-only SPOC independent cadence check; not used in adopted transit fit",
+  "status": "blocked_mast_query_failed",
+  "error_type": "SSLError / network block",
+  "error": "Both mast.stsci.edu and archive.stsci.edu unreachable: timeout and SSL WRONG_VERSION_NUMBER on all HTTPS attempts (Python urllib verify_ssl=True and False, PowerShell Invoke-WebRequest). DNS resolves correctly (130.167.220.112) but TCP/TLS connections fail. Other hosts (exoplanetarchive.ipac.caltech.edu, google.com) work normally.",
+  "diagnosis": "Network-level firewall blocking STScI IP range. Not a Python TLS configuration issue.",
+  "tested_2026-07-09": true,
+  "interpretation": "No 20 s independent cadence check can be performed until network access to MAST/STScI is restored. Re-run this script when the firewall block is resolved. The adopted transit fit and all vetting results are unaffected because they use only 120 s SPOC products that were previously downloaded.",
+  "recommended_alternatives": [
+    "Alternative network (VPN, institutional guest network, home connection).",
+    "Pre-download 20 s FITS files externally and place in D:\\exoplanet\\data\\spoc_20s\\ for local analysis.",
+    "Use the NASA Exoplanet Archive TAP service (exoplanetarchive.ipac.caltech.edu) if 20 s cadence data becomes available there."
+  ]
+}

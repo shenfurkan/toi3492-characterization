@@ -1,0 +1,132 @@
+{
+  "source": "First-pass TESS 120s SPOC target-pixel difference-image centroid check",
+  "created_utc": "2026-07-08T22:40:45.692658+00:00",
+  "inputs": {
+    "target": "TIC 81077799",
+    "period_days": 9.2224171,
+    "t0_btjd": 2314.5211550001986,
+    "duration_hours": 5.39913747666561,
+    "pixel_scale_arcsec_assumed": 21.0
+  },
+  "summary": {
+    "n_sectors": 6,
+    "median_difference_centroid_offset_arcsec": 11.78699070431291,
+    "max_difference_centroid_offset_arcsec": 22.186458505429673,
+    "median_difference_centroid_offset_pix": 0.561285271633948,
+    "max_difference_centroid_offset_pix": 1.0564980240680797
+  },
+  "sector_results": [
+    {
+      "sector": 37,
+      "n_cadences": 17337,
+      "n_in": 324,
+      "n_out": 967,
+      "target_x_pix": 4.118126053488408,
+      "target_y_pix": 4.326924929060486,
+      "difference_centroid_x_pix": 3.513473226794238,
+      "difference_centroid_y_pix": 4.62703717698727,
+      "dx_pix": -0.6046528266941698,
+      "dy_pix": 0.3001122479267835,
+      "offset_pix": 0.6750351118163535,
+      "offset_arcsec": 14.175737348143423,
+      "weighted_pixels": 17,
+      "difference_weight_sum": 171.2176513671875,
+      "peak_difference_flux": 19.7578125
+    },
+    {
+      "sector": 63,
+      "n_cadences": 18357,
+      "n_in": 482,
+      "n_out": 1133,
+      "target_x_pix": 5.109906186866383,
+      "target_y_pix": 3.9324566568902295,
+      "difference_centroid_x_pix": 4.663525169580112,
+      "difference_centroid_y_pix": 3.964580632531357,
+      "dx_pix": -0.44638101728627166,
+      "dy_pix": 0.032123975641127345,
+      "offset_pix": 0.44753543145154273,
+      "offset_arcsec": 9.398244060482398,
+      "weighted_pixels": 10,
+      "difference_weight_sum": 179.89666748046875,
+      "peak_difference_flux": 43.931640625
+    },
+    {
+      "sector": 64,
+      "n_cadences": 18854,
+      "n_in": 481,
+      "n_out": 1259,
+      "target_x_pix": 4.127848434536975,
+      "target_y_pix": 3.9140988958699303,
+      "difference_centroid_x_pix": 4.1074818897664915,
+      "difference_centroid_y_pix": 3.9491277643181477,
+      "dx_pix": -0.020366544770483053,
+      "dy_pix": 0.0350288684482174,
+      "offset_pix": 0.04051935057044487,
+      "offset_arcsec": 0.8509063619793422,
+      "weighted_pixels": 11,
+      "difference_weight_sum": 141.784423828125,
+      "peak_difference_flux": 32.0634765625
+    },
+    {
+      "sector": 90,
+      "n_cadences": 19274,
+      "n_in": 486,
+      "n_out": 1188,
+      "target_x_pix": 4.702078604676331,
+      "target_y_pix": 3.987011240499303,
+      "difference_centroid_x_pix": 4.335778915179203,
+      "difference_centroid_y_pix": 3.942731365186231,
+      "dx_pix": -0.36629968949712843,
+      "dy_pix": -0.0442798753130722,
+      "offset_pix": 0.3689663533215921,
+      "offset_arcsec": 7.748293419753434,
+      "weighted_pixels": 16,
+      "difference_weight_sum": 142.63937377929688,
+      "peak_difference_flux": 28.919921875
+    },
+    {
+      "sector": 99,
+      "n_cadences": 14076,
+      "n_in": 324,
+      "n_out": 733,
+      "target_x_pix": 5.091476554239565,
+      "target_y_pix": 5.401179227250854,
+      "difference_centroid_x_pix": 5.553062721581346,
+      "difference_centroid_y_pix": 4.851655838041326,
+      "dx_pix": 0.4615861673417818,
+      "dy_pix": -0.5495233892095275,
+      "offset_pix": 0.7176613025443139,
+      "offset_arcsec": 15.070887353430592,
+      "weighted_pixels": 8,
+      "difference_weight_sum": 409.8132019042969,
+      "peak_difference_flux": 139.443359375
+    },
+    {
+      "sector": 100,
+      "n_cadences": 18314,
+      "n_in": 485,
+      "n_out": 1179,
+      "target_x_pix": 4.9054752476880665,
+      "target_y_pix": 4.422875467931767,
+      "difference_centroid_x_pix": 5.113279572901548,
+      "difference_centroid_y_pix": 5.458735225467663,
+      "dx_pix": 0.20780432521348136,
+      "dy_pix": 1.0358597575358965,
+      "offset_pix": 1.0564980240680797,
+      "offset_arcsec": 22.186458505429673,
+      "weighted_pixels": 11,
+      "difference_weight_sum": 167.39498901367188,
+      "peak_difference_flux": 41.8759765625
+    }
+  ],
+  "outputs": {
+    "centroid_csv": "toi3492_120s_difference_centroids.csv",
+    "summary_json": "tess_source_localization_120s.json",
+    "difference_image_plot": "toi3492_tess_difference_images.png"
+  },
+  "notes": [
+    "This is a simple difference-image centroid check, not a formal SPOC data-validation centroid analysis.",
+    "Offsets are measured between the positive difference-image centroid and the target coordinate projected into each TPF WCS.",
+    "TESS pixels are large, so sub-pixel offsets should be interpreted cautiously and compared with Gaia neighbors and aperture masks."
+  ]
+}

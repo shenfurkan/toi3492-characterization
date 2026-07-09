@@ -1,0 +1,16 @@
+{
+  "FPP": 0.00011254088967021944,
+  "NFPP": 0.9998874591103298,
+  "FPP_percent": 0.011254088967021944,
+  "NFPP_percent": 99.98874591103298,
+  "planet_prior": 1.0,
+  "eb_prior_effective": 4.6181412007769954e-06,
+  "beb_prior_effective": 0.0001247,
+  "flux_ratio_sum_42arcsec": 0.01247,
+  "n_full_eclipse_mimics_42arcsec": 0,
+  "odd_even_sigma": 0.17323455099540974,
+  "secondary_depth_sigma": 0.5361730978504543,
+  "method": "Simplified Morton-style Bayesian FPP screening",
+  "aRstar_tension_sigma": 2.6356906516266436,
+  "caveat": "CAVEAT: The a/Rstar tension (2.6 sigma) indicates that the circular transit solution is not self-consistent with the TIC-density prediction. This limits the strength of validation language. The computed FPP should be treated as a screening metric, not an exact probability or a formal validation result."
+}

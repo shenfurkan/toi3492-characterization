@@ -1,0 +1,59 @@
+{
+  "method": "TRICERATOPS",
+  "status": "supporting screening run, not RV confirmation",
+  "tic_id": 81077799,
+  "sectors": [
+    37,
+    63,
+    64,
+    90,
+    99,
+    100
+  ],
+  "n_draws": 100000,
+  "search_radius_tess_pixels": 4,
+  "bin_count_requested": 240,
+  "bin_count_used": 240,
+  "window_days": 0.7,
+  "flux_err_used": 8.708825645956603e-05,
+  "period_days": 9.2224171,
+  "depth_ppm": 3167.409949746321,
+  "depth_fraction_passed_to_calc_depths": 0.003167409949746321,
+  "FPP": 0.0,
+  "FPP_percent": 0.0,
+  "NFPP": 0.0,
+  "NFPP_percent": 0.0,
+  "scenario_probabilities": {
+    "PTP": 0.9999970841146957,
+    "DTP": 2.91588457618249e-06,
+    "TP": 7.280835587448847e-13,
+    "STP": 4.779843250920017e-72,
+    "BTP": 1.9341103324365333e-267,
+    "BEB": 0.0,
+    "BEBx2P": 0.0,
+    "DEB": 0.0,
+    "DEBx2P": 0.0,
+    "EB": 0.0,
+    "EBx2P": 0.0,
+    "PEB": 0.0,
+    "PEBx2P": 0.0,
+    "SEB": 0.0,
+    "SEBx2P": 0.0
+  },
+  "dominant_scenario": "PTP",
+  "dominant_scenario_probability": 0.9999970841146957,
+  "interpretation": "TRICERATOPS returned FPP numerically 0 for this finite run. The dominant listed scenario is PTP with probability 0.999997; interpret the scenario_probabilities table directly rather than rounding this to TP=1.0. Treat this as extremely low FPP under the run assumptions, not as an exact zero probability or mass confirmation.",
+  "limitations": [
+    "No radial-velocity mass measurement.",
+    "No high-resolution imaging contrast curve was supplied.",
+    "The fitted a/Rstar remains in 2.6 sigma tension with the TIC-density prediction.",
+    "Runtime compatibility shims were needed for this local Python environment."
+  ],
+  "runtime_seconds": 358.12799310684204,
+  "outputs": {
+    "folded_binned_light_curve": "triceratops_120s_folded_binned.csv",
+    "scenario_probabilities_csv": "triceratops_probs_120s.csv"
+  },
+  "note": "Runtime compatibility shims applied for numpy.int and pkg_resources.resource_filename; site-packages not modified.",
+  "trilegal_ssl_verification": "disabled inside this process because the installed TRICERATOPS target initializer hard-codes verify_ssl=True and the local CA bundle rejects the TRILEGAL certificate."
+}

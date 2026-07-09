@@ -1,0 +1,89 @@
+{
+  "target": "TOI-3492.01 / TIC 81077799 / HD 96519",
+  "gaia_dr3": {
+    "source_id": 5.347362071701194e+18,
+    "ra": 166.63666838751203,
+    "dec": -53.731979971508025,
+    "parallax": 4.932393709472833,
+    "parallax_error": 0.013711396604776382,
+    "pmra": -8.902959414506856,
+    "pmra_error": 0.015775790438055992,
+    "pmdec": -1.9237125294174786,
+    "pmdec_error": 0.014793112874031067,
+    "radial_velocity": 13.326496124267578,
+    "radial_velocity_error": 0.21301357448101044,
+    "rv_nb_transits": 13.0,
+    "teff_gspphot": 6061.15087890625,
+    "teff_gspphot_lower": 6058.5126953125,
+    "teff_gspphot_upper": 6066.3076171875,
+    "logg_gspphot": 3.850600004196167,
+    "logg_gspphot_lower": 3.848599910736084,
+    "logg_gspphot_upper": 3.852400064468384,
+    "mh_gspphot": -0.045499999076128006,
+    "mh_gspphot_lower": -0.051100000739097595,
+    "mh_gspphot_upper": -0.039799999445676804,
+    "azero_gspphot": 0.002099999925121665,
+    "non_single_star": 0,
+    "ruwe": 0.984845757484436,
+    "duplicated_source": true,
+    "phot_g_mean_mag": 8.83012866973877,
+    "phot_bp_mean_mag": 9.096477508544922,
+    "phot_rp_mean_mag": 8.400259971618652
+  },
+  "hd_catalog": {
+    "hd_number": "HD 96519",
+    "spectral_type_hd": "F7IV/V",
+    "spectral_type_source": "HD Catalog (Cannon & Pickering); confirmed by Gaia logg=3.85",
+    "note": "IV/V subgiant classification independently confirms evolved-star nature"
+  },
+  "tess_spoc_contamination": {
+    "crowdsap_per_sector": [
+      {
+        "sector": 37,
+        "CROWDSAP": 0.97762835,
+        "FLFRCSAP": 0.94107628
+      },
+      {
+        "sector": 63,
+        "CROWDSAP": 0.97406495,
+        "FLFRCSAP": 0.93564993
+      },
+      {
+        "sector": 64,
+        "CROWDSAP": 0.98158622,
+        "FLFRCSAP": 0.93173587
+      },
+      {
+        "sector": 90,
+        "CROWDSAP": 0.97782713,
+        "FLFRCSAP": 0.93036371
+      },
+      {
+        "sector": 100,
+        "CROWDSAP": 0.97304165,
+        "FLFRCSAP": 0.93117619
+      },
+      {
+        "sector": 99,
+        "CROWDSAP": 0.97475088,
+        "FLFRCSAP": 0.90610188
+      }
+    ],
+    "crowdsap_mean": 0.9764831966666668,
+    "crowdsap_note": "CROWDSAP = fraction of flux from target; 1-CROWDSAP = contamination fraction",
+    "exofop_contamination_ratio": 0.019471,
+    "exofop_note": "ExoFOP SPOC pipeline contamination ratio for the 2-min aperture"
+  },
+  "notes": [
+    "Gaia RVS RV is a mean over 13 transits; single-epoch precision only, not a mass constraint.",
+    "Gaia GSP-Phot Teff (6061 K) differs from TIC Stassun+2019 Teff (6332 K) by 271 K.",
+    "Gaia logg=3.85 independently confirms subgiant nature despite TIC lumclass=DWARF.",
+    "HD spectral type F7IV/V further supports evolved classification.",
+    "No RAVE DR6 match within 5 arcsec (programmatically confirmed 2026-07-09).",
+    "No GALAH DR3 match within 5 arcsec (programmatically confirmed 2026-07-09).",
+    "No LAMOST DR10 match within 5 arcsec (programmatically confirmed 2026-07-09; target Dec=-53.7 deg outside Northern footprint).",
+    "No APOGEE DR17 match within 5 arcsec (programmatically confirmed 2026-07-09; target not in any APOGEE field).",
+    "CONCLUSION: No major spectroscopic survey has observed TIC 81077799. All stellar parameters are photometric.",
+    "The a/Rstar tension cannot be resolved with existing public data; new dedicated spectroscopy is required."
+  ]
+}

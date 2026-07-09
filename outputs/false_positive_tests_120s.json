@@ -1,0 +1,46 @@
+{
+  "source": "Corrected 120s SPOC reference light curve",
+  "inputs": {
+    "config": "config_corrected_120s.json",
+    "reference_csv": "toi3492_120s_reference.csv",
+    "period_days": 9.2224171,
+    "t0_btjd": 2314.5211550001986,
+    "duration_hours": 5.399481569857967,
+    "model_depth_ppm": 3165.408884197394
+  },
+  "event_depths": {
+    "n_events_used": 16,
+    "n_odd_events": 7,
+    "n_even_events": 9,
+    "event_depth_csv": "toi3492_120s_event_depths.csv"
+  },
+  "odd_even": {
+    "odd_depth_ppm": 2686.3445248803637,
+    "odd_depth_err_ppm": 39.936152395598334,
+    "even_depth_ppm": 2677.1538209754863,
+    "even_depth_err_ppm": 34.925355323385894,
+    "absolute_difference_ppm": 9.19070390487741,
+    "difference_sigma": 0.17323455099540974,
+    "passes_3sigma_check": true
+  },
+  "secondary_eclipse": {
+    "phase_checked": 0.5,
+    "depth_ppm": 9.775946833934235,
+    "depth_err_ppm": 14.974169660254516,
+    "significance_sigma": 0.6528540183354696,
+    "three_sigma_upper_limit_ppm": 54.69845581469778,
+    "passes_no_secondary_3sigma_check": true,
+    "n_in": 2575,
+    "n_out": 6635
+  },
+  "outputs": {
+    "summary_json": "false_positive_tests_120s.json",
+    "event_depth_csv": "toi3492_120s_event_depths.csv",
+    "plot": "toi3492_false_positive_120s.png"
+  },
+  "notes": [
+    "Odd/even means are weighted means of per-event robust median depths.",
+    "The secondary-eclipse check measures a transit-duration window centered at phase 0.5.",
+    "These tests reduce obvious eclipsing-binary concerns but do not replace Gaia, centroid, imaging, or RV validation."
+  ]
+}
