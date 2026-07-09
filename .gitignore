@@ -58,6 +58,10 @@ literature/
 # TeX / LaTeX sources (keep only Python + data + figures)
 *.tex
 
+# arXiv submission package
+arxiv_submission/
+arxiv_submission.zip
+
 # Miscellaneous
 handover.md
 81077799_TRILEGAL.csv
