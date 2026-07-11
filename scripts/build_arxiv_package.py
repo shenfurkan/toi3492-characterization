@@ -13,6 +13,8 @@ DESTINATION = ROOT / "arxiv_submission"
 def main():
     source = ROOT / "toi3492_characterization.tex"
     text = source.read_text()
+    if DESTINATION.exists():
+        shutil.rmtree(DESTINATION)
     DESTINATION.mkdir(exist_ok=True)
     (DESTINATION / source.name).write_text(text)
     shutil.copy2(ROOT / "references.bib", DESTINATION / "references.bib")

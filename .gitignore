@@ -68,6 +68,8 @@ AstrophysicsResources/
 # Large binary data (re-downloadable from MAST)
 data/spoc_dv/
 data/asteroseismology/raw/
+data/asteroseismology/pysyd/
+outputs/pysyd/
 
 # Jupyter
 .ipynb_checkpoints/

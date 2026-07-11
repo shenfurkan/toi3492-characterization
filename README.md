@@ -60,6 +60,9 @@ Run from project root with Python 3.9+:
 | 11 | `scripts/ttv_analysis.py` | Transit timing |
 | 12 | `scripts/stellar_activity.py` | Rotation / variability |
 | 13 | `scripts/audit_science_consistency.py` | Final verification |
+| 14 | `scripts/asteroseismic_prepare.py` | Re-downloadable SPOC FITS inventory and hashes |
+| 15 | `scripts/asteroseismic_search.py` | Preregistered block-level seismic diagnostics |
+| 16 | `scripts/asteroseismic_injection_recovery.py` | Preliminary sensitivity calibration |
 
 Steps 1-2, 5, 7-8, 10, and 12 can require network access.  Frozen release
 artifacts can be audited offline.
@@ -80,3 +83,13 @@ consistency, manuscript claims, and required release artifacts.
 - Core: `numpy`, `scipy`, `pandas`, `matplotlib`, `corner`, `pytest`
 - Astronomy: `astropy`, `lightkurve`, `astroquery`, `batman-package`, `emcee`, `ldtk`
 - Optional: `triceratops` for a non-adopted screening experiment
+- Optional: `tess-atl` and `pysyd` for the exploratory asteroseismic extension
+
+## Asteroseismic Status
+
+The preregistered exploratory search is documented in `REVIEW_NOTES.md`.
+Neither the local search nor the independent pySYD block analysis found a
+replicated seismic solution, so no asteroseismic measurement is adopted in the
+manuscript. The non-detection is not constraining at the expected few-ppm mode
+amplitudes; the injection/recovery experiment only becomes efficient for much
+stronger signals.

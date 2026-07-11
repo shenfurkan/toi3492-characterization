@@ -43,6 +43,11 @@ REQUIRED = [
     "outputs/toi3492_20s_sector_depths.csv",
     "outputs/tess_source_localization_120s.json",
     "outputs/toi3492_120s_difference_centroids.csv",
+    "outputs/asteroseismic_input_inventory.json",
+    "outputs/asteroseismic_feasibility.json",
+    "outputs/asteroseismic_preliminary_search.json",
+    "outputs/asteroseismic_injection_recovery.json",
+    "outputs/asteroseismic_pysyd_crosscheck.json",
     "figures/toi3492_120s_reference_fold.png",
     "figures/toi3492_transit_fit_120s_corrected.png",
     "figures/toi3492_corner_120s_corrected.png",
@@ -51,7 +56,18 @@ REQUIRED = [
     "figures/toi3492_tess_difference_images.png",
     "figures/toi3492_20s_reference_fold.png",
     "figures/toi3492_20s_vs_120s_depth.png",
+    "figures/toi3492_asteroseismic_preliminary.png",
 ]
+
+# The release claims full reproducibility, so freeze every Python pipeline and
+# its executable tests rather than only the generated scientific artifacts.
+REQUIRED.extend(
+    sorted(
+        str(path.relative_to(ROOT)).replace("\\", "/")
+        for directory in (ROOT / "scripts", ROOT / "tests")
+        for path in directory.glob("*.py")
+    )
+)
 
 
 def sha256(path):

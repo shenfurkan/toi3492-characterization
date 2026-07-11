@@ -95,6 +95,10 @@ def test_new_public_data_crosschecks():
 
 def test_release_hash_manifest():
     manifest = load_json("provenance/SHA256SUMS.json")
+    assert "scripts/transit_model_120s_corrected.py" in manifest
+    assert "scripts/asteroseismic_search.py" in manifest
+    assert "tests/test_science.py" in manifest
+    assert "tests/test_asteroseismology.py" in manifest
     for relative, expected in manifest.items():
         digest = hashlib.sha256((ROOT / relative).read_bytes()).hexdigest()
         assert digest == expected, relative
