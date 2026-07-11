@@ -1,0 +1,113 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Virtual environments
+venv/
+.env/
+.venv/
+
+# LaTeX build artifacts
+*.aux
+*.bbl
+*.blg
+*.log
+*.out
+*.toc
+*.fls
+*.fdb_latexmk
+*.synctex.gz
+*.nav
+*.snm
+*.vrb
+*.run.xml
+*.bcf
+
+# LaTeX backup files
+*.bak
+*.sav
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE / Editor
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Backup / temp
+outputs/fresh_backup_*/
+outputs/night_runs/
+archive/
+
+# PDFs (compiled and reference copies)
+*.pdf
+papers/
+
+# Literature (reading PDFs)
+literature/
+
+# Canonical TeX source and release package are versioned.
+arxiv_submission.zip
+data/*.tex
+
+# Miscellaneous
+handover.md
+81077799_TRILEGAL.csv
+AstrophysicsResources/
+*.pk
+
+# Large binary data (re-downloadable from MAST)
+data/spoc_dv/
+data/asteroseismology/raw/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Working notes and local orchestration scripts
+docs/*.md
+docs/*.txt
+*.ps1
+scripts/*.ps1
+
+# Duplicate references.bib (use root copy only)
+data/references.bib
+
+# Generated outputs, caches, and intermediate data
+outputs/*.json
+outputs/*.csv
+outputs/*.npy
+outputs/*.md
+outputs/*.txt
+
+# Generated data and figures (untracked)
+data/*.json
+data/*.csv
+data/*.npy
+figures/*.png
+*.png
+
+# Archives and build artifacts
+arxiv_submission/
+provenance/
+*.zip
+
+# Root files the user wants to ignore
+*.tex
+requirements-lock.txt
+CITATION.cff
+LICENSE
+REVIEW_NOTES.md
+pyproject.toml
+
+# Miscellaneous
+human.txt
+references.bib
