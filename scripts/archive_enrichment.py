@@ -54,7 +54,7 @@ hd_catalog = {
     'hd_number': 'HD 96519',
     'spectral_type_hd': 'F7IV/V',
     'spectral_type_source': 'HD Catalog (Cannon & Pickering); confirmed by Gaia logg=3.85',
-    'note': 'IV/V subgiant classification independently confirms evolved-star nature'
+    'note': 'IV/V classification is a catalog cross-check of the evolved-star interpretation, not independent confirmation'
 }
 print(f"\n  HD catalog: {hd_catalog['hd_number']} ({hd_catalog['spectral_type_hd']})")
 
@@ -100,7 +100,7 @@ result = {
     'notes': [
         'Gaia RVS RV is a mean over 13 transits; single-epoch precision only, not a mass constraint.',
         'Gaia GSP-Phot Teff (6061 K) differs from TIC Stassun+2019 Teff (6332 K) by 271 K.',
-        'Gaia logg=3.85 independently confirms subgiant nature despite TIC lumclass=DWARF.',
+        'Gaia logg=3.85 is a model-dependent catalog cross-check despite TIC lumclass=DWARF.',
         'HD spectral type F7IV/V further supports evolved classification.',
         'No RAVE DR6 match within 5 arcsec.',
         'No GALAH DR3 match within 5 arcsec (GALAH coverage limited).',

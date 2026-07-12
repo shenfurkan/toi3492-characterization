@@ -138,5 +138,5 @@ a_rs_unc = a_rs_predicted * np.sqrt(
     (m_star_e / (3 * m_star)) ** 2 + (r_star_e / r_star) ** 2
 )
 print(f"\nPredicted a/Rs from Kepler III (P=9.22d): {a_rs_predicted:.2f} +/- {a_rs_unc:.2f}")
-print("  -> This is the Gaussian prior center for MCMC transit fit.")
+print("  -> Catalog comparison only; the adopted circular transit fit uses no stellar-density prior.")
 print("\nPhase 1 complete.\n")

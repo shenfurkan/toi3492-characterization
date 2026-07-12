@@ -87,7 +87,7 @@ def main():
             ),
             "rvs": (
                 "Gaia reports only summary RVS statistics, not public epoch "
-                "velocities. The 2.08-km/s robust range and p=0.046 constancy "
+                "velocities. The 2.08-km/s robust-amplitude variability statistic and p=0.046 constancy "
                 "statistic motivate dedicated RV follow-up but cannot yield an "
                 "orbit or companion mass."
             ),

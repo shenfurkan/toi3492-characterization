@@ -1,6 +1,8 @@
-"""Run a TRICERATOPS false-positive calculation for TOI-3492.01.
+"""Run a quarantined, non-adopted TRICERATOPS method experiment.
 
-This is an optional formal-validation attempt. The installed TRICERATOPS stack
+This cannot validate the candidate without complete calibrated inputs,
+instrumental reliability, source localization, and contrast constraints.
+The installed TRICERATOPS stack
 uses older dependencies, so the script applies runtime-only compatibility shims
 without modifying site-packages.
 """
@@ -116,7 +118,17 @@ def main() -> None:
     parser.add_argument("--bins", type=int, default=240, help="Number of folded light-curve bins")
     parser.add_argument("--window-days", type=float, default=0.70, help="Folded time window around transit midpoint")
     parser.add_argument("--parallel", action="store_true", help="Use TRICERATOPS parallel mode")
+    parser.add_argument(
+        "--allow-nonadopted-screening",
+        action="store_true",
+        help="Acknowledge that this run is quarantined and cannot support release claims",
+    )
     args = parser.parse_args()
+    if not args.allow_nonadopted_screening:
+        parser.error(
+            "This script is quarantined. Pass --allow-nonadopted-screening "
+            "only for method development; no output may be adopted as FPP."
+        )
 
     started = time_module.time()
     np.random.seed(349201)
@@ -180,7 +192,7 @@ def main() -> None:
 
     result = {
         "method": "TRICERATOPS",
-        "status": "supporting screening run, not RV confirmation",
+        "status": "quarantined_screening_not_validation",
         "tic_id": TIC_ID,
         "sectors": SECTORS.tolist(),
         "n_draws": args.n,
@@ -204,13 +216,13 @@ def main() -> None:
             f"run. The dominant listed scenario is {dominant_scenario} with "
             f"probability {dominant_probability:.6g}; interpret the "
             "scenario_probabilities table directly rather than rounding this "
-            "to TP=1.0. Treat this as extremely low FPP under the run "
-            "assumptions, not as an exact zero probability or mass confirmation."
+            "to TP=1.0. This finite method-development run is not a calibrated "
+            "FPP and must not support validation or confirmation."
         ),
         "limitations": [
             "No radial-velocity mass measurement.",
             "No high-resolution imaging contrast curve was supplied.",
-            "The fitted a/Rstar remains in 2.6 sigma tension with the TIC-density prediction.",
+            "The transit and stellar density models remain mutually inconsistent under the circular reference assumptions.",
             "Runtime compatibility shims were needed for this local Python environment.",
         ],
         "runtime_seconds": time_module.time() - started,

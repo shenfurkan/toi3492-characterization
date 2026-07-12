@@ -51,8 +51,8 @@ print(f"\nCandidate size: {t['rp_earth']:.1f} Rearth = giant-planet-size regime"
 print(f"(Neptune ~4 Re, Saturn ~9 Re, Jupiter ~11 Re)")
 
 print("\nValidation status: unvalidated and not RV-confirmed; no calibrated population FPP is reported")
-print("Corrected basic vetting: odd/even and secondary checks show no obvious EB signature")
-print("Gaia/source localization: reassuring first-pass checks; high-resolution imaging still missing")
+print("Corrected basic vetting: odd/even and phase-0.5 secondary checks show no obvious EB signature")
+print("Gaia/source localization: qualitative geometry only; calibrated PRF and high-resolution imaging missing")
 print("TTV analysis: corrected 120s timing is SNR-limited; no TTV detection claimed")
 
 print(f"\n{'-'*55}")

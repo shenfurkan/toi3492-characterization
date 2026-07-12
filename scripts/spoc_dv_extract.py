@@ -384,7 +384,7 @@ def build_comparison(config, official, transit_rows, pdf_rows):
         },
         "official_toi": official_params,
         "spoc_dv_best_machine_readable": best,
-        "interpretation": "SPOC DV products are independent pipeline products. They support the corrected deep-transit scale when their TCE period matches the official TOI ephemeris, but they do not constitute RV confirmation.",
+        "interpretation": "SPOC DV products are a separate pipeline analysis of the same TESS observations. They support the deep-transit scale when their TCE period matches the official TOI ephemeris, but they are not independent data and do not constitute confirmation.",
     }
     if best:
         comparison["deltas_spoc_minus_local"] = {
@@ -459,7 +459,7 @@ def write_markdown(summary, comparison, transit_rows, pdf_rows):
     lines.append("")
     lines.append("## Interpretation")
     lines.append("")
-    lines.append("These SPOC DV products independently support the corrected several-thousand-ppm depth scale for the official-period TCEs. Single-sector DV products can prefer aliases or unrelated lower-SNR TCEs, so the multi-sector official-period products should be emphasized. This remains vetting evidence, not RV confirmation.")
+    lines.append("These SPOC DV products support the several-thousand-ppm depth scale through a separate pipeline analysis of the same TESS observations. Single-sector DV products can prefer aliases or unrelated lower-SNR TCEs, so the multi-sector official-period products should be emphasized. This remains same-data vetting evidence, not confirmation.")
     SUMMARY_MD.write_text("\n".join(lines) + "\n")
 
 

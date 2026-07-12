@@ -382,6 +382,11 @@ def summarize(fit, samples, optimum, sampler, cadence):
         "caveats": [
             "AR(1) coefficients are fixed empirical out-of-transit estimates, not sampled Gaussian-process hyperparameters.",
             "The cadence products come from the same TESS pixels and are not independent observations.",
+            "No event-level or sector-level timing offsets are fitted beyond the shared linear ephemeris.",
+            "Sector baselines are profiled rather than marginalized, and the fixed AR(1) uncertainty is not propagated.",
+            "Sector radius ratios have independent bounded priors; their arithmetic mean is not a hierarchical common-radius posterior.",
+            "Only broadened LDTk-centered limb-darkening priors are tested; no alternate atmosphere prescription is included.",
+            "The optimizer did not move materially from its supplied initial vector; posterior movement comes from the short ensemble chain.",
         ],
     }
 

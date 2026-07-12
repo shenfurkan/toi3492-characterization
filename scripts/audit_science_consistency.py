@@ -51,6 +51,13 @@ def main():
     cadence = load_json("outputs/cadence_independent_depth_check.json")
     gaia_stellar = load_json("outputs/gaia_stellar_crosscheck.json")
     localization = load_json("outputs/tess_source_localization_120s.json")
+    robust_120 = load_json("outputs/transit_fit_robust_120s.json")
+    robust_20 = load_json("outputs/transit_fit_robust_20s.json")
+    phase = load_json("outputs/phase_curve_search_120s.json")
+    sed = load_json("outputs/stellar_sed_posterior.json")
+    dilution = load_json("outputs/dilution_corrected_transit_params.json")
+    source_specific = load_json("outputs/source_specific_aperture_check.json")
+    release_status = load_json("outputs/release_status.json")
     assert cadence["n_points_20s"] == 310533
     assert abs(cadence["delta_20s_minus_matched_120s_robust_sigma_formal"]) < 3
     assert np.isclose(
@@ -58,16 +65,29 @@ def main():
         7.9558813800220705,
     )
     assert localization["summary"]["n_sectors"] == 6
+    assert robust_120["status"] == "robustness_fit_not_adopted"
+    assert robust_20["status"] == "robustness_fit_not_adopted"
+    assert not robust_120["mcmc"]["reliable_50tau_rule"]
+    assert not robust_20["mcmc"]["reliable_50tau_rule"]
+    assert phase["status"] == "unphysical_phase_harmonic_detected_systematics_limited"
+    assert phase["secondary_phase_scan_performed"] is False
+    assert sed["status"] == "approximate_sed_radius_crosscheck_not_isochrone_posterior"
+    assert not dilution["adopted_dilution_treatment"]["additional_correction_applied"]
+    assert source_specific["status"] == "aperture_geometry_check_not_formal_prf_localization"
+    assert release_status["strongest_supported_gate"] == "descriptive_candidate_preprint"
+    assert not release_status["gates"]["central_density_or_eccentricity_claim_ready"]
+    assert not release_status["gates"]["statistical_validation_ready"]
+    assert not release_status["gates"]["planet_confirmation_ready"]
 
-    print("SCIENTIFIC RELEASE AUDIT: PASS")
+    print("SCIENTIFIC CONSISTENCY AND CLAIM-BOUNDARY AUDIT: PASS")
     print(f"Reference rows: {len(reference)}")
     print(f"Posterior samples: {len(chain)}")
     print(f"Rp/Rs: {transit['rp_rs']:.6f} +/- {transit['rp_rs_err']:.6f}")
     print(f"Circular a/Rs: {transit['a_rs']:.3f} +/- {transit['a_rs_err']:.3f}")
     print(f"Keplerian a: {transit['a_au']:.5f} AU")
     print(
-        "Density difference: "
-        f"{transit['derived_posterior']['density_difference_sigma']:.2f} sigma"
+        "Circular reference/catalog density ratio: "
+        f"{transit['derived_posterior']['photometric_density_solar']['median'] / transit['derived_posterior']['catalog_density_solar']['median']:.2f} (model conditional)"
     )
     print("Formal FPP: not reported")
     print(
@@ -78,6 +98,9 @@ def main():
         "Gaia FLAME expected circular a/Rs: "
         f"{gaia_stellar['derived_from_flame_medians']['expected_circular_a_rs']:.3f}"
     )
+    print("Native-cadence chains: diagnostic and unconverged")
+    print("Secondary eclipse coverage: phase 0.5 only; no eccentric-phase scan")
+    print("Strongest supported gate: descriptive candidate preprint")
 
 
 if __name__ == "__main__":

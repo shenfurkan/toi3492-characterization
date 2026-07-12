@@ -160,11 +160,12 @@ def main():
         "n_covariance_clusters": n_clusters,
         "primary_mask_half_width_hours": 0.65 * DURATION_DAYS * 24.0,
         "secondary_box_duration_hours": DURATION_DAYS * 24.0,
+        "secondary_phase_scan_performed": False,
         "components": components,
         "sector_components": sector_components,
         "maximum_absolute_significance_sigma": max_significance,
         "interpretation": (
-            "The strongest harmonic has the opposite sign from reflected/emitted planetary light, so the all-phase baseline is systematics-limited. No albedo, phase-curve mass, or physical harmonic detection is reported. The secondary-eclipse box remains consistent with zero."
+            "The strongest harmonic has the opposite sign from reflected/emitted planetary light, so the all-phase baseline is systematics-limited. No albedo, phase-curve mass, or physical harmonic detection is reported. The secondary box is fixed at phase 0.5; no eccentric-phase eclipse scan was performed."
             if unphysical_reflection
             else "This is a photometric vetting constraint, not a mass measurement or statistical validation."
         ),

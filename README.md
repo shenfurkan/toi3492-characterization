@@ -18,7 +18,7 @@ RV confirmation and high-resolution imaging are still needed.
 | Circular-fit a/Rs | 10.60 +/- 0.45 |
 | Impact parameter b | 0.705 +/- 0.032 |
 | Formal FPP | Not reported; current diagnostics are not a calibrated population model |
-| Key caveat | Reference circular-density difference is about 4.3 sigma, but native-cadence robustness chains are not yet publication-converged |
+| Key caveat | Circular transit density is about 2.6 times the catalog-model density, but native-cadence and stellar controls are incomplete; no calibrated significance is claimed |
 
 ## Repository Structure
 
@@ -41,31 +41,46 @@ RV confirmation and high-resolution imaging are still needed.
 The release includes the canonical LaTeX source and machine-readable outputs.
 Literature PDFs and LaTeX build intermediates are excluded.
 
-## Pipeline (Reproducibility Order)
+The reusable end-to-end workflow, claim gates, stop rules, and safe/unsafe
+release practices are documented in `EXOPLANET_RELEASE_ROADMAP.md`.
 
-Run from project root with Python 3.9+:
+## Pipeline and Status
 
-| Step | Script | Produces |
+Run from project root with Python 3.9.x. The frozen release is audited offline;
+network scripts are regeneration utilities rather than prerequisites for the
+default test suite.
+
+| Stage | Script | Status and product |
 |---:|---|---|
-| 1 | `scripts/stellar_params.py` | `config.json`, LD coefficients |
-| 2 | `scripts/build_120s_reference_lightcurve.py` | `toi3492_120s_reference.csv` |
-| 3 | `scripts/transit_model_120s_corrected.py` | `config_corrected_120s.json`, chains, figures |
-| 4 | `scripts/false_positive_tests_120s.py` | Odd/even, secondary eclipse checks |
-| 5 | `scripts/gaia_contamination_check.py` | Gaia DR3 neighbor census |
-| 6 | `scripts/dilution_robustness.py` | Residual-dilution sensitivity; no second CROWDSAP correction |
-| 7 | `scripts/tess_source_localization_120s.py` | Difference-image centroid check |
-| 8 | `scripts/spoc_dv_extract.py` | SPOC DV product parsing |
-| 9 | `scripts/statistical_validation.py` | Non-probabilistic vetting summary |
-| 10 | `scripts/triceratops_validation.py` | Optional, non-adopted screening experiment |
-| 11 | `scripts/ttv_analysis.py` | Transit timing |
-| 12 | `scripts/stellar_activity.py` | Rotation / variability |
-| 13 | `scripts/audit_science_consistency.py` | Final verification |
-| 14 | `scripts/asteroseismic_prepare.py` | Re-downloadable SPOC FITS inventory and hashes |
-| 15 | `scripts/asteroseismic_search.py` | Preregistered block-level seismic diagnostics |
-| 16 | `scripts/asteroseismic_injection_recovery.py` | Preliminary sensitivity calibration |
+| 1 | `scripts/build_120s_reference_lightcurve.py` | Network regeneration of the six-sector 120-s reference CSV; frozen CSV is included |
+| 2 | `scripts/check_20s_independent.py` | Same-pixel 20-s cadence-product consistency data and summaries |
+| 3 | `scripts/transit_model_120s_corrected.py` | Adopted converged folded/binned circular reference fit; no stellar-density prior |
+| 4 | `scripts/transit_fit_robust.py` | Native-cadence 120-s and 20-s diagnostic fits; not adopted because chains are unconverged |
+| 5 | `scripts/transit_stability_checks.py` | Window/bin perturbation diagnostics |
+| 6 | `scripts/false_positive_tests_120s.py` | Odd/even and phase-0.5 secondary checks |
+| 7 | `scripts/phase_curve_search.py` | Systematics-limited harmonic fit and phase-0.5 box; not an eccentric-phase eclipse scan |
+| 8 | `scripts/gaia_contamination_check.py` | Gaia field census and mimic-capable source list |
+| 9 | `scripts/tess_source_localization_120s.py` | Qualitative difference-image centroids |
+| 10 | `scripts/source_specific_aperture_check.py` | Discrete aperture geometry; not calibrated PRF localization |
+| 11 | `scripts/dilution_robustness.py` | Residual-dilution sensitivity; no second CROWDSAP correction |
+| 12 | `scripts/spoc_dv_extract.py` | Separate-pipeline analysis of the same TESS observations |
+| 13 | `scripts/query_stellar_photometry.py` | Frozen 2MASS/WISE/APASS query |
+| 14 | `scripts/stellar_sed_posterior.py` | Approximate blackbody radius-scale check; not an isochrone posterior |
+| 15 | `scripts/robust_density_comparison.py` | Non-adopted model-conditional density diagnostic |
+| 16 | `scripts/statistical_validation.py` | Non-probabilistic vetting summary; formal FPP remains null |
+| 17 | `scripts/asteroseismic_prepare.py` | Re-downloadable SPOC FITS inventory and hashes |
+| 18 | `scripts/asteroseismic_search.py` | Preliminary implementation of preregistered seismic diagnostics |
+| 19 | `scripts/asteroseismic_injection_recovery.py` | Sensitivity calibration showing the null is non-constraining |
+| 20 | `scripts/audit_science_consistency.py` | Offline consistency and claim-boundary audit |
 
-Steps 1-2, 5, 7-8, 10, and 12 can require network access.  Frozen release
-artifacts can be audited offline.
+`scripts/ttv_analysis.py`, `scripts/stellar_activity.py`, and
+`scripts/triceratops_validation.py` are retained for provenance but are not
+active adopted pipeline steps. Their old claims are unsupported: timing is
+signal-to-noise limited, no rotation result is adopted, and no calibrated FPP
+is reported. `scripts/stellar_params.py` is a network regeneration utility; its
+catalog `a/Rstar` calculation is comparison-only.
+
+The machine-readable current claim gate is `outputs/release_status.json`.
 
 ## Verification
 
@@ -73,9 +88,11 @@ artifacts can be audited offline.
 python scripts/audit_science_consistency.py
 ```
 
-The publication gate is `python -m pytest -q`.  The audit script provides a
-human-readable summary; the tests enforce schemas, equations, chain/output
-consistency, manuscript claims, and required release artifacts.
+The publication gate is `python -m pytest -q`. The audit script provides a
+human-readable consistency summary; tests enforce selected equations,
+chain/output consistency, claim-boundary statuses, manifest hashes, and
+required artifacts. They are not a substitute for peer review or independent
+scientific reproduction.
 
 Raw SPOC FITS files are re-downloadable and intentionally excluded from the
 release ZIP. After downloading them, verify their sizes and hashes separately
@@ -86,7 +103,8 @@ with `python -m pytest -q -m integration -o addopts=""`.
 - Python 3.9.13 and the versions pinned in `requirements-lock.txt`
 - Core: `numpy`, `scipy`, `pandas`, `matplotlib`, `corner`, `pytest`
 - Astronomy: `astropy`, `lightkurve`, `astroquery`, `batman-package`, `emcee`, `ldtk`
-- Optional: `triceratops` for a non-adopted screening experiment
+- Optional: `triceratops` only for explicitly non-adopted method development;
+  no output from it supports the release claims
 - Optional: `tess-atl` and `pysyd` for the exploratory asteroseismic extension
 
 ## Asteroseismic Status

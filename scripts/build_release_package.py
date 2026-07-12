@@ -2,6 +2,9 @@
 
 import hashlib
 import json
+import subprocess
+import sys
+import tempfile
 import zipfile
 from pathlib import Path
 
@@ -41,6 +44,16 @@ def main():
         output.write(manifest_path, "provenance/SHA256SUMS.json")
         output.write(run_path, "provenance/run.json")
     with zipfile.ZipFile(archive) as packaged:
+        names = packaged.namelist()
+        if len(names) != len(set(names)):
+            raise RuntimeError("Release ZIP contains duplicate paths")
+        for name in names:
+            path = Path(name)
+            if path.is_absolute() or ".." in path.parts:
+                raise RuntimeError(f"Unsafe ZIP path: {name}")
+        bad_entry = packaged.testzip()
+        if bad_entry is not None:
+            raise RuntimeError(f"ZIP CRC failure: {bad_entry}")
         embedded = json.loads(
             packaged.read("provenance/SHA256SUMS.json").decode("utf-8")
         )
@@ -50,7 +63,20 @@ def main():
             actual_hash = hashlib.sha256(packaged.read(relative)).hexdigest()
             if actual_hash != expected_hash:
                 raise RuntimeError(f"ZIP hash mismatch for {relative}")
+        with tempfile.TemporaryDirectory(prefix="toi3492-release-") as temporary:
+            extracted = Path(temporary)
+            packaged.extractall(extracted)
+            subprocess.run(
+                [sys.executable, "-m", "pytest", "-q"],
+                cwd=extracted,
+                check=True,
+                timeout=240,
+            )
+    archive_hash = sha256(archive)
+    sidecar = archive.with_suffix(archive.suffix + ".sha256")
+    sidecar.write_text(f"{archive_hash}  {archive.name}\n")
     print(f"Wrote {archive}")
+    print(f"Wrote {sidecar}")
 
 
 if __name__ == "__main__":
