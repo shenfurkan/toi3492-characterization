@@ -13,6 +13,7 @@ def test_unsupported_claims_are_absent():
         r"increasing radius amplifies",
         r"transit duration of \\approx2\.9",
         r"free-geometry fit",
+        r"on-target planetary signal",
     ]
     for pattern in forbidden:
         assert re.search(pattern, TEXT, flags=re.IGNORECASE) is None
@@ -31,6 +32,9 @@ def test_adopted_numbers_are_present():
         r"a/R_\\star=10\.248",
         r"R_\\star=2\.671",
         r"p=0\.046",
+        r"10\.44\^\{\+0\.32\}_\{-0\.29\}",
+        r"10\.32\^\{\+0\.28\}_\{-0\.30\}",
+        r"-144\\pm17",
     ]
     for pattern in required:
         assert re.search(pattern, TEXT) is not None

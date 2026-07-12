@@ -50,7 +50,7 @@ print(f"  Delta             = {delta:.2f} ({'CONSISTENT' if delta < 1.5 else 'TE
 print(f"\nCandidate size: {t['rp_earth']:.1f} Rearth = giant-planet-size regime")
 print(f"(Neptune ~4 Re, Saturn ~9 Re, Jupiter ~11 Re)")
 
-print("\nValidation status: not RV-confirmed; TRICERATOPS screening is strongly reassuring")
+print("\nValidation status: unvalidated and not RV-confirmed; no calibrated population FPP is reported")
 print("Corrected basic vetting: odd/even and secondary checks show no obvious EB signature")
 print("Gaia/source localization: reassuring first-pass checks; high-resolution imaging still missing")
 print("TTV analysis: corrected 120s timing is SNR-limited; no TTV detection claimed")

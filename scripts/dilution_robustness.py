@@ -10,6 +10,7 @@ ROOT = Path(__file__).parent.parent
 CONFIG_PATH = ROOT / "data" / "config_corrected_120s.json"
 ARCHIVE_PATH = ROOT / "outputs" / "archive_enrichment.json"
 GAIA_PATH = ROOT / "outputs" / "gaia_contamination_check.json"
+INVENTORY_PATH = ROOT / "outputs" / "asteroseismic_input_inventory.json"
 
 OUT_CSV = ROOT / "outputs" / "dilution_summary_120s.csv"
 OUT_JSON = ROOT / "outputs" / "dilution_corrected_transit_params.json"
@@ -45,8 +46,22 @@ def corrected_from_ratio(depth_ppm, rp_rs, rp_earth, rp_earth_err, ratio_vs_targ
 
 def main():
     config = load_json(CONFIG_PATH)
-    archive = load_json(ARCHIVE_PATH)
     gaia = load_json(GAIA_PATH)
+    archive = load_json(ARCHIVE_PATH) if ARCHIVE_PATH.exists() else {}
+    contamination = archive.get("tess_spoc_contamination", {})
+    crowdsap_rows = contamination.get("crowdsap_per_sector", [])
+    if not crowdsap_rows and INVENTORY_PATH.exists():
+        inventory = load_json(INVENTORY_PATH)
+        crowdsap_rows = [
+            {
+                "sector": item["sector"],
+                "CROWDSAP": item["fits"]["crowdsap"],
+                "FLFRCSAP": item["fits"]["flfrcsap"],
+            }
+            for item in inventory.get("products", [])
+            if item.get("product_type") == "lc"
+            and item.get("cadence_seconds") == 120
+        ]
 
     transit = config["transit"]
     depth_ppm = float(transit["depth_ppm"])
@@ -55,41 +70,34 @@ def main():
     rp_earth_err = float(transit["rp_earth_err"])
 
     rows = []
-    for item in archive["tess_spoc_contamination"].get("crowdsap_per_sector", []):
-        corrected = corrected_from_target_fraction(depth_ppm, rp_rs, rp_earth, rp_earth_err, float(item["CROWDSAP"]))
+    for item in crowdsap_rows:
         rows.append(
             {
-                "source": "SPOC_CROWDSAP",
+                "source": "SPOC_CROWDSAP_metadata",
                 "label": f"Sector {int(item['sector'])}",
                 "sector": int(item["sector"]),
                 "CROWDSAP": float(item["CROWDSAP"]),
                 "FLFRCSAP": float(item["FLFRCSAP"]) if item.get("FLFRCSAP") is not None else np.nan,
-                **corrected,
+                "applied_again_to_pdcsap": False,
+                "reason": "The reference series uses PDCSAP_FLUX, which already includes the SPOC crowding correction.",
             }
         )
 
-    crowdsap_values = [float(x["CROWDSAP"]) for x in archive["tess_spoc_contamination"].get("crowdsap_per_sector", [])]
+    crowdsap_values = [float(x["CROWDSAP"]) for x in crowdsap_rows]
     scenarios = []
-    if crowdsap_values:
-        scenarios.extend(
-            [
-                ("SPOC CROWDSAP mean", corrected_from_target_fraction(depth_ppm, rp_rs, rp_earth, rp_earth_err, float(np.mean(crowdsap_values)))),
-                ("SPOC CROWDSAP minimum", corrected_from_target_fraction(depth_ppm, rp_rs, rp_earth, rp_earth_err, float(np.min(crowdsap_values)))),
-                ("SPOC CROWDSAP maximum", corrected_from_target_fraction(depth_ppm, rp_rs, rp_earth, rp_earth_err, float(np.max(crowdsap_values)))),
-            ]
-        )
-
-    exofop_ratio = archive["tess_spoc_contamination"].get("exofop_contamination_ratio")
+    exofop_ratio = contamination.get("exofop_contamination_ratio")
+    if exofop_ratio is None:
+        exofop_ratio = gaia.get("exofop_tic_contamination_ratio", {}).get("value")
     if exofop_ratio is not None:
-        scenarios.append(("ExoFOP TIC contamination ratio", corrected_from_ratio(depth_ppm, rp_rs, rp_earth, rp_earth_err, float(exofop_ratio))))
+        scenarios.append(("Hypothetical residual equal to ExoFOP TIC ratio", corrected_from_ratio(depth_ppm, rp_rs, rp_earth, rp_earth_err, float(exofop_ratio))))
 
     for aperture in gaia.get("aperture_flux_summary_gband", []):
         radius = float(aperture["radius_arcsec"])
         ratio = float(aperture["neighbor_flux_ratio_sum_gband"])
-        scenarios.append((f"Gaia G-band neighbors within {radius:.0f} arcsec", corrected_from_ratio(depth_ppm, rp_rs, rp_earth, rp_earth_err, ratio)))
+        scenarios.append((f"Hypothetical residual from all Gaia G-band neighbors within {radius:.0f} arcsec", corrected_from_ratio(depth_ppm, rp_rs, rp_earth, rp_earth_err, ratio)))
 
     for ratio in [0.05, 0.10, 0.25]:
-        scenarios.append((f"Conservative contamination ratio {ratio:.0%} vs target", corrected_from_ratio(depth_ppm, rp_rs, rp_earth, rp_earth_err, ratio)))
+        scenarios.append((f"Additional uncorrected contamination {ratio:.0%} vs target", corrected_from_ratio(depth_ppm, rp_rs, rp_earth, rp_earth_err, ratio)))
 
     scenario_rows = []
     for label, values in scenarios:
@@ -101,12 +109,11 @@ def main():
     scenario_df = pd.DataFrame(scenario_rows)
     scenario_df.to_json(OUT_WORST, orient="records", indent=2)
 
-    mean_row = next((row for row in scenario_rows if row["label"] == "SPOC CROWDSAP mean"), None)
-    exofop_row = next((row for row in scenario_rows if row["label"] == "ExoFOP TIC contamination ratio"), None)
-    gaia_42 = next((row for row in scenario_rows if row["label"] == "Gaia G-band neighbors within 42 arcsec"), None)
+    exofop_row = next((row for row in scenario_rows if row["label"] == "Hypothetical residual equal to ExoFOP TIC ratio"), None)
+    gaia_42 = next((row for row in scenario_rows if row["label"] == "Hypothetical residual from all Gaia G-band neighbors within 42 arcsec"), None)
 
     summary = {
-        "source": "Dilution robustness from corrected 120 s transit parameters, SPOC CROWDSAP, ExoFOP contamination ratio, and Gaia DR3 G-band flux ratios",
+        "source": "Residual-dilution sensitivity for the SPOC PDCSAP 120 s transit parameters",
         "observed": {
             "depth_ppm": depth_ppm,
             "rp_rs": rp_rs,
@@ -119,12 +126,15 @@ def main():
             "min": float(np.min(crowdsap_values)) if crowdsap_values else None,
             "max": float(np.max(crowdsap_values)) if crowdsap_values else None,
         },
-        "preferred_small_dilution_corrections": {
-            "spoc_crowdsap_mean": mean_row,
-            "exofop_tic_ratio": exofop_row,
-            "gaia_42arcsec_gband": gaia_42,
+        "adopted_dilution_treatment": {
+            "additional_correction_applied": False,
+            "reason": "PDCSAP_FLUX already includes the sector CROWDSAP correction; applying CROWDSAP again would double-correct the transit.",
         },
-        "interpretation": "The nominal SPOC/ExoFOP dilution corrections change the inferred radius by about 1 percent, so the candidate remains firmly giant-planet-size. Gaia 120 arcsec is an intentionally over-wide G-band scenario and should not be treated as the adopted TESS aperture correction.",
+        "hypothetical_residual_sensitivity": {
+            "exofop_tic_ratio_if_entirely_residual": exofop_row,
+            "gaia_42arcsec_gband_if_entirely_in_aperture_and_residual": gaia_42,
+        },
+        "interpretation": "No second nominal dilution correction is applied. Even residual contamination at the ExoFOP ratio would change the radius by about 1 percent, but Gaia circular-radius sums are deliberately conservative G-band sensitivity bounds rather than TESS aperture corrections.",
         "outputs": {
             "sector_csv": OUT_CSV.name,
             "scenario_json": OUT_WORST.name,
@@ -139,27 +149,21 @@ def main():
     lines.append(f"Observed corrected 120 s depth: {depth_ppm:.1f} ppm")
     lines.append(f"Observed candidate radius: {rp_earth:.2f} +/- {rp_earth_err:.2f} Rearth")
     lines.append("")
-    if mean_row:
-        lines.append(
-            "SPOC CROWDSAP mean correction: "
-            f"target fraction={mean_row['target_fraction']:.4f}, "
-            f"depth={mean_row['corrected_depth_ppm']:.1f} ppm, "
-            f"Rp={mean_row['corrected_rp_earth']:.2f} Rearth."
-        )
+    lines.append("Adopted additional correction: none. PDCSAP_FLUX already includes the SPOC CROWDSAP correction.")
     if exofop_row:
         lines.append(
-            "ExoFOP contamination-ratio correction: "
+            "If the full ExoFOP ratio remained uncorrected: "
             f"depth={exofop_row['corrected_depth_ppm']:.1f} ppm, "
             f"Rp={exofop_row['corrected_rp_earth']:.2f} Rearth."
         )
     if gaia_42:
         lines.append(
-            "Gaia 42 arcsec G-band summed-flux scenario: "
+            "If the full Gaia 42 arcsec G-band sum were residual aperture contamination: "
             f"depth={gaia_42['corrected_depth_ppm']:.1f} ppm, "
             f"Rp={gaia_42['corrected_rp_earth']:.2f} Rearth."
         )
     lines.append("")
-    lines.append("The nominal correction is small and does not affect the giant-planet-size interpretation. This does not replace high-resolution imaging or a TESS-band PRF aperture model.")
+    lines.append("These are sensitivity bounds, not corrections to the adopted PDCSAP fit. They do not replace high-resolution imaging or a TESS-band PRF aperture model.")
     OUT_MD.write_text("\n".join(lines) + "\n")
 
     ratios = np.linspace(0.0, 0.25, 300)
@@ -178,17 +182,15 @@ def main():
     ax2.tick_params(axis="y", labelcolor="tab:orange")
 
     markers = []
-    if mean_row:
-        markers.append((mean_row["contamination_ratio_vs_target"], "CROWDSAP mean"))
     if exofop_row:
-        markers.append((exofop_row["contamination_ratio_vs_target"], "ExoFOP"))
+        markers.append((exofop_row["contamination_ratio_vs_target"], "ExoFOP residual"))
     if gaia_42:
         markers.append((gaia_42["contamination_ratio_vs_target"], "Gaia 42 arcsec"))
     for ratio, label in markers:
         ax1.axvline(ratio * 100.0, color="gray", linestyle="--", alpha=0.6)
         ax1.text(ratio * 100.0, ax1.get_ylim()[1], label, rotation=90, va="top", ha="right", fontsize=8)
 
-    ax1.set_title("TOI-3492.01 dilution robustness")
+    ax1.set_title("TOI-3492.01 residual-dilution sensitivity")
     ax1.grid(alpha=0.25)
     plt.tight_layout()
     fig.savefig(OUT_FIG, dpi=180)
@@ -199,8 +201,6 @@ def main():
     print(f"Wrote {OUT_WORST}")
     print(f"Wrote {OUT_MD}")
     print(f"Wrote {OUT_FIG}")
-    if mean_row:
-        print(f"CROWDSAP mean corrected Rp={mean_row['corrected_rp_earth']:.2f} Rearth")
 
 
 if __name__ == "__main__":

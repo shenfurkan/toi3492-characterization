@@ -3,6 +3,7 @@ import json
 from pathlib import Path
 
 import numpy as np
+import pytest
 
 from asteroseismic_search import parse_product, symmetric_clip, transit_mask
 
@@ -10,15 +11,27 @@ from asteroseismic_search import parse_product, symmetric_clip, transit_mask
 ROOT = Path(__file__).resolve().parents[1]
 
 
-def test_spoc_seismic_inventory_is_complete_and_verified():
-    inventory = json.loads(
+def load_inventory():
+    return json.loads(
         (ROOT / "outputs" / "asteroseismic_input_inventory.json").read_text()
     )
+
+
+def test_spoc_seismic_inventory_metadata_is_complete():
+    inventory = load_inventory()
     products = inventory["products"]
     assert inventory["includes_tpf"] is True
     assert len(products) == 18
     assert {row["product_type"] for row in products} == {"lc", "tpf"}
     assert {row["sector"] for row in products} == {37, 63, 64, 90, 99, 100}
+    assert all(len(row["sha256"]) == 64 for row in products)
+    assert all(row["size_bytes"] > 0 for row in products)
+
+
+@pytest.mark.integration
+def test_downloaded_spoc_seismic_files_match_inventory():
+    inventory = load_inventory()
+    products = inventory["products"]
     for row in products:
         path = ROOT / row["relative_path"]
         assert path.is_file()

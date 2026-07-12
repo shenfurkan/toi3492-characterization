@@ -69,6 +69,14 @@ def test_required_machine_readable_outputs_exist():
         "outputs/cadence_independent_depth_check.json",
         "outputs/toi3492_20s_sector_depths.csv",
         "outputs/tess_source_localization_120s.json",
+        "outputs/transit_fit_robust_120s.json",
+        "outputs/transit_fit_robust_20s.json",
+        "outputs/robust_density_comparison.json",
+        "outputs/phase_curve_search_120s.json",
+        "outputs/source_specific_aperture_check.json",
+        "outputs/stellar_sed_posterior.json",
+        "outputs/dilution_corrected_transit_params.json",
+        "data/stellar_photometry.json",
         "toi3492_characterization.tex",
         "toi3492_characterization.pdf",
     ]
@@ -91,6 +99,21 @@ def test_new_public_data_crosschecks():
     )
     assert localization["summary"]["n_sectors"] == 6
     assert localization["summary"]["max_difference_centroid_offset_pix"] < 1.1
+
+
+def test_new_robustness_outputs_are_not_overclaimed():
+    robust_120 = load_json("outputs/transit_fit_robust_120s.json")
+    robust_20 = load_json("outputs/transit_fit_robust_20s.json")
+    phase = load_json("outputs/phase_curve_search_120s.json")
+    dilution = load_json("outputs/dilution_corrected_transit_params.json")
+    source = load_json("outputs/source_specific_aperture_check.json")
+    assert robust_120["status"] == "robustness_fit_not_adopted"
+    assert robust_20["status"] == "robustness_fit_not_adopted"
+    assert robust_120["mcmc"]["reliable_50tau_rule"] is False
+    assert robust_20["mcmc"]["reliable_50tau_rule"] is False
+    assert phase["status"] == "unphysical_phase_harmonic_detected_systematics_limited"
+    assert dilution["adopted_dilution_treatment"]["additional_correction_applied"] is False
+    assert source["nearest_mimic_candidate_summary"]["inside_pipeline_aperture_sector_count"] == 0
 
 
 def test_release_hash_manifest():

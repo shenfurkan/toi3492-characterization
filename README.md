@@ -18,7 +18,7 @@ RV confirmation and high-resolution imaging are still needed.
 | Circular-fit a/Rs | 10.60 +/- 0.45 |
 | Impact parameter b | 0.705 +/- 0.032 |
 | Formal FPP | Not reported; current diagnostics are not a calibrated population model |
-| Key caveat | Circular photometric density is about 4.3 sigma above the catalog density |
+| Key caveat | Reference circular-density difference is about 4.3 sigma, but native-cadence robustness chains are not yet publication-converged |
 
 ## Repository Structure
 
@@ -52,7 +52,7 @@ Run from project root with Python 3.9+:
 | 3 | `scripts/transit_model_120s_corrected.py` | `config_corrected_120s.json`, chains, figures |
 | 4 | `scripts/false_positive_tests_120s.py` | Odd/even, secondary eclipse checks |
 | 5 | `scripts/gaia_contamination_check.py` | Gaia DR3 neighbor census |
-| 6 | `scripts/dilution_robustness.py` | CROWDSAP/ExoFOP dilution corrections |
+| 6 | `scripts/dilution_robustness.py` | Residual-dilution sensitivity; no second CROWDSAP correction |
 | 7 | `scripts/tess_source_localization_120s.py` | Difference-image centroid check |
 | 8 | `scripts/spoc_dv_extract.py` | SPOC DV product parsing |
 | 9 | `scripts/statistical_validation.py` | Non-probabilistic vetting summary |
@@ -76,6 +76,10 @@ python scripts/audit_science_consistency.py
 The publication gate is `python -m pytest -q`.  The audit script provides a
 human-readable summary; the tests enforce schemas, equations, chain/output
 consistency, manuscript claims, and required release artifacts.
+
+Raw SPOC FITS files are re-downloadable and intentionally excluded from the
+release ZIP. After downloading them, verify their sizes and hashes separately
+with `python -m pytest -q -m integration -o addopts=""`.
 
 ## Dependencies
 

@@ -10,6 +10,7 @@ from science import (
     photometric_density_solar,
     transit_duration_hours,
 )
+from transit_fit_robust import ar1_transform, q_to_u, u_to_q
 
 
 PERIOD = 9.2224171
@@ -47,3 +48,21 @@ def test_eccentric_geometry_reduces_to_circular():
 def test_eccentric_impact_parameter_mapping():
     expected = 0.5 / 9.0 * (1.0 + 0.3) / (1.0 - 0.3**2)
     assert np.isclose(eccentric_cosi(9.0, 0.5, 0.3, 90.0), expected)
+
+
+def test_limb_darkening_parameterization_round_trip():
+    u1, u2 = 0.39, 0.15
+    q1, q2 = u_to_q(u1, u2)
+    recovered = q_to_u(q1, q2)
+    assert np.allclose(recovered, [u1, u2])
+    assert 0.0 < q1 < 1.0
+    assert 0.0 < q2 < 1.0
+
+
+def test_ar1_transform_resets_across_gaps():
+    values = np.array([1.0, 2.0, 10.0, 12.0])
+    transformed = ar1_transform(values, np.array([True, False, True]), 0.5)
+    scale = np.sqrt(1.0 - 0.5**2)
+    assert np.isclose(transformed[1], (2.0 - 0.5) / scale)
+    assert transformed[2] == 10.0
+    assert np.isclose(transformed[3], (12.0 - 5.0) / scale)
