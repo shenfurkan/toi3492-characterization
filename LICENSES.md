@@ -7,17 +7,22 @@ The source code in `scripts/` and `tests/` is released under the MIT License in
 
 ## Manuscript, Figures, and Documentation
 
-The MIT software license does not automatically license the manuscript,
-figures, or narrative documentation. Copyright remains with the named author
-unless a separate publication or repository record assigns a content license.
-Before public deposit, the author should select and record the intended content
-license, commonly CC BY 4.0 for an openly reusable research compendium.
+Copyright (c) 2026 Furkan Sen. The original manuscript, original figures, and
+narrative documentation in this release are licensed under the Creative
+Commons Attribution 4.0 International License (CC BY 4.0):
+https://creativecommons.org/licenses/by/4.0/
+
+This license permits sharing and adaptation for any purpose, provided that
+appropriate credit is given, a link to the license is supplied, and changes are
+indicated. It does not replace the MIT license that applies to the software or
+the terms that apply to upstream data and third-party material.
 
 ## Derived Tables and Catalog Excerpts
 
-The release contains derived measurements and limited factual catalog fields.
-No ownership is asserted over underlying mission or catalog data. Users must
-follow the terms and acknowledgement requirements of the originating archives.
+Original derived measurements and tables created for this release are licensed
+under CC BY 4.0. No ownership is asserted over underlying mission or catalog
+data or factual catalog fields. Users must follow the terms and acknowledgement
+requirements of the originating archives.
 
 ## Upstream Data
 
@@ -29,5 +34,6 @@ follow the terms and acknowledgement requirements of the originating archives.
 Large raw TESS files are not redistributed in the compact archive. Their MAST
 identifiers, sizes, and SHA-256 hashes are provided for verification.
 
-This file clarifies artifact classes; it does not replace any upstream license
-or data-use policy.
+The CC BY 4.0 grant applies only to original release content for which the named
+author holds the rights. This file does not replace any upstream license or
+data-use policy.

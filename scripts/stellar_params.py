@@ -85,7 +85,7 @@ rho_err = rho_star_sun * np.sqrt((m_star_e / m_star) ** 2 + (3 * r_star_e / r_st
 print(f"\n  Stellar density: {rho_star_sun:.3f} +/- {rho_err:.3f} rho_sun")
 print(f"                    = {rho_star_cgs/1000:.2f} +/- {rho_err*rho_star_cgs/1000/rho_star_sun:.2f} g/cm^3")
 
-print("\nComputing limb darkening coefficients via ExoMol LDTk...")
+print("\nComputing limb-darkening coefficients via LDTk PHOENIX intensities...")
 print("  (First run downloads ~23MB of stellar model grids; subsequent runs use cache.)")
 
 try:
@@ -103,7 +103,7 @@ try:
     u2 = float(coeffs[0, 1])
     u1_err = float(coeffs_err[0, 0])
     u2_err = float(coeffs_err[0, 1])
-    ldc_source = "ExoMol LDTk (Claret 2016/2017 PHOENIX models, TESS bandpass)"
+    ldc_source = "LDTk PHOENIX specific-intensity library (Husser et al. 2013), TESS bandpass"
     print(f"  u1 = {u1:.6f} +/- {u1_err:.6f}")
     print(f"  u2 = {u2:.6f} +/- {u2_err:.6f}")
 except Exception as e:

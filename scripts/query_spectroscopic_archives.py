@@ -9,6 +9,7 @@ catalog failure does not stop the others.
 """
 import json
 import warnings
+from datetime import datetime, timezone
 from pathlib import Path
 
 import numpy as np
@@ -32,14 +33,15 @@ results = {
     "target": "TOI-3492.01 / TIC 81077799 / HD 96519",
     "coordinates": {"ra_deg": ra, "dec_deg": dec},
     "search_radius_arcsec": SEARCH_RADIUS,
-    "tic_v8_reference": metadata["official_stellar_parameters"],
+    "retrieved_utc": datetime.now(timezone.utc).isoformat(),
+    "tic_v8_reference": metadata["stellar"],
     "queries": {},
 }
 
-tic_teff = metadata["official_stellar_parameters"]["teff_k"]
-tic_logg = metadata["official_stellar_parameters"]["logg"]
-tic_teff_err = metadata["official_stellar_parameters"]["teff_err_k"]
-tic_logg_err = metadata["official_stellar_parameters"]["logg_err"]
+tic_teff = metadata["stellar"]["teff_k"]
+tic_logg = metadata["stellar"]["logg"]
+tic_teff_err = metadata["stellar"]["teff_error_k"]
+tic_logg_err = metadata["stellar"]["logg_error"]
 
 print(f"Target: RA={ra:.6f} deg  Dec={dec:.6f} deg")
 print(f"TIC v8: Teff={tic_teff:.0f}+/-{tic_teff_err:.0f} K  logg={tic_logg:.4f}+/-{tic_logg_err:.4f}")
@@ -52,6 +54,7 @@ print("=" * 60)
 print("Querying APOGEE DR17 (SDSS SkyServer) ...")
 try:
     from astroquery.sdss import SDSS
+    SDSS.TIMEOUT = 30
 
     # Try cone-search approach first (more reliable than raw SQL)
     apogee_tbl = SDSS.query_region(
@@ -112,6 +115,7 @@ try:
     from astroquery.vizier import Vizier
 
     Vizier.ROW_LIMIT = -1
+    Vizier.TIMEOUT = 30
     coord_lamost = SkyCoord(ra=ra, dec=dec, unit="deg")
 
     lamost_tables = Vizier.query_region(
@@ -169,6 +173,7 @@ try:
     from astroquery.vizier import Vizier
 
     Vizier.ROW_LIMIT = -1
+    Vizier.TIMEOUT = 30
     coord_galah = SkyCoord(ra=ra, dec=dec, unit="deg")
 
     galah_tables = Vizier.query_region(
@@ -221,6 +226,7 @@ try:
     from astroquery.vizier import Vizier
 
     Vizier.ROW_LIMIT = -1
+    Vizier.TIMEOUT = 30
     coord_rave = SkyCoord(ra=ra, dec=dec, unit="deg")
 
     rave_tables = Vizier.query_region(
@@ -288,7 +294,14 @@ for catalog_key, catalog_label in [
     ("rave_dr6", "RAVE DR6"),
 ]:
     q = results["queries"].get(catalog_key, {})
-    if q.get("status") != "success" or not q.get("rows"):
+    if q.get("status") == "failed":
+        comparison["archives"].append({
+            "catalog": catalog_label,
+            "status": "query_failed",
+            "error": q.get("error"),
+        })
+        continue
+    if q.get("status") == "empty" or not q.get("rows"):
         comparison["archives"].append({"catalog": catalog_label, "status": "no_match"})
         continue
     best = q["rows"][0]
@@ -329,10 +342,8 @@ for mc in matched_catalogs:
 results["a_rstar_implication"] = {
     "tic_density_logg": tic_logg,
     "tic_density_a_rs_prediction": 7.69,
-    "fitted_a_rs": 9.209,
-    "if_logg_4_0": "At logg=4.0 (dwarf), rho would be ~0.54 rho_sun, a/Rs prediction ~5.7 — worse.",
-    "if_logg_3_5": "At logg=3.5 (more evolved), rho would be ~0.023 rho_sun, a/Rs prediction ~10.9 — closer.",
-    "conclusion": "If archive logg is LOWER than 3.71, the tension REDUCES. If HIGHER, tension INCREASES.",
+    "fitted_a_rs": 10.60,
+    "conclusion": "No archive-based density inference is made unless a query returns a usable matched spectrum with documented quality.",
 }
 
 OUT.write_text(json.dumps(results, indent=2))
@@ -396,17 +407,19 @@ if matched_catalogs:
     best_teff_diffs = [abs(mc.get("teff_diff_from_tic", 0)) for mc in matched_catalogs if mc.get("teff_diff_from_tic") is not None]
     best_logg_diffs = [abs(mc.get("logg_diff_from_tic", 0)) for mc in matched_catalogs if mc.get("logg_diff_from_tic") is not None]
 else:
-    md_lines.append("**No spectroscopic archives had a match for this target within 5 arcsec.**")
+    successful_empty = [
+        a["catalog"] for a in comparison["archives"] if a.get("status") == "no_match"
+    ]
+    failed = [
+        a["catalog"] for a in comparison["archives"] if a.get("status") == "query_failed"
+    ]
+    md_lines.append("**No usable archival spectroscopic match was adopted.**")
     md_lines.append("")
-    md_lines.append("This is a significant finding in itself:")
-    md_lines.append("- TIC 81077799 (HD 96519, F7IV/V, V~8.5) has **never been observed** by any major spectroscopic survey.")
-    md_lines.append("- **LAMOST DR10**: Northern-hemisphere survey (Dec > -10 deg typical) — target at Dec = -53.7 deg is outside primary footprint.")
-    md_lines.append("- **APOGEE DR17**: Targets primarily red giants in specific fields — this F-type subgiant was not in any APOGEE field.")
-    md_lines.append("- **GALAH DR3**: Southern survey but limited to ~1 million stars — this target was not included.")
-    md_lines.append("- **RAVE DR6**: Southern survey (I < 13 mag, limited to ~450,000 stars) — no match.")
-    md_lines.append("- Therefore, the **only available stellar parameters are photometric**: TIC v8 (broadband photometry + parallax) and Gaia GSP-Phot (BP/RP spectra).")
-    md_lines.append("- The a/Rstar tension **cannot be resolved with existing public spectroscopic data** — it requires new dedicated spectroscopy.")
-    md_lines.append("- This also means TOI-3492.01 is a **genuinely uncharacterized host star** at the spectroscopic level, making our photometric characterization the first detailed analysis.")
+    if successful_empty:
+        md_lines.append("- Successful queries returning no match: " + ", ".join(successful_empty) + ".")
+    if failed:
+        md_lines.append("- Queries that failed and cannot support a no-match statement: " + ", ".join(failed) + ".")
+    md_lines.append("- Dedicated spectroscopy is still required before using independent atmospheric parameters in the analysis.")
 
 md_lines.append("")
 md_lines.append(f"Full results: `{OUT.name}`")

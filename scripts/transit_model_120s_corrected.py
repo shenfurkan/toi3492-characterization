@@ -10,7 +10,7 @@ parameters are sampled:
     * baseline
 
 Orbital period, reference epoch, eccentricity (e=0), and quadratic
-limb-darkening coefficients (LDTk / Claret 2017) are fixed.
+limb-darkening coefficients (LDTk with PHOENIX specific intensities) are fixed.
 
 No stellar-density prior is used.  The fitted a/Rs is therefore an
 independent photometric astrodensity measurement that can be compared with

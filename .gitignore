@@ -77,6 +77,8 @@ outputs/pysyd/
 # Working notes and local orchestration scripts
 docs/*.md
 docs/*.txt
+!docs/publication_process_howto.md
+!docs/potansiyel.md
 *.ps1
 scripts/*.ps1
 
@@ -100,6 +102,7 @@ figures/*.png
 # Archives and build artifacts
 arxiv_submission/
 provenance/
+toi3492_reproducible_release_v*/
 *.zip
 
 # Root files the user wants to ignore
@@ -115,3 +118,9 @@ human.txt
 references.bib
 EXOPLANET_RELEASE_ROADMAP.md
 toi3492_reproducible_release_v1.0.0.zip.sha256
+docs/publication_process_howto.md
+docs/potansiyel.md
+LICENSES.md
+LICENSES.md
+LICENSES.md
+LICENSES.md

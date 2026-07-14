@@ -5,6 +5,7 @@ from pathlib import Path
 import lightkurve as lk
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
 from astropy.timeseries import BoxLeastSquares
 
 
@@ -47,9 +48,10 @@ def robust_depth(time, flux, period, t0, duration_hr=OFFICIAL_DURATION_HR):
 
 
 def flatten_lc(lc, mode):
-    lc = lc.remove_nans().normalize().remove_outliers(sigma_upper=3, sigma_lower=10)
+    lc = lc.remove_nans()
     if mode == "none":
         return lc
+    lc = lc.normalize().remove_outliers(sigma_upper=3, sigma_lower=10)
     if mode == "fixed_1001":
         return lc.flatten(window_length=1001)
     if mode == "two_day":
@@ -98,15 +100,21 @@ def combine(lcs, mode):
 
 
 def main():
-    search = lk.search_lightcurve(TARGET, author="SPOC")
+    reference_path = ROOT / "data" / "toi3492_120s_reference.csv"
+    reference = pd.read_csv(reference_path)
     selected = []
-    for i, row in enumerate(search.table):
-        exptime = float(row.get("exptime", np.nan))
-        if abs(exptime - 120.0) > 1.0:
-            continue
-        sector = parse_sector(row.get("mission", ""))
-        print(f"Downloading 120s product: row={i}, sector={sector}")
-        selected.append({"idx": i, "sector": sector, "exptime": exptime, "lc": search[i].download()})
+    for sector, group in reference.groupby("sector", sort=True):
+        selected.append({
+            "idx": None,
+            "sector": int(sector),
+            "exptime": float(group["exptime"].median()),
+            "lc": lk.LightCurve(
+                time=group["time"].to_numpy(),
+                flux=group["flux"].to_numpy(),
+                flux_err=group["flux_err"].to_numpy(),
+            ),
+        })
+        print(f"Loaded frozen 120s reference product: sector={int(sector)}")
 
     results = {
         "official": {
@@ -116,6 +124,8 @@ def main():
             "depth_ppm": OFFICIAL_DEPTH_PPM,
             "radius_rearth": OFFICIAL_RADIUS_REARTH,
         },
+        "input": "data/toi3492_120s_reference.csv",
+        "input_note": "Frozen compact reference photometry; network regeneration is not used for this release diagnostic.",
         "products": [{"idx": x["idx"], "sector": x["sector"], "exptime": x["exptime"]} for x in selected],
         "modes": {},
     }

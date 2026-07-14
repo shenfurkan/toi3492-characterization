@@ -56,6 +56,8 @@ def test_required_machine_readable_outputs_exist():
     paths = [
         "data/official_toi_metadata.json",
         "outputs/mcmc_diagnostics_120s_corrected.json",
+        "outputs/alias_120s_results.json",
+        "outputs/spectroscopic_archives.json",
         "outputs/false_positive_tests_120s.json",
         "outputs/gaia_contamination_check.json",
         "outputs/gaia_stellar_crosscheck.json",
@@ -136,6 +138,8 @@ def test_release_hash_manifest():
     assert "EXOPLANET_RELEASE_ROADMAP.md" in manifest
     assert "outputs/gaia_dr3_neighbors.csv" in manifest
     assert "outputs/release_status.json" in manifest
+    assert "outputs/alias_120s_results.json" in manifest
+    assert "outputs/spectroscopic_archives.json" in manifest
     assert "provenance/environment.json" in manifest
     for relative, expected in manifest.items():
         digest = hashlib.sha256((ROOT / relative).read_bytes()).hexdigest()

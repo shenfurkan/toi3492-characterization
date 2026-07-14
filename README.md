@@ -107,6 +107,23 @@ with `python -m pytest -q -m integration -o addopts=""`.
   no output from it supports the release claims
 - Optional: `tess-atl` and `pysyd` for the exploratory asteroseismic extension
 
+## Citation
+
+If you use this reproducibility package or the associated manuscript, please cite:
+
+Şen, F. (2026). TOI-3492.01 Photometric Characterization: Reproducibility Package (v1.0.0). Zenodo. https://doi.org/10.5281/zenodo.21327242
+
+## Licensing
+
+- Source code in `scripts/` and `tests/`: MIT License.
+- Original manuscript, figures, narrative documentation, and original derived
+  tables: Creative Commons Attribution 4.0 International (CC BY 4.0).
+- Upstream TESS, Gaia, ExoFOP, NASA Exoplanet Archive, and catalog material:
+  original archive terms and acknowledgement requirements continue to apply.
+
+See `LICENSES.md` for the artifact-level license matrix and upstream-data
+notice.
+
 ## Asteroseismic Status
 
 The preregistered exploratory search is documented in `REVIEW_NOTES.md`.

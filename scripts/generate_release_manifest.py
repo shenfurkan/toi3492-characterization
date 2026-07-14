@@ -36,6 +36,8 @@ REQUIRED = [
     "data/stellar_photometry.json",
     "data/stellar_sed_chain.npy",
     "outputs/mcmc_diagnostics_120s_corrected.json",
+    "outputs/alias_120s_results.json",
+    "outputs/spectroscopic_archives.json",
     "outputs/false_positive_tests_120s.json",
     "outputs/gaia_contamination_check.json",
     "outputs/gaia_dr3_neighbors.csv",
