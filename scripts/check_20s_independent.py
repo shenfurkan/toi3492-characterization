@@ -83,6 +83,7 @@ def run_bls(time, flux):
     double_idx = int(np.argmin(np.abs(power.period - 2 * OFFICIAL_PERIOD)))
     return {
         "n_binned_points": int(len(time)),
+        "period_grid_spacing_days": float(periods[1] - periods[0]),
         "best_period_days": float(power.period[best]),
         "best_t0_btjd": float(power.transit_time[best]),
         "best_duration_days": float(power.duration[best]),

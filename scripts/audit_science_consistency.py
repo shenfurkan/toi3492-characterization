@@ -58,6 +58,10 @@ def main():
     dilution = load_json("outputs/dilution_corrected_transit_params.json")
     source_specific = load_json("outputs/source_specific_aperture_check.json")
     release_status = load_json("outputs/release_status.json")
+    window = load_json("outputs/transit_window_comparison.json")
+    math_audit = load_json("outputs/manuscript_math_audit.json")
+    sector_stats = load_json("outputs/sector_depth_statistics.json")
+    tic = load_json("data/tic_v8_target.json")
     assert cadence["n_points_20s"] == 310533
     assert abs(cadence["delta_20s_minus_matched_120s_robust_sigma_formal"]) < 3
     assert np.isclose(
@@ -78,6 +82,14 @@ def main():
     assert not release_status["gates"]["central_density_or_eccentricity_claim_ready"]
     assert not release_status["gates"]["statistical_validation_ready"]
     assert not release_status["gates"]["planet_confirmation_ready"]
+    assert window["status"] == "window_definition_sensitivity_not_adopted"
+    assert window["adopted_window"]["half_width_hours"] == 13.0
+    assert window["adopted_window"]["total_width_hours"] == 26.0
+    assert window["alternative_window"]["mcmc"]["reliable_50tau_rule"]
+    assert math_audit["status"] == "PASS"
+    assert np.isclose(sector_stats["chi_square"], 29.849938162158445)
+    assert tic["stellar"]["metallicity_dex"] is None
+    assert "Assumed solar metallicity" in stellar["feh_source"]
 
     print("SCIENTIFIC CONSISTENCY AND CLAIM-BOUNDARY AUDIT: PASS")
     print(f"Reference rows: {len(reference)}")
@@ -101,6 +113,15 @@ def main():
     print("Native-cadence chains: diagnostic and unconverged")
     print("Secondary eclipse coverage: phase 0.5 only; no eccentric-phase scan")
     print("Strongest supported gate: descriptive candidate preprint")
+    print(
+        "Total-width 13h window shift in Rp/Rs: "
+        f"{window['alternative_minus_adopted']['rp_rs']['in_adopted_max_68pct_half_widths']:.2f} adopted posterior half-widths"
+    )
+    print(
+        "Manuscript math inventory: "
+        f"{math_audit['inventory']['math_expression_count']} expressions, "
+        f"{math_audit['inventory']['numeric_token_count']} numeric tokens"
+    )
 
 
 if __name__ == "__main__":

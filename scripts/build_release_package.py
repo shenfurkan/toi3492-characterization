@@ -28,7 +28,7 @@ def main():
             "Run scripts/generate_release_manifest.py before packaging"
         )
     files = json.loads(manifest_path.read_text())
-    archive = ROOT / "toi3492_reproducible_release_v1.0.0.zip"
+    archive = ROOT / "toi3492_reproducible_release_v1.0.1.zip"
     with zipfile.ZipFile(archive, "w", compression=zipfile.ZIP_DEFLATED) as output:
         for relative, expected_hash in files.items():
             path = ROOT / relative

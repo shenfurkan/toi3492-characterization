@@ -124,3 +124,7 @@ LICENSES.md
 LICENSES.md
 LICENSES.md
 LICENSES.md
+
+# Keep project documentation in the repository, but outside the release ZIP.
+!docs/
+!docs/**

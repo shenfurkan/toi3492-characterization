@@ -1,3 +1,4 @@
+import argparse
 import numpy as np
 import matplotlib.pyplot as plt
 import batman
@@ -6,6 +7,19 @@ from scipy.optimize import minimize
 from utils import load_config
 import pandas as pd
 import json
+
+parser = argparse.ArgumentParser()
+parser.add_argument(
+    "--allow-nonadopted-screening",
+    action="store_true",
+    help="Run the quarantined SNR-limited timing development check",
+)
+args = parser.parse_args()
+if not args.allow_nonadopted_screening:
+    parser.error(
+        "This timing script is quarantined. Pass --allow-nonadopted-screening "
+        "only for method development; no TTV result may be adopted."
+    )
 
 print("=" * 60)
 print("Phase 3: Transit Timing Analysis on Corrected 120s Light Curve (SNR-limited)")
@@ -26,9 +40,9 @@ inc = CONFIG["transit"]["inc"]
 u1 = CONFIG["limb_darkening"]["u1"]
 u2 = CONFIG["limb_darkening"]["u2"]
 
-depth_ppm = rp_rs ** 2 * 1e6
+area_ratio_ppm = rp_rs ** 2 * 1e6
 print(f"Period: {period:.6f} d, T0: {t0_ref:.6f} BJD")
-print(f"Transit depth: {depth_ppm:.0f} ppm, a/Rs={a_rs:.2f}, inc={inc:.2f}")
+print(f"Area ratio: {area_ratio_ppm:.0f} ppm, a/Rs={a_rs:.2f}, inc={inc:.2f}")
 
 print(f"\nWARNING: Individual-transit timing is SNR-limited in the 120s light curve.")
 print(f"Use the 5-year phase-folded fit (Phase 2) for robust parameters.")
@@ -109,7 +123,7 @@ ax.errorbar(epochs, oc_minutes, yerr=oc_err_minutes, fmt="o",
 ax.axhline(0, color="red", linestyle="--")
 ax.set_xlabel("Transit Epoch N")
 ax.set_ylabel("O-C (minutes)")
-ax.set_title(f"TOI-3492.01 TTV check on corrected 120s light curve ({depth_ppm:.0f} ppm)\n"
+ax.set_title(f"TOI-3492.01 TTV check on corrected 120s light curve ({area_ratio_ppm:.0f} ppm area ratio)\n"
              f"N={len(epochs)} transits, RMS={rms_oc:.0f} min - no reliable TTV detection claimed")
 ax.grid(True, alpha=0.3)
 plt.tight_layout()
@@ -120,7 +134,7 @@ result = {
     "source": "Corrected 120s SPOC reference light curve; individual timing is SNR-limited",
     "period_days": float(period),
     "t0_btjd": float(t0_ref),
-    "depth_ppm": float(depth_ppm),
+    "area_ratio_ppm": float(area_ratio_ppm),
     "n_transits_fit": int(len(epochs)),
     "oc_rms_minutes": float(rms_oc),
     "mean_uncertainty_minutes": float(mean_unc),

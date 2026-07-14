@@ -38,6 +38,18 @@ def test_circular_duration_and_density():
     assert np.isclose(density, 0.1879, atol=0.001)
 
 
+def test_photometric_density_companion_mass_correction():
+    planetary = photometric_density_solar(PERIOD, 10.60)
+    assert np.isclose(
+        photometric_density_solar(PERIOD, 10.60, mass_ratio=0.1),
+        planetary / 1.1,
+    )
+    assert np.isclose(
+        photometric_density_solar(PERIOD, 10.60, mass_ratio=1.0),
+        planetary / 2.0,
+    )
+
+
 def test_eccentric_geometry_reduces_to_circular():
     circular = eccentric_cosi(9.0, 0.5, 0.0, 237.0)
     assert np.isclose(circular, 0.5 / 9.0)

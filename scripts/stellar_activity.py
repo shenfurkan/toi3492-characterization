@@ -1,3 +1,4 @@
+import argparse
 import lightkurve as lk
 import matplotlib.pyplot as plt
 import numpy as np
@@ -5,6 +6,19 @@ import warnings
 from utils import load_config
 
 warnings.filterwarnings("ignore")
+
+parser = argparse.ArgumentParser()
+parser.add_argument(
+    "--allow-nonadopted-screening",
+    action="store_true",
+    help="Run an exploratory periodogram that cannot support a rotation claim",
+)
+args = parser.parse_args()
+if not args.allow_nonadopted_screening:
+    parser.error(
+        "This script is quarantined. Pass --allow-nonadopted-screening only "
+        "for method development; no rotation result may be adopted."
+    )
 
 print("=" * 60)
 print("Phase 4: Stellar Rotation Analysis (Multi-Sector)")
@@ -52,10 +66,9 @@ if len(detected_periods) > 0:
     mean_period = np.average(detected_periods, weights=detected_powers)
     std_period = np.sqrt(np.average((detected_periods - mean_period)**2,
                                      weights=detected_powers))
-    print(f"\nMean rotation period: {mean_period:.2f} +/- {std_period:.2f} days")
+    print(f"\nWeighted peak summary: {mean_period:.2f} +/- {std_period:.2f} days")
 else:
-    mean_period, std_period = 5.5, 1.0
-    print("\nFalling back to default period: 5.5 days")
+    raise RuntimeError("No finite exploratory periodogram peaks were produced")
 
 ref_sector_label = str(search_result[0].mission[0]) if len(search_result) > 0 else "index 0"
 print(f"\nWindow function analysis ({ref_sector_label})...")
@@ -85,10 +98,10 @@ pg_full = lc_clean.to_periodogram(method="lombscargle",
                                     minimum_period=1, maximum_period=20)
 ax2.plot(pg_full.period.value, pg_full.power.value, "k-", linewidth=1, alpha=0.5)
 ax2.axvline(mean_period, color="red", linestyle="--",
-            label=f"Prot = {mean_period:.2f} +/- {std_period:.2f} d")
+            label=f"Weighted peak = {mean_period:.2f} +/- {std_period:.2f} d")
 ax2.set_xlabel("Period (days)")
 ax2.set_ylabel("Lomb-Scargle Power")
-ax2.set_title("Multi-Sector Lomb-Scargle Periodogram")
+ax2.set_title("Exploratory Periodogram - No Rotation Detection Claimed")
 ax2.legend()
 ax2.grid(True, alpha=0.3)
 
@@ -97,8 +110,4 @@ plt.savefig("figures/toi3492_stellar_rotation.png", dpi=150)
 plt.close(fig)
 print("Saved: figures/toi3492_stellar_rotation.png")
 
-CONFIG["pipeline_status"]["stellar_activity"] = True
-from utils import save_config
-save_config(CONFIG)
-
-print("\nPhase 4 complete.\n")
+print("\nExploratory non-adopted screening complete.\n")

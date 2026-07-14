@@ -1,13 +1,14 @@
 """Corrected 120-s MCMC transit fit for TOI-3492.01.
 
 Phase-folds the reference light curve on the official TOI ephemeris and
-fits a circular analytic transit model (batman) with emcee.  Four free
+fits a circular analytic transit model (batman) with emcee.  Five free
 parameters are sampled:
 
     * rp_rs           –  planet-to-star radius ratio
     * a_rs            –  scaled semi-major axis
     * impact_parameter
     * baseline
+    * log_jitter       -  log white-noise floor
 
 Orbital period, reference epoch, eccentricity (e=0), and quadratic
 limb-darkening coefficients (LDTk with PHOENIX specific intensities) are fixed.
@@ -88,7 +89,7 @@ def load_reference():
     return time[finite], flux[finite], sector[finite]
 
 
-def phase_bin(time, flux, period, t0, limit_hr=13.0, bin_minutes=8.0):
+def phase_bin(time, flux, period, t0, half_width_hr=13.0, bin_minutes=8.0):
     """Phase-fold and median-bin the light curve.
 
     The 8-minute bin size keeps the ingress/egress resolved at 120-s
@@ -101,13 +102,15 @@ def phase_bin(time, flux, period, t0, limit_hr=13.0, bin_minutes=8.0):
     """
     phase_days = ((time - t0 + 0.5 * period) % period) - 0.5 * period
     hours = phase_days * 24.0
-    mask = np.abs(hours) < limit_hr
+    mask = np.abs(hours) < half_width_hr
     hours = hours[mask]
     phase_days = phase_days[mask]
     flux = flux[mask]
 
     bins = np.arange(
-        -limit_hr, limit_hr + bin_minutes / 60.0, bin_minutes / 60.0
+        -half_width_hr,
+        half_width_hr + bin_minutes / 60.0,
+        bin_minutes / 60.0,
     )
     centers_hr = 0.5 * (bins[:-1] + bins[1:])
     centers_days = centers_hr / 24.0

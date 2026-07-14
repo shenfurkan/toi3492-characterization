@@ -18,7 +18,7 @@ RV confirmation and high-resolution imaging are still needed.
 | Circular-fit a/Rs | 10.60 +/- 0.45 |
 | Impact parameter b | 0.705 +/- 0.032 |
 | Formal FPP | Not reported; current diagnostics are not a calibrated population model |
-| Key caveat | Circular transit density is about 2.6 times the catalog-model density, but native-cadence and stellar controls are incomplete; no calibrated significance is claimed |
+| Key caveat | Circular transit density is about 2.6 times the catalog-model density, but a converged total-width 13-h fit shifts Rp/Rs by 1.95 adopted posterior half-widths; no calibrated significance is claimed |
 
 ## Repository Structure
 
@@ -72,6 +72,8 @@ default test suite.
 | 18 | `scripts/asteroseismic_search.py` | Preliminary implementation of preregistered seismic diagnostics |
 | 19 | `scripts/asteroseismic_injection_recovery.py` | Sensitivity calibration showing the null is non-constraining |
 | 20 | `scripts/audit_science_consistency.py` | Offline consistency and claim-boundary audit |
+| 21 | `scripts/transit_window_comparison.py` | Converged total-width 13-h sensitivity fit; not adopted |
+| 22 | `scripts/audit_manuscript_math.py` | Line-by-line mathematical inventory and source-value recalculation |
 
 `scripts/ttv_analysis.py`, `scripts/stellar_activity.py`, and
 `scripts/triceratops_validation.py` are retained for provenance but are not
@@ -86,6 +88,7 @@ The machine-readable current claim gate is `outputs/release_status.json`.
 
 ```bash
 python scripts/audit_science_consistency.py
+python scripts/audit_manuscript_math.py
 ```
 
 The publication gate is `python -m pytest -q`. The audit script provides a
@@ -111,7 +114,7 @@ with `python -m pytest -q -m integration -o addopts=""`.
 
 If you use this reproducibility package or the associated manuscript, please cite:
 
-Şen, F. (2026). TOI-3492.01 Photometric Characterization: Reproducibility Package (v1.0.0). Zenodo. https://doi.org/10.5281/zenodo.21327242
+Şen, F. (2026). TOI-3492.01 Photometric Characterization: Reproducibility Package (v1.0.1). The Zenodo DOI must be added after the corrected package is deposited; no DOI is claimed in this draft.
 
 ## Licensing
 

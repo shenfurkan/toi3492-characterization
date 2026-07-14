@@ -31,8 +31,11 @@ def main():
         "search_estimates": estimates,
         "global_fits": global_fit,
         "interpretation": (
-            "Neither the search estimates nor the global fits reproduce a common "
-            "numax and dnu in two independent blocks. S90 alone is insufficient."
+            "No candidate passes all preregistered detection gates. The S63+64 "
+            "and S99+100 search-stage estimates lie near the circular-density "
+            "scaling, but their global fits are mutually inconsistent and the "
+            "signals fail the required reduction, false-alarm, and replication "
+            "controls."
         ),
         "limitations": [
             "One iteration is an initial cross-check, not an uncertainty analysis.",

@@ -32,14 +32,18 @@ def load_reference():
     return time[finite], flux[finite], sector[finite]
 
 
-def phase_bin(time, flux, period, t0, limit_hr=13.0, bin_minutes=8.0):
+def phase_bin(time, flux, period, t0, half_width_hr=13.0, bin_minutes=8.0):
     phase_days = ((time - t0 + 0.5 * period) % period) - 0.5 * period
     hours = phase_days * 24.0
-    mask = np.abs(hours) < limit_hr
+    mask = np.abs(hours) < half_width_hr
     hours = hours[mask]
     phase_days = phase_days[mask]
     flux = flux[mask]
-    bins = np.arange(-limit_hr, limit_hr + bin_minutes / 60.0, bin_minutes / 60.0)
+    bins = np.arange(
+        -half_width_hr,
+        half_width_hr + bin_minutes / 60.0,
+        bin_minutes / 60.0,
+    )
     centers_hr = 0.5 * (bins[:-1] + bins[1:])
     centers_days = centers_hr / 24.0
     med = np.full_like(centers_days, np.nan, dtype=float)
@@ -194,7 +198,7 @@ def main():
     print(f"e         = {ecc:.4f} +{hi[4]-ecc:.4f} -{ecc-lo[4]:.4f}")
     print(f"omega     = {omega:.1f} deg +{hi[5]-omega:.1f} -{omega-lo[5]:.1f}")
     print(f"Incl      = {inc:.2f} deg")
-    print(f"Depth     = {rp**2 * 1e6:.0f} ppm")
+    print(f"Area ratio = {rp**2 * 1e6:.0f} ppm")
     print(f"Duration  = {duration_hours(rp, ar, b, ecc, omega):.2f} h")
     ar_diff = ar - ar_prior
     ar_sigma_tot = np.sqrt(np.std(ar_samples)**2 + ar_sigma**2)
@@ -230,7 +234,7 @@ def main():
         "omega_deg_p16": float(lo[5]),
         "omega_deg_p84": float(hi[5]),
         "inclination_deg": inc,
-        "depth_ppm": float(rp**2 * 1e6),
+        "area_ratio_ppm": float(rp**2 * 1e6),
         "duration_hrs": duration_hours(rp, ar, b, ecc, omega),
         "rp_earth": rp_re,
         "ar_prior": float(ar_prior),

@@ -18,13 +18,13 @@ from transit_model_120s_corrected import (
 ROOT = Path(__file__).resolve().parent.parent
 
 
-def fit_variant(time, flux, u1, u2, initial, window_hours, bin_minutes):
+def fit_variant(time, flux, u1, u2, initial, half_width_hours, bin_minutes):
     t_bin, f_bin, e_bin, _ = phase_bin(
         time,
         flux,
         OFFICIAL_PERIOD,
         OFFICIAL_T0_BTJD,
-        limit_hr=window_hours,
+        half_width_hr=half_width_hours,
         bin_minutes=bin_minutes,
     )
 
@@ -62,12 +62,13 @@ def fit_variant(time, flux, u1, u2, initial, window_hours, bin_minutes):
     )
     if not result.success:
         raise RuntimeError(
-            f"Stability fit failed for {window_hours} h/{bin_minutes} min: "
+            f"Stability fit failed for +/-{half_width_hours} h/{bin_minutes} min: "
             f"{result.message}"
         )
     rp, a_rs, b, baseline, log_jitter = result.x
     return {
-        "window_hours": window_hours,
+        "window_half_width_hours": half_width_hours,
+        "window_total_width_hours": 2.0 * half_width_hours,
         "bin_minutes": bin_minutes,
         "n_bins": len(t_bin),
         "rp_rs": float(rp),
@@ -109,7 +110,7 @@ def main():
     reference = next(
         item
         for item in variants
-        if item["window_hours"] == 13.0 and item["bin_minutes"] == 8.0
+        if item["window_half_width_hours"] == 13.0 and item["bin_minutes"] == 8.0
     )
     for item in variants:
         item["delta_rp_rs_vs_reference"] = item["rp_rs"] - reference["rp_rs"]

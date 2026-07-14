@@ -43,8 +43,8 @@ if star is not None:
     teff_err = _safe_float(star, "e_Teff")
     logg = _safe_float(star, "logg")
     logg_err = _safe_float(star, "e_logg")
-    feh = _safe_float(star, "MH")
-    feh_err = _safe_float(star, "e_MH")
+    catalog_feh = _safe_float(star, "MH")
+    catalog_feh_err = _safe_float(star, "e_MH")
     r_star = _safe_float(star, "rad")
     r_star_err = _safe_float(star, "e_rad")
     m_star = _safe_float(star, "mass")
@@ -54,7 +54,7 @@ else:
     raise RuntimeError("No TIC target record is available")
 
 missing = []
-for name, val in [("Teff", teff), ("logg", logg), ("[Fe/H]", feh),
+for name, val in [("Teff", teff), ("logg", logg),
                    ("Rstar", r_star), ("Mstar", m_star), ("Tmag", tmag)]:
     if val is None:
         missing.append(name)
@@ -64,7 +64,17 @@ if missing:
 
 teff_e = teff_err if teff_err is not None else 100.0
 logg_e = logg_err if logg_err is not None else 0.10
-feh_e = feh_err if feh_err is not None else 0.15
+if catalog_feh is None:
+    feh = 0.0
+    feh_e = 0.15
+    feh_source = (
+        "Assumed solar metallicity with a 0.15-dex interpolation width; "
+        "TIC v8 MH is null"
+    )
+else:
+    feh = catalog_feh
+    feh_e = catalog_feh_err if catalog_feh_err is not None else 0.15
+    feh_source = "TIC v8 MH"
 r_star_e = r_star_err if r_star_err is not None else 0.05
 m_star_e = m_star_err if m_star_err is not None else 0.05
 
@@ -72,6 +82,7 @@ print(f"\nStellar Parameters:")
 print(f"  Teff  = {teff:.0f} +/- {teff_e:.0f} K")
 print(f"  log g = {logg:.2f} +/- {logg_e:.2f} dex")
 print(f"  [Fe/H] = {feh:.2f} +/- {feh_e:.2f} dex")
+print(f"           source: {feh_source}")
 print(f"  R*    = {r_star:.3f} +/- {r_star_e:.3f} Rsun")
 print(f"  M*    = {m_star:.3f} +/- {m_star_e:.3f} Msun")
 print(f"  Tmag  = {tmag:.1f}")
@@ -115,7 +126,7 @@ except Exception as e:
 CONFIG["stellar"].update({
     "teff": teff, "teff_err": teff_e,
     "logg": logg, "logg_err": logg_e,
-    "feh": feh, "feh_err": feh_e,
+    "feh": feh, "feh_err": feh_e, "feh_source": feh_source,
     "r_star": r_star, "r_star_err": r_star_e,
     "m_star": m_star, "m_star_err": m_star_e,
     "rho_star": rho_star_sun, "rho_star_err": rho_err,

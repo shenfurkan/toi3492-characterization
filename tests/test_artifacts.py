@@ -5,6 +5,9 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
+from audit_manuscript_math import build_audit
+from summarize_sector_depths import calculate_sector_statistics
+
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -79,7 +82,11 @@ def test_required_machine_readable_outputs_exist():
         "outputs/stellar_sed_posterior.json",
         "outputs/dilution_corrected_transit_params.json",
         "outputs/release_status.json",
+        "outputs/transit_window_comparison.json",
+        "outputs/manuscript_math_audit.json",
+        "outputs/sector_depth_statistics.json",
         "data/stellar_photometry.json",
+        "data/tic_v8_target.json",
         "EXOPLANET_RELEASE_ROADMAP.md",
         "toi3492_characterization.tex",
         "toi3492_characterization.pdf",
@@ -105,6 +112,72 @@ def test_new_public_data_crosschecks():
     assert localization["summary"]["max_difference_centroid_offset_pix"] < 1.1
 
 
+def test_tic_v8_provenance_and_metallicity_assumption():
+    tic = load_json("data/tic_v8_target.json")
+    config = load_json("data/config_corrected_120s.json")
+    stellar = config["stellar"]
+    assert tic["target"]["lumclass"] == "DWARF"
+    assert tic["stellar"]["metallicity_dex"] is None
+    assert np.isclose(tic["stellar"]["mass_solar"], stellar["m_star"])
+    assert np.isclose(tic["stellar"]["mass_error_solar"], stellar["m_star_err"])
+    assert "Assumed solar metallicity" in stellar["feh_source"]
+
+
+def test_sector_statistics_are_regenerated_from_csv():
+    frame = pd.read_csv(ROOT / "outputs" / "toi3492_120s_sector_depths.csv")
+    calculated = calculate_sector_statistics(frame)
+    stored = load_json("outputs/sector_depth_statistics.json")
+    for key, value in calculated.items():
+        assert np.isclose(stored[key], value), key
+    assert np.isclose(stored["chi_square"], 29.849938162158445)
+    assert np.isclose(stored["p_value"], 1.578626941110096e-05)
+
+
+def test_window_comparison_is_converged_and_nonadopted():
+    comparison = load_json("outputs/transit_window_comparison.json")
+    assert comparison["status"] == "window_definition_sensitivity_not_adopted"
+    assert comparison["adopted_window"]["half_width_hours"] == 13.0
+    assert comparison["adopted_window"]["total_width_hours"] == 26.0
+    assert comparison["adopted_window"]["n_selected_native_points"] == 12051
+    assert comparison["alternative_window"]["half_width_hours"] == 6.5
+    assert comparison["alternative_window"]["total_width_hours"] == 13.0
+    assert comparison["alternative_window"]["mcmc"]["reliable_50tau_rule"]
+    shift = comparison["alternative_minus_adopted"]["rp_rs"]
+    assert shift["in_adopted_max_68pct_half_widths"] > 1.9
+
+
+def test_manuscript_math_audit_is_current_and_passes():
+    stored = load_json("outputs/manuscript_math_audit.json")
+    calculated = build_audit()
+    assert stored["status"] == "PASS"
+    assert stored["manuscript_sha256"] == hashlib.sha256(
+        (ROOT / "toi3492_characterization.tex").read_bytes()
+    ).hexdigest()
+    assert stored["manuscript_sha256"] == calculated["manuscript_sha256"]
+    assert stored["inventory"] == calculated["inventory"]
+    display = [
+        item
+        for item in stored["inventory"]["math_expressions"]
+        if item["kind"] == "display"
+    ]
+    assert len(display) == 3
+    assert any("rho_\\star =" in item["expression"] for item in display)
+    assert all(
+        item["status"] == "PASS" for item in stored["automated_recalculations"]
+    )
+
+
+def test_nonadopted_scripts_are_quarantined():
+    activity = (ROOT / "scripts" / "stellar_activity.py").read_text()
+    density_locked = (
+        ROOT / "scripts" / "transit_model_120s_density_locked.py"
+    ).read_text()
+    timing = (ROOT / "scripts" / "ttv_analysis.py").read_text()
+    for text in (activity, density_locked, timing):
+        assert "--allow-nonadopted-screening" in text
+    assert "save_config" not in activity
+
+
 def test_new_robustness_outputs_are_not_overclaimed():
     robust_120 = load_json("outputs/transit_fit_robust_120s.json")
     robust_20 = load_json("outputs/transit_fit_robust_20s.json")
@@ -121,6 +194,9 @@ def test_new_robustness_outputs_are_not_overclaimed():
     assert dilution["adopted_dilution_treatment"]["additional_correction_applied"] is False
     assert source["nearest_mimic_candidate_summary"]["inside_pipeline_aperture_sector_count"] == 0
     assert release["strongest_supported_gate"] == "descriptive_candidate_preprint"
+    assert release["gates"]["archive_ready"] is False
+    assert release["gates"]["local_release_package_ready"] is True
+    assert release["gates"]["zenodo_deposit_verified"] is False
     assert release["gates"]["central_density_or_eccentricity_claim_ready"] is False
     assert release["gates"]["statistical_validation_ready"] is False
     assert release["gates"]["planet_confirmation_ready"] is False
@@ -139,8 +215,13 @@ def test_release_hash_manifest():
     assert "outputs/gaia_dr3_neighbors.csv" in manifest
     assert "outputs/release_status.json" in manifest
     assert "outputs/alias_120s_results.json" in manifest
+    assert "outputs/transit_window_comparison.json" in manifest
+    assert "outputs/manuscript_math_audit.json" in manifest
+    assert "outputs/sector_depth_statistics.json" in manifest
+    assert "data/tic_v8_target.json" in manifest
     assert "outputs/spectroscopic_archives.json" in manifest
     assert "provenance/environment.json" in manifest
+    assert "data/toi3492_characterization_qa.tex" not in manifest
     for relative, expected in manifest.items():
         digest = hashlib.sha256((ROOT / relative).read_bytes()).hexdigest()
         assert digest == expected, relative

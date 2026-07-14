@@ -29,7 +29,7 @@ OFFICIAL_PERIOD = 9.2224171
 OFFICIAL_PERIOD_ERR = 0.0000098
 OFFICIAL_T0 = 2459314.5211550 - 2457000.0
 OFFICIAL_T0_ERR = 0.000615
-WINDOW_HOURS = 13.0
+WINDOW_HALF_WIDTH_HOURS = 13.0
 LD_SYSTEMATIC_FLOOR = 0.05
 
 
@@ -85,8 +85,12 @@ class JointTransitLikelihood:
             (data["time"].to_numpy() - OFFICIAL_T0 + 0.5 * OFFICIAL_PERIOD)
             % OFFICIAL_PERIOD
         ) - 0.5 * OFFICIAL_PERIOD
-        selected = data.loc[np.abs(phase) < WINDOW_HOURS / 24.0].copy()
-        selected["phase"] = phase[np.abs(phase) < WINDOW_HOURS / 24.0]
+        selected = data.loc[
+            np.abs(phase) < WINDOW_HALF_WIDTH_HOURS / 24.0
+        ].copy()
+        selected["phase"] = phase[
+            np.abs(phase) < WINDOW_HALF_WIDTH_HOURS / 24.0
+        ]
         selected = selected.sort_values(["sector", "time"])
 
         self.sectors = sorted(int(value) for value in selected["sector"].unique())
@@ -333,7 +337,8 @@ def summarize(fit, samples, optimum, sampler, cadence):
         "method": "native-cadence circular joint fit; shared geometry and ephemeris; sector radius ratios, profiled linear baselines, sector jitters; fixed empirical AR(1) whitening",
         "n_points": int(sum(len(block["time"]) for block in fit.blocks)),
         "sectors": fit.sectors,
-        "window_hours": WINDOW_HOURS,
+        "window_half_width_hours": WINDOW_HALF_WIDTH_HOURS,
+        "window_total_width_hours": 2.0 * WINDOW_HALF_WIDTH_HOURS,
         "exposure_integration": {
             str(block["sector"]): {
                 "seconds": block["exposure_seconds"],

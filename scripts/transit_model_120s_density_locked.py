@@ -1,3 +1,4 @@
+import argparse
 import json
 from pathlib import Path
 
@@ -17,14 +18,18 @@ OFFICIAL_PERIOD = 9.2224171
 OFFICIAL_T0_BTJD = 2459314.5211550 - 2457000.0
 
 
-def phase_bin(time, flux, period, t0, limit_hr=13.0, bin_minutes=8.0):
+def phase_bin(time, flux, period, t0, half_width_hr=13.0, bin_minutes=8.0):
     phase_days = ((time - t0 + 0.5 * period) % period) - 0.5 * period
     hours = phase_days * 24.0
-    mask = np.abs(hours) < limit_hr
+    mask = np.abs(hours) < half_width_hr
     hours = hours[mask]
     phase_days = phase_days[mask]
     flux = flux[mask]
-    bins = np.arange(-limit_hr, limit_hr + bin_minutes / 60.0, bin_minutes / 60.0)
+    bins = np.arange(
+        -half_width_hr,
+        half_width_hr + bin_minutes / 60.0,
+        bin_minutes / 60.0,
+    )
     centers_hr = 0.5 * (bins[:-1] + bins[1:])
     centers_days = centers_hr / 24.0
     med = np.full_like(centers_days, np.nan, dtype=float)
@@ -62,6 +67,18 @@ def duration_hours(rp, ar, b):
 
 
 def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--allow-nonadopted-screening",
+        action="store_true",
+        help="Run the quarantined density-locked development model",
+    )
+    args = parser.parse_args()
+    if not args.allow_nonadopted_screening:
+        parser.error(
+            "This density-locked script is quarantined: it fixes the stellar "
+            "density and omits its uncertainty. No output may be adopted."
+        )
     config = load_config()
     s = config["stellar"]
     u1 = config["limb_darkening"]["u1"]
@@ -132,7 +149,7 @@ def main():
         "impact_parameter_err": float(b_err),
         "inc": inc,
         "inc_err": float(inc_err),
-        "depth_ppm": float(rp**2 * 1e6),
+        "area_ratio_ppm": float(rp**2 * 1e6),
         "duration_hrs": duration_hours(rp, ar, b),
         "rp_earth": rp_re,
         "rp_earth_err": rp_re_err,

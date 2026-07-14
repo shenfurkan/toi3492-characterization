@@ -44,11 +44,15 @@ def equilibrium_temperature_k(teff_k, radius_solar, semimajor_axis_au):
     )
 
 
-def photometric_density_solar(period_days, a_rs):
-    """Circular transit density in units of the Sun's mean density."""
+def photometric_density_solar(period_days, a_rs, mass_ratio=0.0):
+    """Circular stellar density in solar units for companion mass ratio q.
+
+    The usual planetary approximation is q = M_companion / M_star = 0.
+    """
     return (
         4.0 * np.pi**2 * np.asarray(a_rs) ** 3
         / (G_RSUN3_MSUN_DAY2 * np.asarray(period_days) ** 2)
+        / (1.0 + np.asarray(mass_ratio))
     )
 
 
