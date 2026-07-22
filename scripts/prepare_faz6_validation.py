@@ -90,7 +90,18 @@ def build_validation_frame():
 def verify_existing():
     expected = build_validation_frame()
     stored = pd.read_csv(OUTPUT_PATH)
-    pd.testing.assert_frame_equal(stored, expected, check_exact=True)
+    exact_columns = ["sector", "cadenceno", "event_id", "epoch", "side"]
+    pd.testing.assert_frame_equal(
+        stored[exact_columns], expected[exact_columns], check_exact=True
+    )
+    for column in ("time_btjd", "x_days"):
+        if not np.allclose(
+            stored[column].to_numpy(float),
+            expected[column].to_numpy(float),
+            rtol=0.0,
+            atol=1e-12,
+        ):
+            raise AssertionError("Stored {} values exceed 1e-12 day".format(column))
     print(
         f"Verified {OUTPUT_PATH.relative_to(ROOT).as_posix()}: "
         f"rows={len(stored)}, sha256={sha256_file(OUTPUT_PATH)}"

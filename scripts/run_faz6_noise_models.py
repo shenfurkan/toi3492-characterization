@@ -277,26 +277,30 @@ def load_analysis_inputs(protocol):
     events = phase5b.used_events(phase2)
     if len(events) != 16:
         raise RuntimeError("Phase-6 training requires exactly 16 used events")
-    expected_counts = report_mask_counts(protocol)
-    actual_counts = {
-        "raw_valid": len(raw),
-        "reference_included": len(reference),
-    }
-    if expected_counts != actual_counts:
-        raise RuntimeError(
-            "Phase-5B cadence mask counts changed: {} != {}".format(
-                actual_counts, expected_counts
-            )
-        )
+    verify_mask_contract(
+        protocol, {"raw_valid": raw, "reference_included": reference}
+    )
     return {"raw_valid": raw, "reference_included": reference}, validation, events, phase2
 
 
-def report_mask_counts(protocol):
+def verify_mask_contract(protocol, masks):
     report = load_json(ROOT / protocol["inputs"]["phase5b_report"]["relative_path"])
-    return {
-        mask_id: int(report["cadence_lineage"]["masks"][mask_id]["row_count"])
-        for mask_id in MASK_IDS
-    }
+    checks = {}
+    for mask_id, frame in masks.items():
+        expected = report["cadence_lineage"]["masks"][mask_id]
+        actual_sector_counts = {
+            str(int(sector)): int(count)
+            for sector, count in frame.groupby("sector", sort=True).size().items()
+        }
+        actual_key_hash = phase5b.cadence_map_hash(phase5b.cadence_map(frame))
+        checks[mask_id] = bool(
+            len(frame) == int(expected["row_count"])
+            and actual_sector_counts == expected["sector_counts"]
+            and actual_key_hash == expected["cadence_key_sha256"]
+        )
+    if not all(checks.values()):
+        raise RuntimeError("Phase-5B cadence mask contract failed: {}".format(checks))
+    return checks
 
 
 def event_block_sector_data(frame, sector, degree):
