@@ -1,21 +1,21 @@
 # arXiv Readiness Checklist
 
-Last synchronized: 2026-07-14 after the final mathematical, editorial, package,
-and documentation audits.
+Last synchronized: 2026-07-22. Submission is blocked until all scientific,
+AASTeX, audit, and package gates are completed.
 
-Authoritative decisions are in `../REVIEW_NOTES.md`; the machine-readable gate
-is `../outputs/release_status.json`. Local package readiness does not mean that
-a public Zenodo record or DOI has been verified.
+Authoritative remediation decisions are in `../currentproblem.md`; the
+machine-readable gate is `../outputs/release_status.json`.
 
 ## Canonical Manuscript Gate
 
 - [x] `toi3492_characterization.tex` is the sole canonical manuscript.
-- [x] `data/toi3492_characterization_qa.tex` is noncanonical and excluded.
-- [x] The canonical source completes the full PDFLaTeX/BibTeX build cycle.
-- [x] The local PDF is 22 pages with 6 figures.
-- [x] No undefined citations, undefined references, box warnings, or document
-  errors remain in the final log.
-- [x] The PDF received page-level visual and parsed-text review.
+- [x] The former QA manuscript is noncanonical, excluded, and retained only in
+  `toi3492_legacy_material_20260722.zip`.
+- [ ] Convert the canonical source to the current AASTeX class.
+- [ ] Build a new canonical PDF after the scientific values are frozen.
+- [ ] Complete the full LaTeX/BibTeX build without undefined references or
+  material layout warnings.
+- [ ] Complete page-level visual and parsed-text review of the new PDF.
 
 ## Supported Scientific Scope
 
@@ -90,7 +90,7 @@ a public Zenodo record or DOI has been verified.
 - [ ] Obtain arXiv endorsement if requested.
 - [ ] Upload `arxiv_submission.zip`, not the reproducibility ZIP.
 - [ ] Select PDFLaTeX and inspect arXiv's generated log and PDF.
-- [ ] Confirm title, author, abstract, 22-page count, six figures, references,
+- [ ] Confirm title, author, abstract, final page count, figures, references,
   and conservative candidate language.
 - [ ] Leave article DOI blank unless a journal publisher has assigned one.
 - [ ] Mention a supporting Zenodo package only after its public DOI and files

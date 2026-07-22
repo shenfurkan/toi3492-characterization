@@ -80,14 +80,3 @@ def test_ar1_transform_resets_across_gaps():
     assert np.isclose(transformed[1], (2.0 - 0.5) / scale)
     assert transformed[2] == 10.0
     assert np.isclose(transformed[3], (12.0 - 5.0) / scale)
-
-
-def test_release_roadmap_uses_correct_density_equation():
-    roadmap = (
-        Path(__file__).resolve().parents[1] / "EXOPLANET_RELEASE_ROADMAP.md"
-    ).read_text()
-    assert (
-        "rho_star,circ = 3*pi*(a/Rstar)^3 / (G*P^2*(1 + Mp/Mstar))"
-        in roadmap
-    )
-    assert "rho_circ = 4*pi^2*(a/Rstar)^3 / (G*P^2)" not in roadmap

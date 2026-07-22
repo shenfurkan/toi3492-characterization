@@ -128,3 +128,14 @@ LICENSES.md
 # Keep project documentation in the repository, but outside the release ZIP.
 !docs/
 !docs/**
+currentproblem.md
+LEGACY_ARCHIVE.md
+README.md
+docs/todo.md
+docs/reproducibility_order.md
+docs/publication_process_howto.md
+docs/publication_process_howto.md
+docs/literature_matrix.md
+docs/arxiv_checklist.md
+docs/arxiv_checklist.md
+docs/literature_matrix.md

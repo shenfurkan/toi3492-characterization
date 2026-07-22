@@ -3,7 +3,6 @@ import json
 from pathlib import Path
 
 import numpy as np
-import pytest
 
 from asteroseismic_search import parse_product, symmetric_clip, transit_mask
 
@@ -28,7 +27,6 @@ def test_spoc_seismic_inventory_metadata_is_complete():
     assert all(row["size_bytes"] > 0 for row in products)
 
 
-@pytest.mark.integration
 def test_downloaded_spoc_seismic_files_match_inventory():
     inventory = load_inventory()
     products = inventory["products"]

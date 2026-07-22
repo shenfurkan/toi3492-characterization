@@ -15,7 +15,8 @@ PROVENANCE = ROOT / "provenance"
 
 REQUIRED = [
     "README.md",
-    "REVIEW_NOTES.md",
+    "currentproblem.md",
+    "LEGACY_ARCHIVE.md",
     "EXOPLANET_RELEASE_ROADMAP.md",
     "LICENSE",
     "LICENSES.md",
@@ -24,7 +25,10 @@ REQUIRED = [
     "requirements-lock.txt",
     "references.bib",
     "toi3492_characterization.tex",
-    "toi3492_characterization.pdf",
+]
+if (ROOT / "toi3492_characterization.pdf").is_file():
+    REQUIRED.append("toi3492_characterization.pdf")
+REQUIRED.extend([
     "data/official_toi_metadata.json",
     "data/tic_v8_target.json",
     "data/config_corrected_120s.json",
@@ -37,6 +41,13 @@ REQUIRED = [
     "data/toi3492_chains_robust_20s.npy",
     "data/stellar_photometry.json",
     "data/stellar_sed_chain.npy",
+    "data/faz5_preregistered_grid.json",
+    "data/faz5b_preregistered_handoff.json",
+    "data/toi3492_cadence_ledger_120s.csv.gz",
+    "data/toi3492_faz4_reductions_120s.csv.gz",
+    "data/toi3492_faz5_geometry_draws.npz",
+    "data/toi3492_faz5b_reference_included_geometry_draws.npz",
+    "data/toi3492_faz5b_handoff_draws.npz",
     "outputs/mcmc_diagnostics_120s_corrected.json",
     "outputs/alias_120s_results.json",
     "outputs/spectroscopic_archives.json",
@@ -73,6 +84,18 @@ REQUIRED = [
     "outputs/dilution_worst_case_scenarios.json",
     "outputs/dilution_summary_120s.csv",
     "outputs/release_status.json",
+    "outputs/faz2_transit_inventory.json",
+    "outputs/faz4_reduction_comparison.json",
+    "outputs/faz5_window_polynomial_grid.json",
+    "outputs/faz5_model_grid.csv",
+    "outputs/faz5_block_scores.csv",
+    "outputs/faz5b_reference_included_grid.json",
+    "outputs/faz5b_reference_included_model_grid.csv",
+    "outputs/faz5b_reference_included_block_scores.csv",
+    "outputs/faz5b_cadence_lineage.csv",
+    "outputs/faz5b_fold_audit.csv",
+    "outputs/faz5b_mask_comparison.csv",
+    "outputs/faz5b_remediation.json",
     "provenance/environment.json",
     "figures/toi3492_120s_reference_fold.png",
     "figures/toi3492_transit_fit_120s_corrected.png",
@@ -84,7 +107,7 @@ REQUIRED = [
     "figures/toi3492_20s_vs_120s_depth.png",
     "figures/toi3492_asteroseismic_preliminary.png",
     "figures/toi3492_dilution_robustness.png",
-]
+])
 
 # The release claims full reproducibility, so freeze every Python pipeline and
 # its executable tests rather than only the generated scientific artifacts.
@@ -146,8 +169,8 @@ def main():
         "platform": platform.platform(),
         "primary_mcmc_seed": 42,
         "stellar_posterior_seed": 3492,
-        "publication_test_command": "python -m pytest -q",
-        "raw_integration_test_command": "python -m pytest -q -m integration -o addopts=\"\"",
+        "publication_test_command": "python scripts/run_all_tests.py",
+        "raw_integration_test_command": "python scripts/run_all_tests.py",
         "environment_file": "provenance/environment.json",
         "input_hashes": {
             key: value

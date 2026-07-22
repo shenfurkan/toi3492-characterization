@@ -2,7 +2,7 @@
 
 This script provides reduction and cross-method diagnostics. Its local peak
 scores are not calibrated detection probabilities; publication claims require
-the null simulations and injection/recovery gates in REVIEW_NOTES.md.
+the null simulations and injection/recovery gates in Phase 28 of currentproblem.md.
 """
 
 import json

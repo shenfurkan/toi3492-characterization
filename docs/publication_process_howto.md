@@ -1,7 +1,9 @@
 # TOI-3492.01 Publication Process How-To
 
-Last project-state synchronization: 2026-07-14. Check the linked official
-Zenodo, arXiv, and AAS guidance again immediately before publication.
+Last project-state synchronization: 2026-07-22. Publication is currently
+blocked by the scientific phases in `../currentproblem.md`. The versioned file
+names below are procedural examples from the superseded release and must be
+replaced only after a new version is assigned.
 
 This is the operator runbook for publishing the TOI-3492.01 candidate
 characterization. It covers:
@@ -17,8 +19,8 @@ journal publish different objects and assign different identifiers.
 
 ## 1. Current Release Scope
 
-The current project release is version `1.0.1` and supports, at most, a
-descriptive candidate preprint.
+No current release is ready. The working draft supports, at most, a descriptive
+candidate interpretation and fails the Phase 0 manuscript gate.
 
 The publication-safe description is:
 
@@ -37,19 +39,17 @@ The principal release files are:
 | Purpose | File |
 |---|---|
 | Canonical manuscript source | `toi3492_characterization.tex` |
-| Compiled manuscript | `toi3492_characterization.pdf` |
-| arXiv source package | `arxiv_submission.zip` |
-| Zenodo reproducibility package | `toi3492_reproducible_release_v1.0.1.zip` |
-| Whole-ZIP checksum | `toi3492_reproducible_release_v1.0.1.zip.sha256` |
+| Compiled manuscript | `toi3492_characterization.pdf` after AASTeX rebuild |
+| arXiv source package | New package to be built after final verification |
+| Zenodo reproducibility package | New version to be assigned after remediation |
+| Whole-ZIP checksum | Generate with the new reproducibility package |
 | Citation metadata | `CITATION.cff` |
 | License matrix | `LICENSES.md` |
-| Scientific decision log | `REVIEW_NOTES.md` |
+| Scientific decision log | `currentproblem.md` |
 | Machine-readable release gate | `outputs/release_status.json` |
 
-The checksum presently stored in the sidecar describes the current pre-DOI
-archive. If the DOI, license, README, manuscript, or citation metadata changes,
-the manifest, release ZIP, and sidecar must be regenerated. Never keep using an
-old checksum after changing a packaged file.
+No current package or checksum is release-ready. Generate the manifest, release
+ZIP, and sidecar only after the scientific phases and final manuscript edits.
 
 ## 2. Understand the Three Publication Objects
 
@@ -525,7 +525,8 @@ Do not upload:
 - LaTeX `.aux`, `.log`, `.out`, `.blg`, or cache files;
 - private email, endorsement codes, API tokens, or credentials;
 - local raw TESS files that the compact release intentionally excludes;
-- `data/toi3492_characterization_qa.tex`, which is noncanonical;
+- the former QA manuscript preserved only in
+  `toi3492_legacy_material_20260722.zip`, which is noncanonical;
 - obsolete outputs or unsupported-validation products outside the verified
   release ZIP.
 
@@ -744,11 +745,11 @@ Recommended values:
 - Primary category: `astro-ph.EP`.
 - Cross-list: none by default; add `astro-ph.SR` only if independently justified
   by the manuscript's stellar content and accepted by arXiv moderation.
-- Title: `TOI-3492.01: A Short-Period Giant Planet Candidate Orbiting an
-  Evolved F-type Subgiant`.
+- Title: `TOI-3492.01: Photometric Characterization of an Unvalidated and
+  Unconfirmed Transit Candidate`.
 - Author: `Furkan Şen`.
-- Comments before DOI verification: `22 pages, 6 figures; photometric
-  characterization of an unvalidated and unconfirmed transit candidate.`
+- Comments before DOI verification: use the final page and figure counts plus
+  `photometric characterization of an unvalidated and unconfirmed transit candidate`.
 - Add `reproducibility package available on Zenodo at [DOI URL]` only after the
   public DOI and downloaded package have been verified.
 - Journal reference: leave blank until there is a real journal publication.
@@ -770,8 +771,8 @@ correctly in arXiv metadata.
 8. Read the compilation log for missing files, undefined citations, and
    undefined references.
 9. Open arXiv's generated PDF and compare it with the final local PDF.
-10. Verify all six figures, bibliography, author name, availability statement,
-    22-page count, and any DOI only if it has passed the public gate.
+10. Verify all final figures, bibliography, author name, availability statement,
+    final page count, and any DOI only if it has passed the public gate.
 11. Complete metadata and preview the abstract page.
 12. Select **Submit Article** only after the preview is correct.
 
@@ -882,7 +883,7 @@ Every new Zenodo version must include:
 - a matching new SHA-256 sidecar;
 - updated `CITATION.cff`;
 - updated `outputs/release_status.json` when claim gates change;
-- updated `REVIEW_NOTES.md` explaining the change;
+- updated `currentproblem.md` explaining the decision and phase status;
 - rerun tests and clean-room verification;
 - a new Git tag matching the package version.
 

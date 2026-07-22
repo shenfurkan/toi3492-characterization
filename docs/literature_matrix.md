@@ -2,9 +2,9 @@
 
 This file tracks open-access papers used to learn methodology. The purpose is to extract structure and procedure, not copy text.
 
-Project-state note (2026-07-14): this is a literature tracker, not a source of
+Project-state note (2026-07-22): this is a literature tracker, not a source of
 canonical TOI-3492.01 values. Current results and claim gates are in
-`../toi3492_characterization.tex`, `../REVIEW_NOTES.md`, and
+`../toi3492_characterization.tex`, `../currentproblem.md`, and
 `../outputs/release_status.json`.
 
 ## Reading Questions For Every Paper

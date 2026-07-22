@@ -67,7 +67,7 @@ def main():
             extracted = Path(temporary)
             packaged.extractall(extracted)
             subprocess.run(
-                [sys.executable, "-m", "pytest", "-q"],
+                [sys.executable, "scripts/run_all_tests.py"],
                 cwd=extracted,
                 check=True,
                 timeout=240,

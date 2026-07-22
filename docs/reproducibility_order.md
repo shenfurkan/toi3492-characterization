@@ -1,26 +1,26 @@
 # TOI-3492.01 Reproducibility Order
 
-Last synchronized: 2026-07-14.
+Last synchronized: 2026-07-22.
 
-This runbook separates offline verification of the frozen `v1.0.1` release from
-network-dependent or computationally expensive regeneration. Run commands from
-the repository root with Python 3.9.x and the versions in
-`requirements-lock.txt`.
+The previous `v1.0.1` package state is superseded. Do not treat the commands or
+stored audit results below as current PASS evidence. The run order remains a
+reference for the final verification stage after `currentproblem.md` is
+completed.
 
 ## Authority and Scope
 
 - Canonical manuscript: `toi3492_characterization.tex`.
-- Adopted configuration: `data/config_corrected_120s.json`.
+- Historical diagnostic configuration: `data/config_corrected_120s.json`.
 - Machine-readable claim gate: `outputs/release_status.json`.
-- Mathematical audit: `outputs/manuscript_math_audit.json`.
-- Adopted window: `|t-Tc| < 13 h`, a 26-h total width.
-- Sensitivity window: `|t-Tc| < 6.5 h`, a 13-h total width; converged but not
-  adopted.
+- Mathematical audit: stale until regenerated for the final TeX source.
+- Active baseline/window treatment: no single adopted cell; use the 24-branch
+  Phase 5B handoff in `data/toi3492_faz5b_handoff_draws.npz`.
+- Original Phase 5 remains `FAIL`; Phase 5B is `CONDITIONAL_CONTINUE`, not a
+  retroactive pass.
 - Formal FPP: not reported.
 
-The frozen reference data and outputs are sufficient for the default offline
-tests. Raw SPOC FITS files and live catalog queries are regeneration inputs and
-are not distributed in the compact release.
+The existing reference data and outputs are remediation inputs. Raw SPOC FITS
+files and live catalog queries remain regeneration inputs.
 
 ## Fast Offline Verification
 
@@ -29,14 +29,12 @@ Run this before any regeneration:
 ```powershell
 python scripts/audit_science_consistency.py
 python scripts/audit_manuscript_math.py
+python scripts/run_faz5b_remediation.py --verify-only
 python -m pytest -q
 ```
 
-Expected results:
-
-- scientific consistency and claim-boundary audit: PASS;
-- manuscript mathematics audit: PASS, 276 expressions and 761 numeric tokens;
-- tests: 27 passed, 1 deselected.
+Do not use historical pass counts as current evidence. The command must exit
+successfully on the current source and every manifest hash must match.
 
 The deselected integration test requires the 18 re-downloadable raw SPOC
 products. If those files are present, run:
@@ -50,6 +48,20 @@ python -m pytest -q -m integration -o addopts=""
 Do not overwrite frozen release outputs casually. Regeneration can involve
 network services, stochastic chains, and substantial runtime. Preserve seeds
 and compare regenerated products with the frozen artifacts.
+
+The completed active remediation order through Phase 5B is:
+
+| Step | Command | Gate |
+|---:|---|---|
+| 1 | `python scripts/verify_faz1_inventory.py` | Phase 1 `PASS` |
+| 2 | `python scripts/verify_faz2_transit_inventory.py` | Phase 2 `PASS` |
+| 3 | `python scripts/prepare_faz3_inputs.py` then `python scripts/verify_faz3_quality_audit.py` | Phase 3 `PASS` |
+| 4 | `python scripts/run_faz4_reductions.py` | Phase 4 `CONDITIONAL_PASS` |
+| 5 | `python scripts/run_faz5_window_grid.py` | Immutable original Phase 5 `FAIL`; do not overwrite |
+| 6 | `python scripts/run_faz5b_remediation.py --verify-only` | Verify Phase 5B `CONDITIONAL_CONTINUE` without refitting |
+
+The Phase 5B producer is no-clobber. Its default fitting mode is only for a
+fresh artifact location; use `--verify-only` for the frozen result.
 
 | Step | Command | Main role | Adoption status |
 |---:|---|---|---|
@@ -83,7 +95,7 @@ Some asteroseismic cross-checks use additional `asteroseismic_*pysyd.py` helper
 scripts. Their outputs remain preliminary and do not supersede the release
 gate.
 
-## Current Adopted Result
+## Historical Diagnostic Result
 
 | Quantity | Value and interpretation |
 |---|---|
@@ -100,7 +112,8 @@ gate.
 | Density interpretation | ratio about 2.6; model conditional, not a calibrated significance |
 | Formal FPP | not reported |
 
-The alternative 13-h-total fit gives
+These values are historical diagnostic quantities, not the active native-cadence
+posterior. The alternative 13-h-total fit gives
 `Rp/Rstar=0.05567 (+0.00039/-0.00040)` and
 `a/Rstar=10.17 (+0.32/-0.29)`. Its 1.95-half-width radius-ratio shift shows
 that the adopted statistical interval does not include fit-window choice.
@@ -114,7 +127,8 @@ that the adopted statistical interval does not include fit-window choice.
 - `scripts/stellar_activity.py`: provenance only; no rotation period is adopted.
 - `scripts/triceratops_validation.py`: method development only and requires an
   explicit acknowledgement flag; no output supports a release FPP.
-- `data/toi3492_characterization_qa.tex`: noncanonical and excluded.
+- Former QA manuscript: noncanonical, excluded, and retained only in
+  `toi3492_legacy_material_20260722.zip`.
 
 ## Manuscript and Package Build
 

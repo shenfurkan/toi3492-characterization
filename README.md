@@ -1,24 +1,28 @@
-# TOI-3492.01: A Short-Period Giant Planet Candidate Orbiting an Evolved F-type Subgiant
+# TOI-3492.01: Photometric Characterization of an Unvalidated and Unconfirmed Transit Candidate
 
 An independent photometric analysis of TESS Object of Interest TOI-3492.01
-(TIC 81077799), a short-period giant-planet candidate around an evolved
-F-type subgiant star.
+(TIC 81077799). Catalog parameters are consistent with a large, evolved
+F-type target, but the source and planetary nature of the signal are unconfirmed.
 
-**Status:** Photometric-only candidate characterization.  
-RV confirmation and high-resolution imaging are still needed.
+**Status:** Scientific remediation in progress. The object remains unvalidated
+and unconfirmed; source localization, RVs, and high-resolution imaging are still
+needed.
 
 ## Quick Summary
 
 | Quantity | Value |
 |---:|---|
 | Period | 9.2224171 d (official TOI) |
-| Rp/Rs | 0.05472 +/- 0.00049 |
-| Mid-transit model depth | 3094 ppm |
-| Rp | 15.47 +/- 0.66 Rearth (1.38 Rjup) |
-| Circular-fit a/Rs | 10.60 +/- 0.45 |
-| Impact parameter b | 0.705 +/- 0.032 |
+| Rp/Rs | 0.05472 +/- 0.00049 (diagnostic folded reference model) |
+| Mid-transit model depth | 3094 ppm (same conditional reference model) |
+| Rp | 15.47 +/- 0.66 Rearth only if planetary, on the catalog target, and under the adopted stellar/dilution assumptions |
+| Circular-fit a/Rs | 10.60 +/- 0.45 (diagnostic reference model) |
+| Impact parameter b | 0.705 +/- 0.032 (diagnostic reference model) |
 | Formal FPP | Not reported; current diagnostics are not a calibrated population model |
 | Key caveat | Circular transit density is about 2.6 times the catalog-model density, but a converged total-width 13-h fit shifts Rp/Rs by 1.95 adopted posterior half-widths; no calibrated significance is claimed |
+
+These intervals are not final native-cadence system parameters. The active
+problem list and quantitative acceptance gates are in `currentproblem.md`.
 
 ## Repository Structure
 
@@ -33,7 +37,7 @@ RV confirmation and high-resolution imaging are still needed.
 │   ├── audit_science_consistency.py  # Comprehensive verification
 │   ├── transit_model_120s_corrected.py  # MCMC transit fit
 │   └── ...              # Full pipeline (see below)
-├── figures/             # 14 diagnostic plots
+├── figures/             # Active manuscript and diagnostic plots
 ├── outputs/             # JSON/CSV results from each pipeline step
 └── docs/                # Methodology notes and checklists
 ```
@@ -46,9 +50,9 @@ release practices are documented in `EXOPLANET_RELEASE_ROADMAP.md`.
 
 ## Pipeline and Status
 
-Run from project root with Python 3.9.x. The frozen release is audited offline;
-network scripts are regeneration utilities rather than prerequisites for the
-default test suite.
+Run from project root with Python 3.9.x. Existing outputs are a remediation
+baseline rather than a release-ready final analysis; network scripts are
+regeneration utilities.
 
 | Stage | Script | Status and product |
 |---:|---|---|
@@ -75,6 +79,17 @@ default test suite.
 | 21 | `scripts/transit_window_comparison.py` | Converged total-width 13-h sensitivity fit; not adopted |
 | 22 | `scripts/audit_manuscript_math.py` | Line-by-line mathematical inventory and source-value recalculation |
 
+Active remediation phases supersede the historical stage numbering above:
+
+| Phase | Script | Current gate |
+|---:|---|---|
+| 1 | `scripts/verify_faz1_inventory.py` | `PASS`; 18/18 local LC/TPF products and cadence ledgers verified |
+| 2 | `scripts/verify_faz2_transit_inventory.py` | `PASS`; 18 expected windows classified, 16 usable events |
+| 3 | `scripts/verify_faz3_quality_audit.py` | `PASS`; quality, telemetry, CBV, and control-star audit |
+| 4 | `scripts/run_faz4_reductions.py` | `CONDITIONAL_PASS`; accepted reduction dispersion retained separately |
+| 5 | `scripts/run_faz5_window_grid.py` | Original preregistered result remains `FAIL` |
+| 5B | `scripts/run_faz5b_remediation.py` | `CONDITIONAL_CONTINUE`; 24 discrete mask/window/polynomial branches handed to Phase 6 |
+
 `scripts/ttv_analysis.py`, `scripts/stellar_activity.py`, and
 `scripts/triceratops_validation.py` are retained for provenance but are not
 active adopted pipeline steps. Their old claims are unsupported: timing is
@@ -89,22 +104,24 @@ The machine-readable current claim gate is `outputs/release_status.json`.
 ```bash
 python scripts/audit_science_consistency.py
 python scripts/audit_manuscript_math.py
+python scripts/run_faz5b_remediation.py --verify-only
+python -m pytest -q
 ```
 
-The publication gate is `python -m pytest -q`. The audit script provides a
-human-readable consistency summary; tests enforce selected equations,
+`python scripts/run_all_tests.py` is a thin wrapper around the same pytest suite.
+The audit scripts provide human-readable consistency summaries; tests enforce selected equations,
 chain/output consistency, claim-boundary statuses, manifest hashes, and
 required artifacts. They are not a substitute for peer review or independent
 scientific reproduction.
 
 Raw SPOC FITS files are re-downloadable and intentionally excluded from the
 release ZIP. After downloading them, verify their sizes and hashes separately
-with `python -m pytest -q -m integration -o addopts=""`.
+with the integration-test command documented in `docs/reproducibility_order.md`.
 
 ## Dependencies
 
 - Python 3.9.13 and the versions pinned in `requirements-lock.txt`
-- Core: `numpy`, `scipy`, `pandas`, `matplotlib`, `corner`, `pytest`
+- Core: `numpy`, `scipy`, `pandas`, `matplotlib`, `corner`
 - Astronomy: `astropy`, `lightkurve`, `astroquery`, `batman-package`, `emcee`, `ldtk`
 - Optional: `triceratops` only for explicitly non-adopted method development;
   no output from it supports the release claims
@@ -129,7 +146,8 @@ notice.
 
 ## Asteroseismic Status
 
-The preregistered exploratory search is documented in `REVIEW_NOTES.md`.
+The current complete-or-remove decision for the exploratory search is documented
+in Phase 28 of `currentproblem.md`.
 Neither the local search nor the independent pySYD block analysis found a
 replicated seismic solution, so no asteroseismic measurement is adopted in the
 manuscript. The non-detection is not constraining at the expected few-ppm mode

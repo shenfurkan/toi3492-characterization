@@ -7,40 +7,44 @@ tracking, and clearly separated historical records for the TOI-3492.01 project.
 
 When documents disagree, use this order:
 
-1. `../toi3492_characterization.tex` and its compiled PDF for manuscript text.
-2. `../outputs/release_status.json` for machine-readable claim and release gates.
-3. `../outputs/manuscript_math_audit.json` for the bound mathematical audit.
-4. `../REVIEW_NOTES.md` for the detailed review history and decisions.
-5. `../EXOPLANET_RELEASE_ROADMAP.md` for reusable release standards.
-6. Active documents in this directory for procedures and supporting notes.
+1. `../currentproblem.md` for the active problem list, claim matrix, and phase gates.
+2. `../toi3492_characterization.tex` for the current, not-yet-final manuscript text.
+3. `../outputs/release_status.json` for machine-readable claim gates.
+4. `../EXOPLANET_RELEASE_ROADMAP.md` for reusable release standards.
+5. Active documents in this directory for procedures and supporting notes.
 
-Files under `archive/` are historical and never override current sources.
-`../data/toi3492_characterization_qa.tex` is noncanonical and excluded from
-public packages.
+Historical drafts and the former noncanonical QA source were consolidated into
+`../toi3492_legacy_material_20260722.zip`. They never override current sources;
+see `../LEGACY_ARCHIVE.md`.
 
 ## Current Verified State
 
-Last synchronized: 2026-07-14.
+Last synchronized: 2026-07-22.
 
 | Item | Current state |
 |---|---|
-| Release version | `v1.0.1` |
-| Canonical PDF | 22 pages, 6 figures |
-| Strongest supported gate | `descriptive_candidate_preprint` |
-| Scientific audit | PASS |
-| Mathematical audit | PASS, 276 expressions and 761 numeric tokens |
-| Default tests | 27 passed, 1 deselected |
-| Adopted fit window | +/-13 h, 26 h total |
-| Sensitivity fit window | +/-6.5 h, 13 h total; converged and nonadopted |
-| Window sensitivity | `Rp/Rstar` shift of 1.95 adopted posterior half-widths |
+| State | Scientific remediation in progress |
+| Active plan | 26 problems and 31 phases in `currentproblem.md` |
+| Canonical source | Existing article draft; AASTeX conversion pending |
+| Canonical PDF | Removed as superseded; rebuild after scientific values freeze |
+| Strongest supported wording | Descriptive, unvalidated, unconfirmed candidate |
+| Phase 0 claim gate | FAIL; unsafe and incomplete claims remain in the draft |
+| Phases 1-3 | PASS |
+| Phase 4 | CONDITIONAL_PASS; reduction systematic propagated |
+| Original Phase 5 | FAIL; retained-model median coverage gate failed |
+| Phase 5B | CONDITIONAL_CONTINUE; 24 discrete mask/window/polynomial branches handed to Phase 6 |
+| Scientific audit | Stale; rerun after remediation |
+| Mathematical audit | Stale; recorded TeX hash does not match the current source |
+| Default tests | Full pytest suite: 57/57 passed |
+| Active baseline/window treatment | No single adopted cell; discrete Phase 5B nuisance handoff |
+| Cadence-mask treatment | 102562 raw-valid and 102502 historical-reference branches, weight 0.5 each |
 | Formal FPP | Not reported |
 | Confirmation status | Unvalidated and unconfirmed candidate; no RV mass |
 | Public DOI | None verified or claimed |
 
-The local reproducibility package is
-`../toi3492_reproducible_release_v1.0.1.zip`. Its adjacent `.sha256` sidecar is
-the checksum authority. Local package readiness does not imply that a Zenodo or
-other public archive deposit has been published or verified.
+No current reproducibility or arXiv package is release-ready. New packages must
+be built only after the scientific phases, AASTeX conversion, audits, and tests
+are complete.
 
 ## Active Documents
 
@@ -58,9 +62,9 @@ other public archive deposit has been published or verified.
 
 ## Historical Documents
 
-See `archive/README.md`. Historical documents preserve old values and claims
-as provenance, but their commands and scientific interpretations are not
-current.
+See `../LEGACY_ARCHIVE.md`. Historical documents preserve old values and claims
+inside one noncanonical ZIP, but their commands and scientific interpretations
+are not current.
 
 ## Core Verification Commands
 
@@ -75,6 +79,6 @@ python scripts/build_arxiv_package.py
 python scripts/build_release_package.py
 ```
 
-Expected default verification results are the values in the table above. Any
-change to a manifest-listed file invalidates the existing manifest, release
-ZIP, and checksum sidecar until they are rebuilt.
+These commands are final verification steps, not publication-ready claims. The
+manifest was regenerated for the Phase 5B source snapshot; any subsequent
+scientific or manuscript change invalidates it until regeneration and testing.
