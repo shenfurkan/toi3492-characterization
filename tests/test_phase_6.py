@@ -16,6 +16,7 @@ import faz6_noise_core as core
 import faz6_residual_diagnostics as diagnostics
 import run_faz6_joint_diagnostics as joint
 import run_faz6_noise_models as phase6
+import run_faz6r as remediation
 
 
 def load_json(relative_path):
@@ -183,6 +184,24 @@ def test_residual_diagnostics_are_gap_aware_and_json_ready():
     assert min(periods) >= 20.0
     assert max(periods) <= 360.0
     json.dumps(result, allow_nan=False)
+
+
+def test_phase6r_gradient_is_diagnostic_not_a_stationarity_gate():
+    values = {
+        "all_starts_finite": True,
+        "all_starts_moved": True,
+        "all_starts_improved": True,
+        "objective_spread": remediation.OBJECTIVE_SPREAD_MAX,
+        "unit_parameter_spread": remediation.PARAMETER_SPREAD_MAX,
+        "minimum_bound_distance": remediation.BOUND_DISTANCE_MIN,
+        "validator_objective_difference": remediation.VALIDATOR_OBJECTIVE_DIFFERENCE_MAX,
+        "validator_unit_parameter_difference": remediation.VALIDATOR_PARAMETER_DIFFERENCE_MAX,
+        "maximum_projected_gradient": 1e6,
+        "maximum_gradient_step_difference": 1e6,
+    }
+    assert remediation.stationarity_gate(values)
+    values["validator_objective_difference"] = 2.0 * remediation.VALIDATOR_OBJECTIVE_DIFFERENCE_MAX
+    assert not remediation.stationarity_gate(values)
 
 
 def test_predictive_mixture_uses_log_density_mixture_and_sector_only_se(protocol):

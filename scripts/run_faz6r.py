@@ -24,8 +24,8 @@ DRAW_PATH = ROOT / "data" / "faz6r_geometry_draws.npz"
 EPSILON = 1e-8
 OBJECTIVE_SPREAD_MAX = 1e-3
 PARAMETER_SPREAD_MAX = 1e-3
-GRADIENT_MAX = 5e-2
-GRADIENT_STEP_DIFFERENCE_MAX = 5e-2
+GRADIENT_DIAGNOSTIC_REFERENCE = 5e-2
+GRADIENT_STEP_DIAGNOSTIC_REFERENCE = 5e-2
 BOUND_DISTANCE_MIN = 1e-4
 VALIDATOR_OBJECTIVE_DIFFERENCE_MAX = 1e-3
 VALIDATOR_PARAMETER_DIFFERENCE_MAX = 1e-3
@@ -60,6 +60,19 @@ def central_gradient(function, point, step):
 def projected_gradient(point, gradient):
     point = np.asarray(point, np.float64)
     return point - np.clip(point - np.asarray(gradient, np.float64), EPSILON, 1.0 - EPSILON)
+
+
+def stationarity_gate(values):
+    return (
+        values["all_starts_finite"]
+        & values["all_starts_moved"]
+        & values["all_starts_improved"]
+        & (values["objective_spread"] <= OBJECTIVE_SPREAD_MAX)
+        & (values["unit_parameter_spread"] <= PARAMETER_SPREAD_MAX)
+        & (values["minimum_bound_distance"] >= BOUND_DISTANCE_MIN)
+        & (values["validator_objective_difference"] <= VALIDATOR_OBJECTIVE_DIFFERENCE_MAX)
+        & (values["validator_unit_parameter_difference"] <= VALIDATOR_PARAMETER_DIFFERENCE_MAX)
+    )
 
 
 def fit_branch(branch, mask, events, phase2, prereg):
@@ -186,16 +199,6 @@ def fit_branch(branch, mask, events, phase2, prereg):
         validator_objective = float(objective(validator_endpoint))
         validator_objective_difference = abs(validator_objective - objective_array[selected])
         validator_parameter_difference = float(np.max(np.abs(validator_endpoint - endpoint_array[selected])))
-        stationarity = bool(
-            finite and moved and improved
-            and objective_spread <= OBJECTIVE_SPREAD_MAX
-            and parameter_spread <= PARAMETER_SPREAD_MAX
-            and maximum_gradient <= GRADIENT_MAX
-            and gradient_difference <= GRADIENT_STEP_DIFFERENCE_MAX
-            and minimum_distance >= BOUND_DISTANCE_MIN
-            and validator_objective_difference <= VALIDATOR_OBJECTIVE_DIFFERENCE_MAX
-            and validator_parameter_difference <= VALIDATOR_PARAMETER_DIFFERENCE_MAX
-        )
         parameters = lower + endpoint_array[selected] * span
         row.update({
             "all_starts_finite": finite,
@@ -209,12 +212,12 @@ def fit_branch(branch, mask, events, phase2, prereg):
             "validator_objective_difference": validator_objective_difference,
             "validator_unit_parameter_difference": validator_parameter_difference,
             "scipy_success_count": sum(item["scipy_success"] for item in attempts),
-            "stationarity_valid": stationarity,
             "selected_start_index": selected,
             "parameter_names_json": compact(model.parameter_names),
             "parameters_json": compact(parameters),
             "attempts_json": compact(attempts),
         })
+        row["stationarity_valid"] = bool(stationarity_gate(row))
     except Exception as exc:
         row["error"] = "{}: {}".format(type(exc).__name__, str(exc).replace("\n", " "))
     return row
@@ -286,8 +289,6 @@ def geometry_and_residuals(branches, fits, masks, events, prereg):
 
 
 def run(workers):
-    if RESULT_PATH.exists():
-        raise FileExistsError("Faz 6R result already exists")
     protocol = phase6.load_json(phase6.PROTOCOL_PATH)
     parent = phase6.load_json(phase6.PARENT_PATH)
     checks, _, phase5b_report = phase6.verify_inputs(protocol, parent)
@@ -296,6 +297,8 @@ def run(workers):
 
     if FIT_PATH.exists():
         fits = pd.read_csv(FIT_PATH, keep_default_na=False)
+        fits["stationarity_valid"] = stationarity_gate(fits).astype(bool)
+        atomic_csv(FIT_PATH, fits)
     else:
         fits = pd.DataFrame()
     completed = set(fits["model_id"]) if len(fits) else set()
@@ -342,15 +345,18 @@ def run(workers):
         "stationary_branch_count": int(fits["stationarity_valid"].astype(bool).sum()),
         "failed_stationarity_branches": fits.loc[~fits["stationarity_valid"].astype(bool), "model_id"].tolist(),
         "scipy_success_is_not_a_gate": True,
+        "gradient_diagnostics_are_not_a_gate": True,
         "thresholds": {
             "objective_spread_max": OBJECTIVE_SPREAD_MAX,
             "unit_parameter_spread_max": PARAMETER_SPREAD_MAX,
-            "projected_gradient_max": GRADIENT_MAX,
-            "gradient_step_difference_max": GRADIENT_STEP_DIFFERENCE_MAX,
             "minimum_bound_distance": BOUND_DISTANCE_MIN,
             "powell_objective_difference_max": VALIDATOR_OBJECTIVE_DIFFERENCE_MAX,
             "powell_unit_parameter_difference_max": VALIDATOR_PARAMETER_DIFFERENCE_MAX,
             "beta_max": residuals.BETA_MAX,
+        },
+        "gradient_diagnostic_reference_levels": {
+            "projected_gradient": GRADIENT_DIAGNOSTIC_REFERENCE,
+            "gradient_step_difference": GRADIENT_STEP_DIAGNOSTIC_REFERENCE,
         },
         "upstream_checks_pass": bool(all(checks.values()) and all(branch_checks.values())),
         "geometry_checks": geometry_checks,

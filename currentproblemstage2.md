@@ -1427,3 +1427,39 @@ Yeni hesaplamadan önce kullanıcıya tek sayfalık, anlaşılır bir Faz 6R yö
 Kullanıcı bu özeti açıkça onaylamadan yeni protokol “dondurulmuş” sayılmayacak,
 Colab/yerel gerçek-data hesabı çalıştırılmayacak ve Yol A/B kararı
 kesinleştirilmeyecektir.
+
+### 21.5 Onay sonrası Faz 6R sonucu
+
+Kullanıcı yöntem özetini onayladıktan sonra aynı Faz-6 V2 K0 white+jitter
+modeli, aynı 24 Faz-5B dalı ve dal başına aynı üç başlangıçla gerçek-data Faz
+6R çalışması dört yerel CPU worker kullanılarak tamamlandı. Yeni bir gürültü
+modeli, dal elemesi, seed araması veya bilimsel fallback uygulanmadı.
+
+İlk ara değerlendirmede iki-adımlı finite-difference gradient tanısı yanlışlıkla
+stationarity kapısına dahil edilmişti. Bu, çalışma öncesinde açıklanan “gradient
+tanısal; esas kabul üç başlangıç ve bağımsız Powell uzlaşmasıdır” kuralıyla
+çeliştiği için bilimsel sonuç olarak benimsenmedi. Eşik sonuç lehine
+değiştirilmedi: gradient değerleri CSV'de tanı olarak korundu, kapı önceden
+açıklanan sekiz kontrole döndürüldü ve bu ayrımı sabitleyen regresyon testi
+eklendi.
+
+Yetkili Faz 6R sonucu:
+
+- stationarity: `24/24 PASS`;
+- pozitif-tanımlı tam-rank geometri Hessianı ve Laplace draw desteği: `24/24 PASS`;
+- beta desteği: kayıtlı altı zaman ölçeğinin tamamında mevcut;
+- ağırlıklı beta değerleri: `1.13844`, `1.22621`, `1.29361`, `1.28827`,
+  `1.22785`, `1.19004` (`20`, `40`, `80`, `160`, `320`, `360` dakika);
+- maksimum ağırlıklı beta: `1.2936064512125263`;
+- önceden kayıtlı beta üst sınırı: `1.2`;
+- nihai durum: `FAIL_RESIDUAL_CORRELATION`;
+- Faz 7: kapalı.
+
+Bu sonuç, eski V2 line-search/stationarity problemini sayısal olarak giderir;
+ancak değişmeden korunan K0 white+jitter modelinin transit-zaman ölçeğindeki
+residual korelasyonu yeterince açıklamadığını gösterir. Stop kuralları gereği
+Faz 6R PASS ilan edilmez, yeni bir eşik veya sonuç-sonrası model aranmaz ve proje
+Yol B'nin dar, fiziksel iddiaları ihtiyatlı candidate-assessment kapsamına döner.
+Yetkili sonuç `outputs/faz6r_result.json`, dal checkpointi
+`outputs/faz6r_joint_fits.csv` ve geometri drawları
+`data/faz6r_geometry_draws.npz` içindedir.
