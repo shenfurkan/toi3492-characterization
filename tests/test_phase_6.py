@@ -14,6 +14,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 
 import faz6_noise_core as core
 import faz6_residual_diagnostics as diagnostics
+import run_faz6_joint_diagnostics as joint
 import run_faz6_noise_models as phase6
 
 
@@ -158,7 +159,12 @@ def test_residual_diagnostics_are_gap_aware_and_json_ready():
         residual = rng.normal(0.0, 1.0, n)
         frames.append(
             pd.DataFrame(
-                {"time_btjd": time, "residual": residual, "sector": sector}
+                {
+                    "time_btjd": time,
+                    "cadenceno": np.arange(n, dtype=np.int64),
+                    "residual": residual,
+                    "sector": sector,
+                }
             )
         )
     frame = pd.concat(frames, ignore_index=True)
@@ -239,3 +245,42 @@ def test_validation_key_producer_verifies_and_refuses_to_clobber():
     )
     assert no_clobber.returncode != 0
     assert "no-clobber" in no_clobber.stderr
+
+
+def test_completed_screening_is_frozen_and_complex_kernels_are_not_promoted(protocol):
+    checks, phase5b_report = phase6.verify_upstream(protocol)
+    phase6.verify_existing(protocol, checks, phase5b_report)
+    report = load_json("outputs/faz6_kernel_comparison.json")
+    assert report["status"] == "screening_complete_final_diagnostics_pending"
+    assert report["screening"]["completed_score_rows"] == 576
+    assert report["screening"]["invalid_score_rows"] == 0
+    assert report["screening"]["predictive_candidates_pending_joint_diagnostics"] == []
+    assert report["gate"]["phase7_may_begin"] is False
+    for comparison in report["screening"]["comparisons_against_k0"]:
+        assert comparison["strict_delta_elpd_gt_2se"] is True
+        assert comparison["exact_sign_flip_p_at_most_0p05"] is True
+        assert comparison["predictive_and_physical_gates_pass"] is False
+
+
+def test_joint_stage_contract_and_objective_are_valid_before_fit():
+    protocol = load_json("data/faz6_joint_diagnostics_protocol.json")
+    parent = load_json("data/faz6_preregistered_kernels.json")
+    checks, screening_report, phase5b_report = joint.verify_inputs(protocol, parent)
+    assert all(checks.values())
+    assert screening_report["screening"][
+        "predictive_candidates_pending_joint_diagnostics"
+    ] == []
+    branches, branch_checks = joint.load_branches(protocol, phase5b_report)
+    assert len(branches) == 24
+    assert all(branch_checks.values())
+    masks, events, _, prereg = joint.load_masks_and_model(protocol, parent)
+    branch = branches[0]
+    model = joint.build_joint_model(
+        branch, masks[branch["mask_id"]], events, prereg
+    )
+    parameters = np.concatenate(
+        [branch["geometry_initializer"], np.array([-1.0] + [0.0] * 6)]
+    )
+    assert len(model.sectors) == 6
+    assert len(model.parameter_names) == 10
+    assert np.isfinite(model.objective(parameters))

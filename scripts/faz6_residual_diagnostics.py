@@ -11,7 +11,7 @@ import pandas as pd
 from astropy.timeseries import LombScargle
 
 
-REQUIRED_COLUMNS = ("time_btjd", "residual", "sector")
+REQUIRED_COLUMNS = ("time_btjd", "cadenceno", "residual", "sector")
 CADENCE_MINUTES = 2.0
 ACF_MAX_LAG_MINUTES = 360.0
 BETA_TIMESCALES_MINUTES = (20, 40, 80, 160, 320, 360)
@@ -43,8 +43,9 @@ def validate_residual_frame(frame: pd.DataFrame) -> pd.DataFrame:
     result["residual"] = np.asarray(result["residual"], dtype=np.float64)
     if not np.all(np.isfinite(result[["time_btjd", "residual"]].to_numpy())):
         raise ValueError("time_btjd and residual must contain only finite values")
-    if result["sector"].isna().any():
-        raise ValueError("sector must not contain missing values")
+    if result[["sector", "cadenceno"]].isna().any().any():
+        raise ValueError("sector and cadenceno must not contain missing values")
+    result["cadenceno"] = np.asarray(result["cadenceno"], dtype=np.int64)
 
     result.sort_values(["sector", "time_btjd"], kind="mergesort", inplace=True)
     result.reset_index(drop=True, inplace=True)
@@ -54,24 +55,9 @@ def validate_residual_frame(frame: pd.DataFrame) -> pd.DataFrame:
                 "time_btjd must be unique and increasing within sector "
                 + str(sector)
             )
+        if np.any(np.diff(group["cadenceno"].to_numpy(np.int64)) <= 0):
+            raise ValueError("cadenceno must be unique and increasing within sector")
     return result
-
-
-def _cadence_indices(
-    time_btjd: np.ndarray,
-    cadence_minutes: float,
-    grid_tolerance: float,
-) -> np.ndarray:
-    cadence_days = cadence_minutes / _MINUTES_PER_DAY
-    grid_position = (time_btjd - time_btjd[0]) / cadence_days
-    indices = np.rint(grid_position).astype(np.int64)
-    if np.max(np.abs(grid_position - indices)) > grid_tolerance:
-        raise ValueError(
-            "Times do not lie on the requested cadence grid within tolerance"
-        )
-    if np.unique(indices).size != indices.size:
-        raise ValueError("More than one sample maps to the same cadence index")
-    return indices
 
 
 def gap_aware_residual_acf(
@@ -103,7 +89,7 @@ def gap_aware_residual_acf(
         residual = group["residual"].to_numpy(dtype=np.float64)
         residual = residual - np.mean(residual, dtype=np.float64)
         variance = np.mean(residual * residual, dtype=np.float64)
-        indices = _cadence_indices(time, cadence_minutes, grid_tolerance)
+        indices = group["cadenceno"].to_numpy(dtype=np.int64)
         positions = {int(index): position for position, index in enumerate(indices)}
 
         for lag in range(max_lag + 1):
@@ -154,16 +140,18 @@ def gap_aware_residual_acf(
 
 def _contiguous_segments(
     time_btjd: np.ndarray,
+    cadenceno: np.ndarray,
     cadence_minutes: float,
     gap_tolerance: float,
 ) -> List[np.ndarray]:
-    delta_minutes = np.diff(time_btjd) * _MINUTES_PER_DAY
-    split_at = np.flatnonzero(delta_minutes > cadence_minutes * (1.0 + gap_tolerance))
-    return list(np.split(np.arange(time_btjd.size), split_at + 1))
+    del time_btjd, cadence_minutes, gap_tolerance
+    split_at = np.flatnonzero(np.diff(cadenceno) != 1)
+    return list(np.split(np.arange(cadenceno.size), split_at + 1))
 
 
 def _sector_binned_means(
     time_btjd: np.ndarray,
+    cadenceno: np.ndarray,
     residual: np.ndarray,
     timescale_minutes: float,
     cadence_minutes: float,
@@ -171,7 +159,9 @@ def _sector_binned_means(
 ) -> Tuple[np.ndarray, np.ndarray]:
     means = []
     counts = []
-    for segment in _contiguous_segments(time_btjd, cadence_minutes, gap_tolerance):
+    for segment in _contiguous_segments(
+        time_btjd, cadenceno, cadence_minutes, gap_tolerance
+    ):
         segment_time = time_btjd[segment]
         bin_index = np.floor(
             (segment_time - segment_time[0])
@@ -219,12 +209,14 @@ def binned_rms_beta(
     rows = []
     for sector, group in clean.groupby("sector", sort=False):
         time = group["time_btjd"].to_numpy(dtype=np.float64)
+        cadenceno = group["cadenceno"].to_numpy(dtype=np.int64)
         residual = group["residual"].to_numpy(dtype=np.float64)
         residual = residual - np.mean(residual, dtype=np.float64)
         unbinned_rms = float(np.sqrt(np.mean(residual * residual)))
         for scale in scales:
             means, counts = _sector_binned_means(
                 time,
+                cadenceno,
                 residual,
                 scale,
                 cadence_minutes,
@@ -321,28 +313,36 @@ def lomb_scargle_diagnostics(
         raise ValueError("samples_per_peak and peak_count must be positive integers")
 
     clean = validate_residual_frame(frame)
-    centered = clean["residual"].to_numpy(dtype=np.float64).copy()
-    for indices in clean.groupby("sector", sort=False).indices.values():
-        centered[indices] -= np.mean(centered[indices], dtype=np.float64)
-    time = clean["time_btjd"].to_numpy(dtype=np.float64)
-    if time.size < 3 or np.ptp(time) <= 0.0 or np.all(centered == 0.0):
-        raise ValueError("At least three time-varying, non-constant samples are required")
-
     minimum_frequency = _MINUTES_PER_DAY / maximum_period
     maximum_frequency = _MINUTES_PER_DAY / minimum_period
-    frequency, power = LombScargle(
-        time,
-        centered,
-        center_data=False,
-        fit_mean=True,
-        normalization="standard",
-    ).autopower(
-        minimum_frequency=minimum_frequency,
-        maximum_frequency=maximum_frequency,
-        samples_per_peak=int(samples_per_peak),
+    groups = list(clean.groupby("sector", sort=False))
+    baselines = [np.ptp(group["time_btjd"].to_numpy(float)) for _, group in groups]
+    longest = max(baselines)
+    if longest <= 0.0:
+        raise ValueError("Each residual sector requires a positive time baseline")
+    frequency_step = 1.0 / (float(samples_per_peak) * longest)
+    frequency = np.arange(
+        minimum_frequency, maximum_frequency, frequency_step, dtype=np.float64
     )
-    frequency = np.asarray(frequency, dtype=np.float64)
-    power = np.asarray(power, dtype=np.float64)
+    if frequency.size == 0 or frequency[-1] < maximum_frequency:
+        frequency = np.r_[frequency, maximum_frequency]
+    sector_power = []
+    for _, group in groups:
+        time = group["time_btjd"].to_numpy(dtype=np.float64)
+        centered = group["residual"].to_numpy(dtype=np.float64)
+        centered -= np.mean(centered, dtype=np.float64)
+        if time.size < 3 or np.all(centered == 0.0):
+            raise ValueError("Each sector requires three non-constant residuals")
+        sector_power.append(
+            LombScargle(
+                time,
+                centered,
+                center_data=False,
+                fit_mean=True,
+                normalization="standard",
+            ).power(frequency)
+        )
+    power = np.mean(np.asarray(sector_power, dtype=np.float64), axis=0)
     period = _MINUTES_PER_DAY / frequency
     periodogram = pd.DataFrame(
         {
@@ -369,6 +369,8 @@ def lomb_scargle_diagnostics(
         "period_min_minutes": minimum_period,
         "period_max_minutes": maximum_period,
         "frequency_count": int(frequency.size),
+        "sector_count": len(groups),
+        "sector_aggregation": "equal-sector mean on a common frequency grid",
         "highest_peak_period_minutes": float(highest["period_minutes"]),
         "highest_peak_frequency_per_day": float(highest["frequency_per_day"]),
         "highest_peak_power": float(highest["power"]),

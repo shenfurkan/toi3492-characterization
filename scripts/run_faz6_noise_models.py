@@ -5,6 +5,7 @@ It does not perform the joint transit/noise fit or final residual diagnostics.
 """
 
 import argparse
+from concurrent.futures import ProcessPoolExecutor
 import hashlib
 import importlib.metadata
 import itertools
@@ -674,7 +675,7 @@ def expected_keys(models):
     }
 
 
-def run_screening(protocol, upstream_checks, report):
+def run_screening(protocol, upstream_checks, report, workers=1):
     if OUTPUT_PATH.exists():
         raise FileExistsError(
             "Phase-6 comparison JSON is no-clobber; use --verify-only"
@@ -704,12 +705,35 @@ def run_screening(protocol, upstream_checks, report):
         training_data, held_data = build_model_sector_data(
             masks[model["mask_id"]], validation, events, phase2, model
         )
-        for kernel_id, sector in pending:
-            row = score_fold(
-                model, kernel_id, sector, training_data, held_data, protocol_hash
+        if workers == 1:
+            rows = (
+                score_fold(
+                    model, kernel_id, sector, training_data, held_data, protocol_hash
+                )
+                for kernel_id, sector in pending
             )
-            scores = append_checkpoint(scores, row)
-            completed.add((model["model_id"], kernel_id, sector))
+        else:
+            executor = ProcessPoolExecutor(max_workers=workers)
+            futures = [
+                executor.submit(
+                    score_fold,
+                    model,
+                    kernel_id,
+                    sector,
+                    training_data,
+                    held_data,
+                    protocol_hash,
+                )
+                for kernel_id, sector in pending
+            ]
+            rows = (future.result() for future in futures)
+        try:
+            for (kernel_id, sector), row in zip(pending, rows):
+                scores = append_checkpoint(scores, row)
+                completed.add((model["model_id"], kernel_id, sector))
+        finally:
+            if workers != 1:
+                executor.shutdown(wait=True, cancel_futures=True)
 
     if completed != expected or len(scores) != 576:
         raise RuntimeError("LOSO checkpoint is not the exact 576-row grid")
@@ -843,13 +867,21 @@ def main():
         action="store_true",
         help="Verify upstream inputs and frozen Phase-6 artifact hashes.",
     )
+    parser.add_argument(
+        "--workers",
+        type=int,
+        default=1,
+        help="Parallel fold workers; changes scheduling only, not the frozen model.",
+    )
     args = parser.parse_args()
+    if args.workers < 1:
+        parser.error("--workers must be at least one")
     protocol = load_json(PROTOCOL_PATH)
     upstream_checks, report = verify_upstream(protocol)
     if args.verify_only:
         verify_existing(protocol, upstream_checks, report)
         return
-    run_screening(protocol, upstream_checks, report)
+    run_screening(protocol, upstream_checks, report, workers=args.workers)
 
 
 if __name__ == "__main__":
