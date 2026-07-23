@@ -91,11 +91,15 @@ outputs/*.csv
 outputs/*.npy
 outputs/*.md
 outputs/*.txt
+!outputs/release_status.json
+!outputs/wp09a_formal_sector_audit.json
+!outputs/wp09a_sector_descriptors.csv
 
 # Generated data and figures (untracked)
 data/*.json
 data/*.csv
 data/*.npy
+!data/wp09a_formal_sector_protocol.json
 figures/*.png
 *.png
 
@@ -107,6 +111,7 @@ toi3492_reproducible_release_v*/
 
 # Root files the user wants to ignore
 *.tex
+!toi3492_characterization.tex
 requirements-lock.txt
 CITATION.cff
 LICENSE
@@ -141,3 +146,5 @@ docs/arxiv_checklist.md
 docs/literature_matrix.md
 data/toi3492_faz6_k0_geometry_draws.npz
 data/toi3492_faz6_k0_geometry_draws_v2.npz
+currentproblemstage2.md
+.gitignore

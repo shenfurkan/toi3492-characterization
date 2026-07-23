@@ -1,0 +1,98 @@
+{
+  "schema_version": "1.0",
+  "as_of_date": "2026-07-23",
+  "release_version": "1.0.1",
+  "target": "TOI-3492.01 / TIC 81077799",
+  "strongest_supported_gate": "working_draft_under_scientific_remediation",
+  "gates": {
+    "archive_ready": false,
+    "local_release_package_ready": false,
+    "zenodo_deposit_verified": false,
+    "candidate_paper_ready": false,
+    "central_density_or_eccentricity_claim_ready": false,
+    "statistical_validation_ready": false,
+    "planet_confirmation_ready": false
+  },
+  "safe_claims": [
+    "A persistent transit-like signal is present in six 120-s TESS sectors.",
+    "A giant-planet-sized scale is conditional on a planetary event originating on the catalog target and on the catalog single-star assumptions.",
+    "The phase-folded transit fit is a descriptive reference, not an adopted native-cadence posterior.",
+    "A converged fit-window sensitivity comparison shows that the descriptive statistical intervals do not include window choice.",
+    "Formal sector-depth errors reject a constant-depth model, but the cause is not assigned as astrophysical.",
+    "No calibrated population false-positive probability is reported.",
+    "The object remains an unvalidated and unconfirmed candidate.",
+    "No Zenodo DOI is claimed until the corrected package deposit resolves successfully."
+  ],
+  "unsafe_claims": [
+    "The density mismatch is a calibrated 4.3-sigma discovery.",
+    "The eccentricity is measured near 0.28 or 0.31.",
+    "The transit source is formally localized to the target.",
+    "The candidate is statistically validated.",
+    "The candidate is dynamically confirmed or has a measured mass."
+  ],
+  "material_incomplete_controls": [
+    "Converged native-cadence circular and eccentric transit posteriors.",
+    "Event-level or sector-level timing-offset model.",
+    "Alternative limb-darkening atmosphere prescription.",
+    "Hierarchical sector-depth excess-scatter model.",
+    "Marginalized correlated-noise, baseline, and residual-dilution parameters.",
+    "A Phase 6 joint noise fit passing the frozen stationarity gate in all 24 branches.",
+    "A principled fit-window model or uncertainty term covering the observed window sensitivity.",
+    "Coherent passband-integrated atmosphere and isochrone posterior with mass-radius covariance.",
+    "Secondary-eclipse scan over eccentric orbital phases.",
+    "Calibrated TESS PRF source-localization likelihood and contrast curve.",
+    "Calibrated population false-positive probability.",
+    "Target-specific epoch radial velocities or equivalent dynamical evidence.",
+    "AASTeX conversion and a newly compiled canonical PDF.",
+    "Regenerated scientific and mathematical audits against the final source.",
+    "Verified Zenodo deposit and resolvable DOI for a future corrected release."
+  ],
+  "phase_0_claim_audit": {
+    "completed": true,
+    "manuscript_gate_passed": true,
+    "binding_plan": "currentproblemstage2.md",
+    "selected_path": "B_LIMITED_CANDIDATE_PAPER",
+    "current_record": "currentproblemstage2.md section 21",
+    "blocking_reasons": [
+      "A passband-integrated atmosphere and isochrone stellar posterior is not complete.",
+      "Formal sector heterogeneity has not yet been closed as WP-09A.",
+      "The transit source remains unresolved without calibrated PRF localization and external imaging.",
+      "The existing release mathematical audit and SHA-256 manifest intentionally predate the Path-B TeX rewrite."
+    ]
+  },
+  "phase_6_noise_model_audit": {
+    "completed": true,
+    "gate_status": "FAIL_STATIONARITY",
+    "screening_folds_valid": 576,
+    "screening_folds_total": 576,
+    "complex_kernel_candidates": 0,
+    "joint_stationarity_branches_valid": 22,
+    "joint_stationarity_branches_total": 24,
+    "phase_7_may_begin": false,
+    "authoritative_audit": "outputs/faz6_gate_audit.json"
+  },
+  "phase_6r_numerical_remediation": {
+    "completed": false,
+    "status": "REOPENED_FOR_METHOD_REVIEW",
+    "real_data_executed": false,
+    "phase_7_may_begin": false,
+    "selected_path": "UNDECIDED",
+    "previous_calibration_status": "DIAGNOSTIC_ONLY_NOT_USER_APPROVED",
+    "current_record": "currentproblemstage2.md section 21"
+  },
+  "wp09a_formal_sector_heterogeneity": {
+    "completed": true,
+    "status": "PASS",
+    "chi_square": 29.84993816215844,
+    "degrees_of_freedom": 5,
+    "p_value": 1.5786269411100997e-05,
+    "cause_assigned": false,
+    "authoritative_audit": "outputs/wp09a_formal_sector_audit.json"
+  },
+  "authoritative_documents": [
+    "currentproblemstage2.md",
+    "toi3492_characterization.tex",
+    "outputs/release_status.json",
+    "EXOPLANET_RELEASE_ROADMAP.md"
+  ]
+}

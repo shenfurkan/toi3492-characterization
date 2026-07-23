@@ -1,0 +1,40 @@
+{
+  "work_package": "WP-09A",
+  "frozen_utc": "2026-07-23T12:12:58.7224464Z",
+  "status": "FROZEN_BEFORE_NEW_WP09A_ARTIFACT",
+  "disclosure": {
+    "legacy_sector_statistics_already_observed": true,
+    "known_chi_square": 29.849938162158445,
+    "known_degrees_of_freedom": 5,
+    "known_p_value": 1.578626941110096e-05,
+    "not_blind": true
+  },
+  "inputs": {
+    "sector_depths": {"relative_path": "outputs/toi3492_120s_sector_depths.csv", "sha256": "137d0a73295001859a421433f619ce0a1149db9c21e86e980920b12c89dcb5c6"},
+    "phase3_inventory": {"relative_path": "outputs/faz3_input_inventory.json", "sha256": "dbd39ed6206dc1b5ff7ffe32c13e3b191b2b1c0d7a8551d9d943d4ece4c81771"},
+    "event_telemetry": {"relative_path": "outputs/faz3_event_telemetry.csv", "sha256": "8a35eb677dbb6ec1fe131b8d463feb315ec4ec15bf88f3a3aa3561a097515161"},
+    "phase4_report": {"relative_path": "outputs/faz4_reduction_comparison.json", "sha256": "f7ecb8496e1698d6e42a6921778ade0158ab2adb75ff4fb81643f46446c762c1"},
+    "producer": {"relative_path": "scripts/run_wp09a_formal_sector_audit.py", "sha256": "66d328e778c872ddc0e7267b209fafe7118f5a565e90d64b329d294355679e4e"}
+  },
+  "method": {
+    "constant_depth_estimator": "inverse-variance weighted mean using formal sector errors",
+    "chi_square": "sum((depth_i-weighted_mean)^2/error_i^2)",
+    "degrees_of_freedom": "sector_count - 1",
+    "p_value": "scipy.stats.chi2.sf",
+    "scatter_scaled_error": "formal weighted-mean error times sqrt(chi_square/dof)",
+    "descriptors": ["camera", "ccd", "optimal aperture pixel count", "CROWDSAP", "FLFRCSAP metadata", "used event count", "event-window SAP background range", "background excursion event count"]
+  },
+  "gate": {
+    "expected": {"chi_square": 29.849938162158445, "degrees_of_freedom": 5, "p_value": 1.578626941110096e-05},
+    "chi_square_absolute_tolerance": 0.01,
+    "p_value_relative_tolerance": 0.01,
+    "all_six_sectors_required": true,
+    "all_descriptors_required": true
+  },
+  "interpretation_boundary": {
+    "formal_heterogeneity_may_be_reported": true,
+    "astrophysical_variability_may_be_inferred": false,
+    "cause_assignment_requires_wp10": true,
+    "formal_and_scatter_scaled_errors_must_remain_distinct": true
+  }
+}

@@ -1345,3 +1345,85 @@ ile sınar. Geçerse tam native-cadence Yol A açılır. Geçmezse daha fazla so
 aramadan Yol B'ye geçilir ve makale mevcut kanıtın desteklediği dar aday kapsamı
 içinde tamamlanır. Faz 11, Faz 9'un formal kısmı, PRF hazırlığı, astrosismolojiyi
 çıkarma ve makale iskeleti bu karar beklenmeden paralel ilerleyebilir.
+
+## 21. Günlük uygulama kaydı: 2026-07-23
+
+### 21.1 Bugün tamamlanan işler
+
+1. Faz 6R için bir sentetik kalibrasyon denemesi yapıldı; ancak eşik formülü,
+   güvenlik katsayıları ve solver ayarları kullanıcı tarafından önceden
+   onaylanmamıştı. Bu deneme bilimsel karar olarak benimsenmedi.
+2. Karışıklık yaratmaması için bu onaysız ara denemeye ait protokol, kalibrasyon,
+   manifest, script ve test dosyaları çalışma ağacından kaldırıldı. Sonuç yalnız
+   bu günlük kaydında yöntemsel ders olarak tutulmaktadır.
+3. Kullanıcı kararıyla Faz 6R yöntem incelemesine yeniden açıldı:
+   - bilimsel yol `UNDECIDED`;
+   - Faz 7 kapalı;
+   - yeni gerçek-data Faz 6R fit sayısı sıfır;
+   - kullanıcı onayı olmadan yeni eşik, benchmark veya gerçek-data fit yok.
+5. WP-00 kapsamında canonical makale ihtiyatlı robustness/candidate-assessment
+   diline geçirildi. Yakınsamamış native-cadence aralıklar, merkezi
+   density/eccentricity iddiaları ve astrosismoloji bölümü çıkarıldı;
+   phase-folded fit `descriptive reference` olarak etiketlendi. Bu metin güvenli
+   çalışma taslağıdır; Yol B'nin kullanıcı tarafından nihai seçildiği anlamına
+   gelmez.
+6. WP-09A formal sektör heterojenliği bağımsız olarak tamamlandı ve `PASS` verdi:
+   - `chi2=29.84993816215844`;
+   - `dof=5`;
+   - `p=1.5786269411100997e-5`;
+   - formal ağırlıklı ortalama `2691.94 +/- 25.89 ppm`;
+   - scatter-scaled ortalama hatası `63.27 ppm`.
+7. WP-09A sektör tablosuna kamera, CCD, optimal aperture piksel sayısı,
+   CROWDSAP, FLFRCSAP üstverisi, kullanılan olay sayısı ve background aralığı
+   eklendi. Formal heterojenliğin nedeni astrofiziksel olarak ilan edilmedi.
+8. Canonical TeX başarıyla derlendi. Final matematik audit/release manifesti
+   bilimsel freeze olmadığı için yenilenmedi.
+9. Tam test paketi `85 passed` verdi.
+10. VS Code/Antigravity içinde `google.colab 0.8.1` eklentisi doğrulandı. Mevcut
+    Faz 6R kodu NumPy/SciPy/celerite tabanlı ve CPU ağırlıklı olduğu için bir
+    saatlik Colab GPU hakkı bu aşamada kullanılmadı; GPU ancak JAX/CuPy gibi
+    açıkça onaylanmış yöntem değişikliği veya GPU-uygun MCMC/enjeksiyon işi için
+    değerlendirilecek.
+
+### 21.2 Bugün değiştirilmeden korunan bilimsel durum
+
+- Faz 1, Faz 2 ve Faz 3 `PASS` durumundadır.
+- Faz 4 `CONDITIONAL_PASS` durumundadır.
+- Faz 5 `FAIL`, Faz 5B `CONDITIONAL_CONTINUE` durumundadır.
+- Faz 6'nın yetkili sonucu `FAIL_STATIONARITY` olarak korunmaktadır.
+- Altı sektörde kalıcı transit-benzeri sinyal vardır.
+- Sinyalin gökyüzü kaynağı, gezegensel doğası, formal FPP'si, kütlesi ve
+  eccentricity'si belirlenmemiştir.
+- “Non-candidate/elendi” sonucu desteklenmemektedir. Yayınlanabilir mevcut çerçeve,
+  kapsamlı fakat fiziksel iddiaları ihtiyatlı bir robustness ve candidate
+  assessment çalışmasıdır.
+
+### 21.3 Bugünkü stop noktası
+
+Bugün yeni gerçek-data Faz 6R çalışması başlatılmamıştır. Proje aşağıdaki karar
+noktasında güvenli biçimde durdurulmuştur:
+
+```text
+mevcut V2 sonucu
+  -> kullanıcı-onaylı olmayan sentetik kalibrasyon benimsenmedi ve ara dosyaları silindi
+  -> Faz 6R yöntem incelemesi açık
+  -> Yol A/B kararı henüz verilmedi
+  -> Faz 7 kapalı
+```
+
+### 21.4 Sonraki oturumun ilk işi
+
+Yeni hesaplamadan önce kullanıcıya tek sayfalık, anlaşılır bir Faz 6R yöntem
+özeti sunulacaktır. Özet en az şunları içerecektir:
+
+1. V2'deki iki line-search durumunun neden bilimsel mod ayrışması olmayabileceği.
+2. Aynı 24 dal ve üç başlangıcın neden korunacağı.
+3. Optimizer `success` bitinin tanısal mı kapı mı olacağı.
+4. Objective/parametre spread, gradient, Hessian, bound ve bağımsız solver
+   eşiklerinin her birinin anlamı ve sayısal değeri.
+5. Beklenen CPU süresi ve üretilecek artifactler.
+6. Geçme, başarısızlık ve stop kuralları.
+
+Kullanıcı bu özeti açıkça onaylamadan yeni protokol “dondurulmuş” sayılmayacak,
+Colab/yerel gerçek-data hesabı çalıştırılmayacak ve Yol A/B kararı
+kesinleştirilmeyecektir.

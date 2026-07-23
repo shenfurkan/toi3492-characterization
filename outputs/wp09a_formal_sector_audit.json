@@ -1,0 +1,33 @@
+{
+  "work_package": "WP-09A",
+  "status": "PASS",
+  "protocol": {
+    "relative_path": "data/wp09a_formal_sector_protocol.json",
+    "sha256": "34b8a5b02e059d2b1523be995aea661c787d70d91dea3f85ddf5137606a202e2"
+  },
+  "statistics": {
+    "weighted_mean_depth_ppm": 2691.937957061624,
+    "weighted_mean_formal_error_ppm": 25.89399474692888,
+    "chi_square": 29.84993816215844,
+    "degrees_of_freedom": 5,
+    "p_value": 1.5786269411100997e-05,
+    "formal_error_scale": 2.4433558137184375,
+    "scatter_scaled_mean_error_ppm": 63.26824260530336
+  },
+  "gate_checks": {
+    "six_sectors_exact": true,
+    "chi_square_within_absolute_tolerance": true,
+    "degrees_of_freedom_exact": true,
+    "p_value_within_relative_tolerance": true,
+    "all_descriptors_complete": true
+  },
+  "interpretation": "Formal errors reject a constant-depth model. This does not identify an astrophysical cause; camera, CCD, aperture, crowding, background, reduction, and unmodeled covariance remain possible contributors.",
+  "adoption": "FORMAL_HETEROGENEITY_ONLY",
+  "artifacts": {
+    "sector_descriptors": {
+      "relative_path": "outputs/wp09a_sector_descriptors.csv",
+      "sha256": "c72df9ce97664b0394d04cf2b8cd50dd8ed0d06e8b2962b940076e0d335fe276",
+      "row_count": 6
+    }
+  }
+}

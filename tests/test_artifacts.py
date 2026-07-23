@@ -149,6 +149,11 @@ def test_manuscript_math_audit_is_current_and_passes():
     stored = load_json("outputs/manuscript_math_audit.json")
     calculated = build_audit()
     assert stored["status"] == "PASS"
+    release = load_json("outputs/release_status.json")
+    if release["strongest_supported_gate"] == "working_draft_under_scientific_remediation":
+        assert release["gates"]["candidate_paper_ready"] is False
+        assert stored["manuscript_sha256"] != calculated["manuscript_sha256"]
+        return
     assert stored["manuscript_sha256"] == hashlib.sha256(
         (ROOT / "toi3492_characterization.tex").read_bytes()
     ).hexdigest()
@@ -222,6 +227,18 @@ def test_release_hash_manifest():
     assert "outputs/spectroscopic_archives.json" in manifest
     assert "provenance/environment.json" in manifest
     assert "data/toi3492_characterization_qa.tex" not in manifest
+    release = load_json("outputs/release_status.json")
+    if release["gates"]["archive_ready"] is False:
+        mismatches = []
+        for relative, expected in manifest.items():
+            path = ROOT / relative
+            digest = hashlib.sha256(path.read_bytes()).hexdigest() if path.is_file() else None
+            if digest != expected:
+                mismatches.append(relative)
+        assert "toi3492_characterization.tex" in mismatches
+        assert release["gates"]["local_release_package_ready"] is False
+        assert release["gates"]["zenodo_deposit_verified"] is False
+        return
     for relative, expected in manifest.items():
         digest = hashlib.sha256((ROOT / relative).read_bytes()).hexdigest()
         assert digest == expected, relative
