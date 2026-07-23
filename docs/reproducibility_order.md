@@ -59,6 +59,9 @@ The completed active remediation order through Phase 5B is:
 | 4 | `python scripts/run_faz4_reductions.py` | Phase 4 `CONDITIONAL_PASS` |
 | 5 | `python scripts/run_faz5_window_grid.py` | Immutable original Phase 5 `FAIL`; do not overwrite |
 | 6 | `python scripts/run_faz5b_remediation.py --verify-only` | Verify Phase 5B `CONDITIONAL_CONTINUE` without refitting |
+| 7 | `python scripts/run_faz6_noise_models.py --verify-only` | Verify the complete 576-fold kernel screen |
+| 8 | `python scripts/run_faz6_joint_diagnostics.py --verify-only` | Verify the V2 joint stationarity failure |
+| 9 | `python scripts/audit_faz6_gate.py --verify-only` | Verify the authoritative `FAIL_STATIONARITY` gate |
 
 The Phase 5B producer is no-clobber. Its default fitting mode is only for a
 fresh artifact location; use `--verify-only` for the frozen result.

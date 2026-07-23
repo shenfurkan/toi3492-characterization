@@ -14,8 +14,9 @@ short operational index and does not duplicate the 31 phase definitions.
 - [x] Complete Phases 1-3 raw-data, event, and quality audits.
 - [x] Complete Phase 4 reduction comparison with conditional systematic handoff.
 - [x] Preserve the original Phase 5 FAIL and complete Phase 5B remediation.
+- [x] Complete the Phase 6 kernel screen and record the joint stationarity failure.
 - [ ] Apply the Phase 0 wording corrections to the canonical manuscript.
-- [ ] Begin Phase 6 kernel comparison with all 24 Phase 5B branches.
+- [ ] Decide whether to preregister a Phase 6 numerical remediation; Phase 7 is blocked.
 
 ## Current Scientific Gate
 
@@ -31,10 +32,10 @@ unvalidated, and unconfirmed transit candidate under scientific remediation.
 
 1. Remove the uncalibrated 4.3-standard-deviation statement.
 2. Stop presenting unconverged native-cadence intervals as reportable results.
-3. Freeze the Phase 6 kernel protocol before inspecting any kernel result.
-4. Run Phase 6 over the 24 discrete cadence-mask/window/polynomial branches.
+3. Keep Phase 7 closed while Phase 6 remains `FAIL_STATIONARITY`.
+4. If Phase 6 is retried, freeze a separate optimizer-remediation protocol first.
 5. Decide whether to complete or remove the asteroseismology section.
-6. Continue in the dependency order defined by `currentproblem.md`.
+6. Continue only through dependencies not blocked by the Phase 6 gate.
 
 ## External Inputs
 

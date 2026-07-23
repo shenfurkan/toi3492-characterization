@@ -33,9 +33,10 @@ Last synchronized: 2026-07-22.
 | Phase 4 | CONDITIONAL_PASS; reduction systematic propagated |
 | Original Phase 5 | FAIL; retained-model median coverage gate failed |
 | Phase 5B | CONDITIONAL_CONTINUE; 24 discrete mask/window/polynomial branches handed to Phase 6 |
+| Phase 6 | FAIL_STATIONARITY; 576 screening folds complete, 22/24 joint branches pass the frozen stationarity gate |
 | Scientific audit | Stale; rerun after remediation |
 | Mathematical audit | Stale; recorded TeX hash does not match the current source |
-| Default tests | Full pytest suite: 57/57 passed |
+| Default tests | Full pytest suite: 69/69 passed |
 | Active baseline/window treatment | No single adopted cell; discrete Phase 5B nuisance handoff |
 | Cadence-mask treatment | 102562 raw-valid and 102502 historical-reference branches, weight 0.5 each |
 | Formal FPP | Not reported |

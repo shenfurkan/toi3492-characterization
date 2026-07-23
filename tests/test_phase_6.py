@@ -176,6 +176,12 @@ def test_residual_diagnostics_are_gap_aware_and_json_ready():
         "minimum_eligible_sectors_per_timescale"
     ] == 4
     assert result["lomb_scargle"]["summary"]["diagnostic_only"] is True
+    periods = [
+        row["period_minutes"]
+        for row in result["lomb_scargle"]["periodogram"]
+    ]
+    assert min(periods) >= 20.0
+    assert max(periods) <= 360.0
     json.dumps(result, allow_nan=False)
 
 
@@ -284,3 +290,33 @@ def test_joint_stage_contract_and_objective_are_valid_before_fit():
     assert len(model.sectors) == 6
     assert len(model.parameter_names) == 10
     assert np.isfinite(model.objective(parameters))
+
+
+def test_joint_v1_is_quarantined_and_v2_fails_only_stationarity():
+    v1 = pd.read_csv(ROOT / "outputs" / "faz6_k0_joint_fits.csv")
+    for value in v1["optimizer_attempts_json"]:
+        attempts = json.loads(value)
+        assert all(
+            np.array_equal(np.asarray(item["initial"]), np.asarray(item["final"]))
+            for item in attempts
+        )
+    protocol = load_json("data/faz6_joint_diagnostics_protocol_v2.json")
+    parent = load_json("data/faz6_preregistered_kernels.json")
+    checks, _, phase5b_report = joint.verify_inputs(protocol, parent)
+    joint.verify_existing(protocol, parent, checks, phase5b_report)
+    v2 = pd.read_csv(ROOT / "outputs" / "faz6_k0_joint_fits_v2.csv")
+    assert len(v2) == 24
+    assert np.all(v2["objective_improvement"] > 0.0)
+    assert np.all(v2["parameter_movement_norm"] > 0.0)
+    assert np.all(v2["multistart_objective_spread"] < 1e-3)
+    assert np.all(v2["multistart_unit_parameter_spread"] < 1e-3)
+    failed = set(v2.loc[~v2["valid"].astype(bool), "model_id"])
+    assert failed == {"raw_valid::W20_P0", "reference_included::W32_P2"}
+    for value in v2.loc[~v2["valid"].astype(bool), "optimizer_attempts_json"]:
+        attempts = json.loads(value)
+        assert sum(item["success"] for item in attempts) == 2
+    report = load_json("outputs/faz6_final_noise_model_v2.json")
+    assert report["joint_fit"]["valid_branch_count"] == 22
+    assert report["gate"]["phase6_pass"] is False
+    assert report["gate"]["phase7_may_begin"] is False
+    assert report["residual_diagnostics"]["weighted_max_beta"] is None

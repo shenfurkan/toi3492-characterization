@@ -212,6 +212,12 @@ def test_release_hash_manifest():
     assert "outputs/faz5b_remediation.json" in manifest
     assert "scripts/run_faz5b_remediation.py" in manifest
     assert "tests/test_phase_5b.py" in manifest
+    assert "data/faz6_preregistered_kernels.json" in manifest
+    assert "data/faz6_joint_diagnostics_protocol_v2.json" in manifest
+    assert "outputs/faz6_kernel_comparison.json" in manifest
+    assert "outputs/faz6_gate_audit.json" in manifest
+    assert "scripts/audit_faz6_gate.py" in manifest
+    assert "tests/test_phase_6.py" in manifest
     assert "data/tic_v8_target.json" in manifest
     assert "outputs/spectroscopic_archives.json" in manifest
     assert "provenance/environment.json" in manifest

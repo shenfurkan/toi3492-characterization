@@ -89,6 +89,7 @@ Active remediation phases supersede the historical stage numbering above:
 | 4 | `scripts/run_faz4_reductions.py` | `CONDITIONAL_PASS`; accepted reduction dispersion retained separately |
 | 5 | `scripts/run_faz5_window_grid.py` | Original preregistered result remains `FAIL` |
 | 5B | `scripts/run_faz5b_remediation.py` | `CONDITIONAL_CONTINUE`; 24 discrete mask/window/polynomial branches handed to Phase 6 |
+| 6 | `scripts/run_faz6_noise_models.py`, `scripts/run_faz6_joint_diagnostics.py` | `FAIL_STATIONARITY`; screening complete, Phase 7 closed |
 
 `scripts/ttv_analysis.py`, `scripts/stellar_activity.py`, and
 `scripts/triceratops_validation.py` are retained for provenance but are not

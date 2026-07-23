@@ -46,7 +46,8 @@ FIT_COLUMNS = (
     "cadence_count", "event_count", "valid", "noise_start_success",
     "noise_start_objective", "noise_start_parameters_json", "initial_objective",
     "map_objective", "objective_improvement", "parameter_movement_norm",
-    "unit_gradient_max_abs", "stationarity_valid", "optimizer_success",
+    "unit_gradient_max_abs", "multistart_objective_spread",
+    "multistart_unit_parameter_spread", "stationarity_valid", "optimizer_success",
     "selected_start_index", "optimizer_attempts_json",
     "parameter_names_json", "parameters_json", "geometry_hessian_valid",
     "geometry_hessian_json", "geometry_covariance_json",
@@ -445,6 +446,8 @@ def empty_fit_row(branch, protocol_hash):
         "noise_start_parameters_json": "[]", "initial_objective": np.nan,
         "map_objective": np.nan, "objective_improvement": np.nan,
         "parameter_movement_norm": np.nan, "unit_gradient_max_abs": np.nan,
+        "multistart_objective_spread": np.nan,
+        "multistart_unit_parameter_spread": np.nan,
         "stationarity_valid": False, "optimizer_success": False,
         "selected_start_index": -1,
         "optimizer_attempts_json": "[]", "parameter_names_json": "[]",
@@ -523,13 +526,26 @@ def fit_branch(branch, mask, events, phase2, prereg, protocol_hash):
         best, parameters, best_objective, selected_initial, movement, gradient_max = (
             results[selected]
         )
-        stationarity = bool(best.success and gradient_max <= 1e-3)
+        converged = [item for item in results if item[0].success]
+        objective_spread = float(np.ptp([item[2] for item in converged]))
+        unit_finals = np.asarray(
+            [(item[1] - lower) / span for item in converged], np.float64
+        )
+        parameter_spread = float(np.max(np.ptp(unit_finals, axis=0)))
+        stationarity = bool(
+            best.success
+            and len(converged) == 3
+            and objective_spread < 1e-3
+            and parameter_spread < 1e-3
+        )
         row.update({
             "initial_objective": objective_offset,
             "map_objective": best_objective,
             "objective_improvement": objective_offset - best_objective,
             "parameter_movement_norm": movement,
             "unit_gradient_max_abs": gradient_max,
+            "multistart_objective_spread": objective_spread,
+            "multistart_unit_parameter_spread": parameter_spread,
             "stationarity_valid": stationarity,
             "optimizer_success": stationarity,
             "selected_start_index": selected,
@@ -539,8 +555,8 @@ def fit_branch(branch, mask, events, phase2, prereg, protocol_hash):
         })
         if not stationarity:
             raise noise.NoiseModelError(
-                "Selected joint MAP failed stationarity: success={}, gradient={}".format(
-                    best.success, gradient_max
+                "Selected joint MAP failed stationarity: success={}, objective_spread={}, parameter_spread={}".format(
+                    best.success, objective_spread, parameter_spread
                 )
             )
         fixed_noise = parameters[3:].copy()
@@ -759,6 +775,7 @@ def finalize(protocol, parent, input_checks, branch_checks, branches, fits,
             "retained_kernel": "K0_white",
             "complex_kernels_rejected_by_registered_screen": True,
             "parent_screening_results_modified": False,
+            "supersedes_invalid_v1_joint_attempt": True,
         },
         "model": {
             "period_days_fixed": prereg["transit_model"]["period_days_fixed"],
@@ -783,7 +800,8 @@ def finalize(protocol, parent, input_checks, branch_checks, branches, fits,
             "all_geometry_hessians_valid": all_valid,
             "geometry_hessian_conditioning": "conditional on fixed joint noise MAP",
             "noise_start": "six-sector OOT fit_pooled_map(required_sector_count=6)",
-            "optimizer": "three fixed geometry starts, common noise start, L-BFGS-B two-point gradient",
+            "optimizer": "three fixed geometry starts, unit-hypercube scaling, objective offset, L-BFGS-B three-point gradient",
+            "stationarity_rule": "all three starts converge with objective spread below 1e-3 and maximum unit-parameter spread below 1e-3",
         },
         "residual_diagnostics": {
             "definition": protocol["residuals"]["definition"],
@@ -802,7 +820,8 @@ def finalize(protocol, parent, input_checks, branch_checks, branches, fits,
         },
         "gate": {
             "checks": {"all_24_joint_fits_valid": all_valid,
-                       "all_24_geometry_hessians_valid": all_valid,
+                        "all_24_stationarity_checks_valid": all_valid,
+                        "all_24_geometry_hessians_valid": all_valid,
                        "all_beta_timescales_eligible": beta_eligible,
                        "weighted_max_beta_at_most_1p2": beta_pass},
             "status": status, "phase6_pass": passed,
