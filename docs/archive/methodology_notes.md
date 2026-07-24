@@ -1,4 +1,9 @@
-# Methodology Notes
+# Historical Methodology Notes
+
+> Archived on 2026-07-23. This document describes a superseded analysis story in
+> which the folded/binned reference fit, density comparison, eccentric branch,
+> and asteroseismology had a more prominent role. It must not be used as current
+> claim or release authority.
 
 Last synchronized: 2026-07-14.
 

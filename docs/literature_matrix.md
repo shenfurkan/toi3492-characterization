@@ -2,10 +2,11 @@
 
 This file tracks open-access papers used to learn methodology. The purpose is to extract structure and procedure, not copy text.
 
-Project-state note (2026-07-22): this is a literature tracker, not a source of
-canonical TOI-3492.01 values. Current results and claim gates are in
-`../toi3492_characterization.tex`, `../currentproblem.md`, and
-`../outputs/release_status.json`.
+Project-state note (2026-07-23): this is a literature tracker, not a source of
+canonical TOI-3492.01 values. Scientific history and current results are in
+`../currentproblem.md`, `../currentproblemstage2.md`, and their referenced
+artifacts. `../outputs/release_status.json` is currently stale for Phase 6R and
+WP-09A.
 
 ## Reading Questions For Every Paper
 
@@ -78,9 +79,9 @@ To extract:
 | Gaia neighbor census | Complete through 120 arcsec with mimic-capable source counts | Gaia-band census is not a TESS PRF likelihood |
 | Centroid and source-localization statement | SPOC DV centroids, first-pass difference images, and source-specific aperture geometry are reported | No calibrated PRF localization or high-resolution contrast curve |
 | Sector consistency | Six-sector depths and heterogeneity statistics are reported | No hierarchical sector-depth excess-scatter model |
-| MCMC diagnostics | Adopted chain exceeds 50 autocorrelation times and raw/flat chains are bound by tests | Native-cadence robustness chains remain unconverged and nonadopted |
+| MCMC diagnostics | The folded/binned descriptive chain exceeds 50 autocorrelation times | It is not an adopted native-cadence posterior; historical native-cadence chains remain unconverged |
 | RV limitation | No mass or confirmation claim is made; dedicated RV follow-up is requested | No target-specific RV time series or orbital solution |
-| Eccentricity context | Photoeccentric relation and a prior-conditioned sensitivity branch are documented | No measured eccentricity or model selection |
+| Eccentricity context | Historical photoeccentric and prior-conditioned sensitivity calculations are preserved | They are nonadopted and do not support a measured eccentricity or model selection |
 | Statistical validation | Direct vetting measurements are reported conservatively | No calibrated population FPP is reported |
 
 Future reading should be prioritized only when it changes a method, caveat, or

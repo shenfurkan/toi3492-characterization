@@ -1,0 +1,22 @@
+{
+  "branch_count": 24,
+  "calibration_protocol": {
+    "path": "data/stage3_synthetic_calibration_protocol.json",
+    "sha256": "e9a37110a924b7c9d8be22d958d05b547849552f4ed1ba5bddd209db6634636b"
+  },
+  "expected_folds_per_realization": 144,
+  "formal_gate_emitted": false,
+  "raw_template_rows": 102562,
+  "reference_template_rows": 102502,
+  "runner": "scripts/run_stage3_synthetic_screening.py",
+  "screening_only": true,
+  "sectors": [
+    37,
+    63,
+    64,
+    90,
+    99,
+    100
+  ],
+  "workers": 1
+}

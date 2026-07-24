@@ -1,0 +1,1854 @@
+{
+  "schema_version": "1.0",
+  "work_package": "S3-02_PHASE6_POSTMORTEM",
+  "generated_utc": "2026-07-23T19:25:15.691574+00:00",
+  "status": "PASS",
+  "scope": {
+    "analysis_mode": "EXISTING_ARTIFACTS_AND_FROZEN_ENDPOINT_DIAGNOSTICS_ONLY",
+    "real_data_fit_executed": false,
+    "optimizer_calls": 0,
+    "new_random_draws": 0,
+    "threshold_changes": 0,
+    "phase_7_may_begin": false
+  },
+  "source_integrity": {
+    "stage3_manifest": "data/stage3_input_manifest.json",
+    "manifest_status": "PASS",
+    "checks": {
+      "manifest_status_pass": true,
+      "manifest_real_data_fit_closed": true,
+      "manifest_phase7_closed": true,
+      "all_used_paths_declared": true,
+      "hash_outputs_faz2_transit_inventory.json": true,
+      "hash_data_toi3492_cadence_ledger_120s.csv.gz": true,
+      "hash_data_toi3492_faz4_reductions_120s.csv.gz": true,
+      "hash_data_faz5_preregistered_grid.json": true,
+      "hash_outputs_faz5b_remediation.json": true,
+      "hash_outputs_faz5b_cadence_lineage.csv": true,
+      "hash_data_toi3492_faz5b_handoff_draws.npz": true,
+      "hash_data_faz6_preregistered_kernels.json": true,
+      "hash_data_faz6_joint_diagnostics_protocol.json": true,
+      "hash_data_faz6_joint_diagnostics_protocol_v2.json": true,
+      "hash_outputs_faz6_loso_scores.csv": true,
+      "hash_outputs_faz6_kernel_sector_mixture.csv": true,
+      "hash_outputs_faz6_kernel_comparison.json": true,
+      "hash_outputs_faz6_final_noise_model.json": true,
+      "hash_outputs_faz6_final_noise_model_v2.json": true,
+      "hash_outputs_faz6_gate_audit.json": true,
+      "hash_scripts_run_faz6r.py": true,
+      "hash_outputs_faz6r_result.json": true,
+      "hash_outputs_faz6r_joint_fits.csv": true,
+      "hash_data_faz6r_geometry_draws.npz": true
+    },
+    "sources": {
+      "outputs/faz2_transit_inventory.json": {
+        "path": "outputs/faz2_transit_inventory.json",
+        "size_bytes": 360697,
+        "sha256": "baa33f45578be3caf855fd5fbb8bd425b34c572347440150e43ae1865d1dabb4"
+      },
+      "data/toi3492_cadence_ledger_120s.csv.gz": {
+        "path": "data/toi3492_cadence_ledger_120s.csv.gz",
+        "size_bytes": 13898271,
+        "sha256": "5756337fce460d5e6d2bcc8e9fd62f53948c85d6517f842c4f028d7dd630b8b2"
+      },
+      "data/toi3492_faz4_reductions_120s.csv.gz": {
+        "path": "data/toi3492_faz4_reductions_120s.csv.gz",
+        "size_bytes": 13182053,
+        "sha256": "4d36e6888029b160055531d88542d6b0f4427710693f89181ed60abfbc06ebca"
+      },
+      "data/faz5_preregistered_grid.json": {
+        "path": "data/faz5_preregistered_grid.json",
+        "size_bytes": 4578,
+        "sha256": "5a17fe2d28f52290fd8776e74751c41d0e7f9f6cc7f611d3e0f30872546109e5"
+      },
+      "outputs/faz5b_remediation.json": {
+        "path": "outputs/faz5b_remediation.json",
+        "size_bytes": 18234,
+        "sha256": "075971b71a0598362f7abcfac65e17dffbf9ba9d8d0c5a0fda3d61dbaf63f3c4"
+      },
+      "outputs/faz5b_cadence_lineage.csv": {
+        "path": "outputs/faz5b_cadence_lineage.csv",
+        "size_bytes": 9526,
+        "sha256": "9364614d9badca81323c898cd94160ea7f45fb3fa628da141062bdbe1efe3a6b"
+      },
+      "data/toi3492_faz5b_handoff_draws.npz": {
+        "path": "data/toi3492_faz5b_handoff_draws.npz",
+        "size_bytes": 5785955,
+        "sha256": "309405de03de82632f637500c9c74383b6b35707649fc131e9b431c202cdaac1"
+      },
+      "data/faz6_preregistered_kernels.json": {
+        "path": "data/faz6_preregistered_kernels.json",
+        "size_bytes": 11110,
+        "sha256": "90685e9cfe6e48dfb0a74228c0c1590a8a8cd8895acdcd10e182a7209deb6ed1"
+      },
+      "data/faz6_joint_diagnostics_protocol.json": {
+        "path": "data/faz6_joint_diagnostics_protocol.json",
+        "size_bytes": 4439,
+        "sha256": "d1482fe4877d4174c6f8cfc2902387e81bbfed11b28433e7eeb39ffe300dc0d9"
+      },
+      "data/faz6_joint_diagnostics_protocol_v2.json": {
+        "path": "data/faz6_joint_diagnostics_protocol_v2.json",
+        "size_bytes": 6481,
+        "sha256": "59831d69b5c6670aa14dd26405d168ae0026be044dde40d928928d069d72fa79"
+      },
+      "outputs/faz6_loso_scores.csv": {
+        "path": "outputs/faz6_loso_scores.csv",
+        "size_bytes": 1416830,
+        "sha256": "7c075261c7c1f48e78c03501193fbf146ab0045cb6568b30eaef7aefffe9d7b0"
+      },
+      "outputs/faz6_kernel_sector_mixture.csv": {
+        "path": "outputs/faz6_kernel_sector_mixture.csv",
+        "size_bytes": 3424,
+        "sha256": "f52d815ccd4d20d2b211544c7cf1399cae46a6b31fe2e60fc48e0382ce688fa9"
+      },
+      "outputs/faz6_kernel_comparison.json": {
+        "path": "outputs/faz6_kernel_comparison.json",
+        "size_bytes": 7330,
+        "sha256": "b4557daba17d84fbb4340874028be94632dd6555356fb75b7288b7965b7a03cf"
+      },
+      "outputs/faz6_final_noise_model.json": {
+        "path": "outputs/faz6_final_noise_model.json",
+        "size_bytes": 10810,
+        "sha256": "0dd3d73dd4ce22806b04341d0a2b98c16c92240559710cc2f280b8e5212294ad"
+      },
+      "outputs/faz6_final_noise_model_v2.json": {
+        "path": "outputs/faz6_final_noise_model_v2.json",
+        "size_bytes": 8821,
+        "sha256": "b81da887cb4f5d7c6f3dd9d716523f409a02b34828c1a9a498bda469f8d7822e"
+      },
+      "outputs/faz6_gate_audit.json": {
+        "path": "outputs/faz6_gate_audit.json",
+        "size_bytes": 3182,
+        "sha256": "e7814bc52efcc39619a53e50b6e871dba11f9ff9abee0327d9779e51709f2dee"
+      },
+      "scripts/run_faz6r.py": {
+        "path": "scripts/run_faz6r.py",
+        "size_bytes": 16725,
+        "sha256": "f1eb186ab5b077b4080c22abc4a8a3d5e1f2241c86ef5659ca42560ffdd6f80b"
+      },
+      "outputs/faz6r_result.json": {
+        "path": "outputs/faz6r_result.json",
+        "size_bytes": 13914,
+        "sha256": "3f3f49dffeeb8e43b374cbaa7fca30eddd171995ce6bfba229dcab9fc66a0697"
+      },
+      "outputs/faz6r_joint_fits.csv": {
+        "path": "outputs/faz6r_joint_fits.csv",
+        "size_bytes": 46589,
+        "sha256": "89a668cb6e373e29bb5159084c05eb174c55cb1554c2b84a029178529be3bca6"
+      },
+      "data/faz6r_geometry_draws.npz": {
+        "path": "data/faz6r_geometry_draws.npz",
+        "size_bytes": 2895576,
+        "sha256": "3ade6bfaae6b0a7e72dc329a7da1420b08e2c99b6c4a1f676886ff050971152c"
+      },
+      "data/stage3_input_manifest.json": {
+        "path": "data/stage3_input_manifest.json",
+        "size_bytes": 17604,
+        "sha256": "85526a306f89712cdcf6f7f638521e8f048042704a4bad3dc674dfd620b3e45d"
+      }
+    }
+  },
+  "gate": {
+    "checks": {
+      "source_manifest_integrity": true,
+      "phase6_parent_input_integrity": true,
+      "phase6_branch_contract_integrity": true,
+      "screening_row_count_576": true,
+      "screening_keys_complete_unique": true,
+      "screening_rows_all_valid": true,
+      "boundary_parameter_rows_6480": true,
+      "boundary_rows_all_source_linked": true,
+      "mixture_source_rows_24": true,
+      "mask_sector_kernel_rows_18": true,
+      "mask_cadence_rows_60": true,
+      "mask_interactions_reproduce_frozen_report": true,
+      "cadence_predictive_effect_not_claimed": true,
+      "phase6r_branch_count_24": true,
+      "phase6r_sector_count_6": true,
+      "phase6r_beta_rows_864": true,
+      "phase6r_beta_rows_all_eligible": true,
+      "phase6r_residual_summary_rows_144": true,
+      "phase6r_official_beta_reproduced": true,
+      "phase6r_draw_identity_integrity": true,
+      "phase6_failure_preserved": true,
+      "phase6r_failure_preserved": true,
+      "invalid_and_empty_residual_artifacts_preserved": true,
+      "new_real_data_fit_count_zero": true,
+      "optimizer_calls_zero": true,
+      "phase7_closed": true,
+      "supported_and_unsupported_explanations_separated": true
+    },
+    "status": "PASS"
+  },
+  "boundary_analysis": {
+    "parameter_diagnostic_count": 6480,
+    "boundary_flag_count": 144,
+    "all_flags_are_upper_timescale": true,
+    "by_kernel": [
+      {
+        "kernel_id": "K0_white",
+        "parameter_diagnostic_count": 864,
+        "boundary_flag_count": 0,
+        "boundary_parameter_counts": {},
+        "boundary_side_counts": {},
+        "held_sector_counts": {},
+        "polynomial_degree_counts": {},
+        "timescale_minutes_minimum": null,
+        "timescale_minutes_maximum": null
+      },
+      {
+        "kernel_id": "K1_ou",
+        "parameter_diagnostic_count": 1872,
+        "boundary_flag_count": 87,
+        "boundary_parameter_counts": {
+          "log_timescale_minutes": 87
+        },
+        "boundary_side_counts": {
+          "upper": 87
+        },
+        "held_sector_counts": {
+          "37": 17,
+          "63": 11,
+          "64": 14,
+          "90": 16,
+          "99": 15,
+          "100": 14
+        },
+        "polynomial_degree_counts": {
+          "0": 42,
+          "1": 35,
+          "2": 10
+        },
+        "timescale_minutes_minimum": 355.09186884979863,
+        "timescale_minutes_maximum": 360.00000000000006
+      },
+      {
+        "kernel_id": "K2_matern32",
+        "parameter_diagnostic_count": 1872,
+        "boundary_flag_count": 37,
+        "boundary_parameter_counts": {
+          "log_timescale_minutes": 37
+        },
+        "boundary_side_counts": {
+          "upper": 37
+        },
+        "held_sector_counts": {
+          "37": 10,
+          "63": 5,
+          "64": 1,
+          "90": 8,
+          "99": 8,
+          "100": 5
+        },
+        "polynomial_degree_counts": {
+          "0": 25,
+          "1": 12
+        },
+        "timescale_minutes_minimum": 346.113878730407,
+        "timescale_minutes_maximum": 360.00000000000006
+      },
+      {
+        "kernel_id": "K3_sho",
+        "parameter_diagnostic_count": 1872,
+        "boundary_flag_count": 20,
+        "boundary_parameter_counts": {
+          "log_timescale_minutes": 20
+        },
+        "boundary_side_counts": {
+          "upper": 20
+        },
+        "held_sector_counts": {
+          "37": 5,
+          "63": 5,
+          "64": 2,
+          "90": 4,
+          "99": 3,
+          "100": 1
+        },
+        "polynomial_degree_counts": {
+          "0": 10,
+          "1": 8,
+          "2": 2
+        },
+        "timescale_minutes_minimum": 344.52005316004903,
+        "timescale_minutes_maximum": 360.00000000000006
+      }
+    ],
+    "interpretation": "The shared correlated-kernel timescale saturates near its registered 360-minute upper bound. Concentration by polynomial degree is an association, not proof that the polynomial and kernel compete.",
+    "source": "outputs/faz6_loso_scores.csv"
+  },
+  "mask_influence": {
+    "sector_kernel_interactions": [
+      {
+        "kernel_id": "K1_ou",
+        "mask_interaction_sum": -1.130444151597203,
+        "reported_mask_interaction": -1.1304441515962935,
+        "sector_drivers_by_absolute_interaction": [
+          {
+            "held_sector": 64,
+            "mask_interaction": -0.36395110551120524
+          },
+          {
+            "held_sector": 100,
+            "mask_interaction": -0.30922574699593497
+          },
+          {
+            "held_sector": 37,
+            "mask_interaction": -0.23518894804897172
+          },
+          {
+            "held_sector": 63,
+            "mask_interaction": -0.0838582322730872
+          },
+          {
+            "held_sector": 99,
+            "mask_interaction": -0.0712357265342689
+          },
+          {
+            "held_sector": 90,
+            "mask_interaction": -0.06698439223373498
+          }
+        ]
+      },
+      {
+        "kernel_id": "K2_matern32",
+        "mask_interaction_sum": -1.0199785241836707,
+        "reported_mask_interaction": -1.0199785241841255,
+        "sector_drivers_by_absolute_interaction": [
+          {
+            "held_sector": 64,
+            "mask_interaction": -0.3749926362538645
+          },
+          {
+            "held_sector": 100,
+            "mask_interaction": -0.31908341993835165
+          },
+          {
+            "held_sector": 37,
+            "mask_interaction": -0.20543779675449514
+          },
+          {
+            "held_sector": 99,
+            "mask_interaction": -0.07140681284613493
+          },
+          {
+            "held_sector": 63,
+            "mask_interaction": -0.0583373451213447
+          },
+          {
+            "held_sector": 90,
+            "mask_interaction": 0.009279486730520148
+          }
+        ]
+      },
+      {
+        "kernel_id": "K3_sho",
+        "mask_interaction_sum": -1.0319348624286704,
+        "reported_mask_interaction": -1.0319348624300346,
+        "sector_drivers_by_absolute_interaction": [
+          {
+            "held_sector": 64,
+            "mask_interaction": -0.41857670572426287
+          },
+          {
+            "held_sector": 100,
+            "mask_interaction": -0.3026551212899449
+          },
+          {
+            "held_sector": 37,
+            "mask_interaction": -0.2100875167132017
+          },
+          {
+            "held_sector": 63,
+            "mask_interaction": -0.1334575022788158
+          },
+          {
+            "held_sector": 90,
+            "mask_interaction": 0.054711253490950185
+          },
+          {
+            "held_sector": 99,
+            "mask_interaction": -0.02186926991339533
+          }
+        ]
+      }
+    ],
+    "cadence_distribution": {
+      "raw_only_cadence_count": 60,
+      "sector_counts": {
+        "37": 20,
+        "63": 4,
+        "64": 13,
+        "90": 4,
+        "99": 9,
+        "100": 10
+      },
+      "quality_counts": {
+        "0": 60
+      },
+      "exclusion_reason_counts": {
+        "post_quality_clip_or_filter": 60
+      },
+      "inside_inner_transit_mask_count": 4,
+      "outside_all_registered_windows_count": 37,
+      "inside_window_counts": {
+        "13": 8,
+        "16": 12,
+        "20": 16,
+        "26": 21,
+        "32": 23
+      },
+      "screening_oot_eligible_counts": {
+        "13": 4,
+        "16": 8,
+        "20": 12,
+        "26": 17,
+        "32": 19
+      },
+      "screening_eligible_any_retained_raw_branch_count": 17,
+      "sap_background_by_sector": [
+        {
+          "sector": 37,
+          "minimum": 3827.1708984375,
+          "median": 3870.2470703125,
+          "maximum": 5329.88623046875
+        },
+        {
+          "sector": 63,
+          "minimum": 4122.3544921875,
+          "median": 4128.13134765625,
+          "maximum": 4149.56982421875
+        },
+        {
+          "sector": 64,
+          "minimum": 3312.520751953125,
+          "median": 3378.2451171875,
+          "maximum": 3803.91943359375
+        },
+        {
+          "sector": 90,
+          "minimum": 3889.34423828125,
+          "median": 3900.5653076171875,
+          "maximum": 3906.2900390625
+        },
+        {
+          "sector": 99,
+          "minimum": 2854.78955078125,
+          "median": 2877.691650390625,
+          "maximum": 3065.51953125
+        },
+        {
+          "sector": 100,
+          "minimum": 3663.438720703125,
+          "median": 3693.45361328125,
+          "maximum": 6188.31884765625
+        }
+      ],
+      "source": "outputs/faz5b_cadence_lineage.csv",
+      "telemetry_source": "data/toi3492_cadence_ledger_120s.csv.gz"
+    },
+    "individual_cadence_predictive_attribution_supported": false,
+    "reason": "The frozen held-sector artifact contains joint vector log densities, not pointwise contributions. The two masks also retain different Phase-5B branch universes."
+  },
+  "phase6r_residual_analysis": {
+    "reconstruction": "Deterministic residual evaluation at each frozen Phase-6R MAP endpoint; no optimizer, Hessian, Laplace draw, or model selection was run.",
+    "branch_count": 24,
+    "sector_count": 6,
+    "event_count": 16,
+    "beta_row_count": 864,
+    "residual_summary_row_count": 144,
+    "official_beta_mixture_reconstructed": [
+      {
+        "timescale_minutes": 20.0,
+        "all_branches_eligible": true,
+        "weighted_equal_sector_beta": 1.1384358007286988
+      },
+      {
+        "timescale_minutes": 40.0,
+        "all_branches_eligible": true,
+        "weighted_equal_sector_beta": 1.2262131894432893
+      },
+      {
+        "timescale_minutes": 80.0,
+        "all_branches_eligible": true,
+        "weighted_equal_sector_beta": 1.2936064512125263
+      },
+      {
+        "timescale_minutes": 160.0,
+        "all_branches_eligible": true,
+        "weighted_equal_sector_beta": 1.2882668252560077
+      },
+      {
+        "timescale_minutes": 320.0,
+        "all_branches_eligible": true,
+        "weighted_equal_sector_beta": 1.227849364279484
+      },
+      {
+        "timescale_minutes": 360.0,
+        "all_branches_eligible": true,
+        "weighted_equal_sector_beta": 1.1900377138853786
+      }
+    ],
+    "sector_beta_mixture": [
+      {
+        "sector": 37,
+        "timescale_minutes": 20.0,
+        "all_branches_eligible": true,
+        "weighted_beta": 1.1947241541830216
+      },
+      {
+        "sector": 37,
+        "timescale_minutes": 40.0,
+        "all_branches_eligible": true,
+        "weighted_beta": 1.2666433865510969
+      },
+      {
+        "sector": 37,
+        "timescale_minutes": 80.0,
+        "all_branches_eligible": true,
+        "weighted_beta": 1.4096720641133405
+      },
+      {
+        "sector": 37,
+        "timescale_minutes": 160.0,
+        "all_branches_eligible": true,
+        "weighted_beta": 1.3900897182886949
+      },
+      {
+        "sector": 37,
+        "timescale_minutes": 320.0,
+        "all_branches_eligible": true,
+        "weighted_beta": 1.4566834591062257
+      },
+      {
+        "sector": 37,
+        "timescale_minutes": 360.0,
+        "all_branches_eligible": true,
+        "weighted_beta": 1.3023933543199164
+      },
+      {
+        "sector": 63,
+        "timescale_minutes": 20.0,
+        "all_branches_eligible": true,
+        "weighted_beta": 1.2012172445665281
+      },
+      {
+        "sector": 63,
+        "timescale_minutes": 40.0,
+        "all_branches_eligible": true,
+        "weighted_beta": 1.299780898637097
+      },
+      {
+        "sector": 63,
+        "timescale_minutes": 80.0,
+        "all_branches_eligible": true,
+        "weighted_beta": 1.3287170453417452
+      },
+      {
+        "sector": 63,
+        "timescale_minutes": 160.0,
+        "all_branches_eligible": true,
+        "weighted_beta": 1.2785533953985837
+      },
+      {
+        "sector": 63,
+        "timescale_minutes": 320.0,
+        "all_branches_eligible": true,
+        "weighted_beta": 1.1719678751975022
+      },
+      {
+        "sector": 63,
+        "timescale_minutes": 360.0,
+        "all_branches_eligible": true,
+        "weighted_beta": 1.1979380787616933
+      },
+      {
+        "sector": 64,
+        "timescale_minutes": 20.0,
+        "all_branches_eligible": true,
+        "weighted_beta": 1.1352621786406814
+      },
+      {
+        "sector": 64,
+        "timescale_minutes": 40.0,
+        "all_branches_eligible": true,
+        "weighted_beta": 1.221581856280774
+      },
+      {
+        "sector": 64,
+        "timescale_minutes": 80.0,
+        "all_branches_eligible": true,
+        "weighted_beta": 1.2219006910344876
+      },
+      {
+        "sector": 64,
+        "timescale_minutes": 160.0,
+        "all_branches_eligible": true,
+        "weighted_beta": 1.327729574712957
+      },
+      {
+        "sector": 64,
+        "timescale_minutes": 320.0,
+        "all_branches_eligible": true,
+        "weighted_beta": 1.3670541566595782
+      },
+      {
+        "sector": 64,
+        "timescale_minutes": 360.0,
+        "all_branches_eligible": true,
+        "weighted_beta": 1.3638134048851998
+      },
+      {
+        "sector": 90,
+        "timescale_minutes": 20.0,
+        "all_branches_eligible": true,
+        "weighted_beta": 1.1127565499947583
+      },
+      {
+        "sector": 90,
+        "timescale_minutes": 40.0,
+        "all_branches_eligible": true,
+        "weighted_beta": 1.2247687112765644
+      },
+      {
+        "sector": 90,
+        "timescale_minutes": 80.0,
+        "all_branches_eligible": true,
+        "weighted_beta": 1.3356527011937176
+      },
+      {
+        "sector": 90,
+        "timescale_minutes": 160.0,
+        "all_branches_eligible": true,
+        "weighted_beta": 1.1701533374115396
+      },
+      {
+        "sector": 90,
+        "timescale_minutes": 320.0,
+        "all_branches_eligible": true,
+        "weighted_beta": 0.9710515738369869
+      },
+      {
+        "sector": 90,
+        "timescale_minutes": 360.0,
+        "all_branches_eligible": true,
+        "weighted_beta": 0.98792772984992
+      },
+      {
+        "sector": 99,
+        "timescale_minutes": 20.0,
+        "all_branches_eligible": true,
+        "weighted_beta": 1.0462250832428752
+      },
+      {
+        "sector": 99,
+        "timescale_minutes": 40.0,
+        "all_branches_eligible": true,
+        "weighted_beta": 1.0981050473354959
+      },
+      {
+        "sector": 99,
+        "timescale_minutes": 80.0,
+        "all_branches_eligible": true,
+        "weighted_beta": 1.1944002257130997
+      },
+      {
+        "sector": 99,
+        "timescale_minutes": 160.0,
+        "all_branches_eligible": true,
+        "weighted_beta": 1.1240678953146188
+      },
+      {
+        "sector": 99,
+        "timescale_minutes": 320.0,
+        "all_branches_eligible": true,
+        "weighted_beta": 0.9201971005335398
+      },
+      {
+        "sector": 99,
+        "timescale_minutes": 360.0,
+        "all_branches_eligible": true,
+        "weighted_beta": 1.008561525224477
+      },
+      {
+        "sector": 100,
+        "timescale_minutes": 20.0,
+        "all_branches_eligible": true,
+        "weighted_beta": 1.1404295937443274
+      },
+      {
+        "sector": 100,
+        "timescale_minutes": 40.0,
+        "all_branches_eligible": true,
+        "weighted_beta": 1.246399236578707
+      },
+      {
+        "sector": 100,
+        "timescale_minutes": 80.0,
+        "all_branches_eligible": true,
+        "weighted_beta": 1.2712959798787669
+      },
+      {
+        "sector": 100,
+        "timescale_minutes": 160.0,
+        "all_branches_eligible": true,
+        "weighted_beta": 1.4390070304096518
+      },
+      {
+        "sector": 100,
+        "timescale_minutes": 320.0,
+        "all_branches_eligible": true,
+        "weighted_beta": 1.4801420203430715
+      },
+      {
+        "sector": 100,
+        "timescale_minutes": 360.0,
+        "all_branches_eligible": true,
+        "weighted_beta": 1.2795921902710647
+      }
+    ],
+    "sector_drivers": [
+      {
+        "timescale_minutes": 20.0,
+        "sectors_by_descending_beta": [
+          {
+            "sector": 63,
+            "weighted_beta": 1.2012172445665281
+          },
+          {
+            "sector": 37,
+            "weighted_beta": 1.1947241541830216
+          },
+          {
+            "sector": 100,
+            "weighted_beta": 1.1404295937443274
+          },
+          {
+            "sector": 64,
+            "weighted_beta": 1.1352621786406814
+          },
+          {
+            "sector": 90,
+            "weighted_beta": 1.1127565499947583
+          },
+          {
+            "sector": 99,
+            "weighted_beta": 1.0462250832428752
+          }
+        ]
+      },
+      {
+        "timescale_minutes": 40.0,
+        "sectors_by_descending_beta": [
+          {
+            "sector": 63,
+            "weighted_beta": 1.299780898637097
+          },
+          {
+            "sector": 37,
+            "weighted_beta": 1.2666433865510969
+          },
+          {
+            "sector": 100,
+            "weighted_beta": 1.246399236578707
+          },
+          {
+            "sector": 90,
+            "weighted_beta": 1.2247687112765644
+          },
+          {
+            "sector": 64,
+            "weighted_beta": 1.221581856280774
+          },
+          {
+            "sector": 99,
+            "weighted_beta": 1.0981050473354959
+          }
+        ]
+      },
+      {
+        "timescale_minutes": 80.0,
+        "sectors_by_descending_beta": [
+          {
+            "sector": 37,
+            "weighted_beta": 1.4096720641133405
+          },
+          {
+            "sector": 90,
+            "weighted_beta": 1.3356527011937176
+          },
+          {
+            "sector": 63,
+            "weighted_beta": 1.3287170453417452
+          },
+          {
+            "sector": 100,
+            "weighted_beta": 1.2712959798787669
+          },
+          {
+            "sector": 64,
+            "weighted_beta": 1.2219006910344876
+          },
+          {
+            "sector": 99,
+            "weighted_beta": 1.1944002257130997
+          }
+        ]
+      },
+      {
+        "timescale_minutes": 160.0,
+        "sectors_by_descending_beta": [
+          {
+            "sector": 100,
+            "weighted_beta": 1.4390070304096518
+          },
+          {
+            "sector": 37,
+            "weighted_beta": 1.3900897182886949
+          },
+          {
+            "sector": 64,
+            "weighted_beta": 1.327729574712957
+          },
+          {
+            "sector": 63,
+            "weighted_beta": 1.2785533953985837
+          },
+          {
+            "sector": 90,
+            "weighted_beta": 1.1701533374115396
+          },
+          {
+            "sector": 99,
+            "weighted_beta": 1.1240678953146188
+          }
+        ]
+      },
+      {
+        "timescale_minutes": 320.0,
+        "sectors_by_descending_beta": [
+          {
+            "sector": 100,
+            "weighted_beta": 1.4801420203430715
+          },
+          {
+            "sector": 37,
+            "weighted_beta": 1.4566834591062257
+          },
+          {
+            "sector": 64,
+            "weighted_beta": 1.3670541566595782
+          },
+          {
+            "sector": 63,
+            "weighted_beta": 1.1719678751975022
+          },
+          {
+            "sector": 90,
+            "weighted_beta": 0.9710515738369869
+          },
+          {
+            "sector": 99,
+            "weighted_beta": 0.9201971005335398
+          }
+        ]
+      },
+      {
+        "timescale_minutes": 360.0,
+        "sectors_by_descending_beta": [
+          {
+            "sector": 64,
+            "weighted_beta": 1.3638134048851998
+          },
+          {
+            "sector": 37,
+            "weighted_beta": 1.3023933543199164
+          },
+          {
+            "sector": 100,
+            "weighted_beta": 1.2795921902710647
+          },
+          {
+            "sector": 63,
+            "weighted_beta": 1.1979380787616933
+          },
+          {
+            "sector": 99,
+            "weighted_beta": 1.008561525224477
+          },
+          {
+            "sector": 90,
+            "weighted_beta": 0.98792772984992
+          }
+        ]
+      }
+    ],
+    "maximum_weighted_beta": 1.2936064512125263,
+    "weighted_equal_sector_acf_20_to_360_minutes": {
+      "maximum_absolute_value": 0.04525889171467083,
+      "signed_value": 0.04525889171467083,
+      "lag_minutes": 24.0,
+      "diagnostic_only": true
+    },
+    "periodogram": {
+      "branch_summaries": [
+        {
+          "model_id": "raw_valid::W16_P1",
+          "joint_model_weight": 0.045454545454545456,
+          "highest_peak_period_minutes": 315.43603883494825,
+          "highest_peak_power": 0.006979032409684342,
+          "diagnostic_only": true
+        },
+        {
+          "model_id": "raw_valid::W20_P1",
+          "joint_model_weight": 0.045454545454545456,
+          "highest_peak_period_minutes": 331.61699298651536,
+          "highest_peak_power": 0.006580430026281187,
+          "diagnostic_only": true
+        },
+        {
+          "model_id": "raw_valid::W13_P1",
+          "joint_model_weight": 0.045454545454545456,
+          "highest_peak_period_minutes": 339.4401616593953,
+          "highest_peak_power": 0.00757041900230868,
+          "diagnostic_only": true
+        },
+        {
+          "model_id": "raw_valid::W13_P2",
+          "joint_model_weight": 0.045454545454545456,
+          "highest_peak_period_minutes": 331.2158331740014,
+          "highest_peak_power": 0.0061682414311933454,
+          "diagnostic_only": true
+        },
+        {
+          "model_id": "raw_valid::W26_P2",
+          "joint_model_weight": 0.045454545454545456,
+          "highest_peak_period_minutes": 315.56157645442863,
+          "highest_peak_power": 0.0037082229852477126,
+          "diagnostic_only": true
+        },
+        {
+          "model_id": "raw_valid::W16_P2",
+          "joint_model_weight": 0.045454545454545456,
+          "highest_peak_period_minutes": 339.56700462830474,
+          "highest_peak_power": 0.007041631940734864,
+          "diagnostic_only": true
+        },
+        {
+          "model_id": "raw_valid::W20_P2",
+          "joint_model_weight": 0.045454545454545456,
+          "highest_peak_period_minutes": 315.77398620472906,
+          "highest_peak_power": 0.005335505493923263,
+          "diagnostic_only": true
+        },
+        {
+          "model_id": "raw_valid::W26_P1",
+          "joint_model_weight": 0.045454545454545456,
+          "highest_peak_period_minutes": 294.41666726825906,
+          "highest_peak_power": 0.004312168828709163,
+          "diagnostic_only": true
+        },
+        {
+          "model_id": "raw_valid::W13_P0",
+          "joint_model_weight": 0.045454545454545456,
+          "highest_peak_period_minutes": 357.17814453483834,
+          "highest_peak_power": 0.008719817434507155,
+          "diagnostic_only": true
+        },
+        {
+          "model_id": "raw_valid::W16_P0",
+          "joint_model_weight": 0.045454545454545456,
+          "highest_peak_period_minutes": 308.3670786912359,
+          "highest_peak_power": 0.006657299660774728,
+          "diagnostic_only": true
+        },
+        {
+          "model_id": "raw_valid::W20_P0",
+          "joint_model_weight": 0.045454545454545456,
+          "highest_peak_period_minutes": 323.1250841624274,
+          "highest_peak_power": 0.00667265462382297,
+          "diagnostic_only": true
+        },
+        {
+          "model_id": "reference_included::W16_P1",
+          "joint_model_weight": 0.038461538461538464,
+          "highest_peak_period_minutes": 315.43603883494825,
+          "highest_peak_power": 0.006840348114837202,
+          "diagnostic_only": true
+        },
+        {
+          "model_id": "reference_included::W20_P1",
+          "joint_model_weight": 0.038461538461538464,
+          "highest_peak_period_minutes": 331.61699298651536,
+          "highest_peak_power": 0.006519988973448324,
+          "diagnostic_only": true
+        },
+        {
+          "model_id": "reference_included::W13_P1",
+          "joint_model_weight": 0.038461538461538464,
+          "highest_peak_period_minutes": 358.11383479582776,
+          "highest_peak_power": 0.007540206752964563,
+          "diagnostic_only": true
+        },
+        {
+          "model_id": "reference_included::W13_P2",
+          "joint_model_weight": 0.038461538461538464,
+          "highest_peak_period_minutes": 358.11383479582776,
+          "highest_peak_power": 0.006213992243736355,
+          "diagnostic_only": true
+        },
+        {
+          "model_id": "reference_included::W26_P2",
+          "joint_model_weight": 0.038461538461538464,
+          "highest_peak_period_minutes": 315.56157645442863,
+          "highest_peak_power": 0.0037157891995769697,
+          "diagnostic_only": true
+        },
+        {
+          "model_id": "reference_included::W16_P2",
+          "joint_model_weight": 0.038461538461538464,
+          "highest_peak_period_minutes": 339.56700462830474,
+          "highest_peak_power": 0.007024768352489191,
+          "diagnostic_only": true
+        },
+        {
+          "model_id": "reference_included::W20_P2",
+          "joint_model_weight": 0.038461538461538464,
+          "highest_peak_period_minutes": 331.61699298651536,
+          "highest_peak_power": 0.0052927350257043855,
+          "diagnostic_only": true
+        },
+        {
+          "model_id": "reference_included::W32_P2",
+          "joint_model_weight": 0.038461538461538464,
+          "highest_peak_period_minutes": 331.50575452072655,
+          "highest_peak_power": 0.0040131045454375935,
+          "diagnostic_only": true
+        },
+        {
+          "model_id": "reference_included::W26_P1",
+          "joint_model_weight": 0.038461538461538464,
+          "highest_peak_period_minutes": 294.41666726825906,
+          "highest_peak_power": 0.004184364066657048,
+          "diagnostic_only": true
+        },
+        {
+          "model_id": "reference_included::W13_P0",
+          "joint_model_weight": 0.038461538461538464,
+          "highest_peak_period_minutes": 357.17814453483834,
+          "highest_peak_power": 0.00867521082483557,
+          "diagnostic_only": true
+        },
+        {
+          "model_id": "reference_included::W16_P0",
+          "joint_model_weight": 0.038461538461538464,
+          "highest_peak_period_minutes": 308.3670786912359,
+          "highest_peak_power": 0.006500812959627916,
+          "diagnostic_only": true
+        },
+        {
+          "model_id": "reference_included::W20_P0",
+          "joint_model_weight": 0.038461538461538464,
+          "highest_peak_period_minutes": 331.61699298651536,
+          "highest_peak_power": 0.00659094985866577,
+          "diagnostic_only": true
+        },
+        {
+          "model_id": "reference_included::W26_P0",
+          "joint_model_weight": 0.038461538461538464,
+          "highest_peak_period_minutes": 308.6346880758578,
+          "highest_peak_power": 0.004308587635817698,
+          "diagnostic_only": true
+        }
+      ],
+      "highest_power_branch": {
+        "model_id": "raw_valid::W13_P0",
+        "joint_model_weight": 0.045454545454545456,
+        "highest_peak_period_minutes": 357.17814453483834,
+        "highest_peak_power": 0.008719817434507155,
+        "diagnostic_only": true
+      },
+      "cross_branch_power_mixture_computed": false,
+      "reason": "Branch frequency grids depend on each branch time baseline; peak summaries are descriptive and are not detection statistics."
+    },
+    "telemetry": {
+      "weighted_branch_correlation_summaries": [
+        {
+          "sector": 37,
+          "coefficient": "pearson_residual_sap_bkg",
+          "finite_branch_count": 24,
+          "weighted_value": -0.04390308594363417
+        },
+        {
+          "sector": 37,
+          "coefficient": "spearman_residual_sap_bkg",
+          "finite_branch_count": 24,
+          "weighted_value": -0.09674775520247166
+        },
+        {
+          "sector": 37,
+          "coefficient": "pearson_residual_pos_corr1",
+          "finite_branch_count": 24,
+          "weighted_value": -0.003777225711328395
+        },
+        {
+          "sector": 37,
+          "coefficient": "spearman_residual_pos_corr1",
+          "finite_branch_count": 24,
+          "weighted_value": -0.0009832293565239757
+        },
+        {
+          "sector": 37,
+          "coefficient": "pearson_residual_pos_corr2",
+          "finite_branch_count": 24,
+          "weighted_value": -0.005609374510053795
+        },
+        {
+          "sector": 37,
+          "coefficient": "spearman_residual_pos_corr2",
+          "finite_branch_count": 24,
+          "weighted_value": -0.013335132577192571
+        },
+        {
+          "sector": 37,
+          "coefficient": "pearson_residual_mom_centr1",
+          "finite_branch_count": 24,
+          "weighted_value": -0.0059294047111153915
+        },
+        {
+          "sector": 37,
+          "coefficient": "spearman_residual_mom_centr1",
+          "finite_branch_count": 24,
+          "weighted_value": -0.006684110991895881
+        },
+        {
+          "sector": 37,
+          "coefficient": "pearson_residual_mom_centr2",
+          "finite_branch_count": 24,
+          "weighted_value": -0.0060133029251332095
+        },
+        {
+          "sector": 37,
+          "coefficient": "spearman_residual_mom_centr2",
+          "finite_branch_count": 24,
+          "weighted_value": -0.01591020061098308
+        },
+        {
+          "sector": 63,
+          "coefficient": "pearson_residual_sap_bkg",
+          "finite_branch_count": 24,
+          "weighted_value": -0.005141127783058347
+        },
+        {
+          "sector": 63,
+          "coefficient": "spearman_residual_sap_bkg",
+          "finite_branch_count": 24,
+          "weighted_value": -0.06720282862464902
+        },
+        {
+          "sector": 63,
+          "coefficient": "pearson_residual_pos_corr1",
+          "finite_branch_count": 24,
+          "weighted_value": 0.006472420292200216
+        },
+        {
+          "sector": 63,
+          "coefficient": "spearman_residual_pos_corr1",
+          "finite_branch_count": 24,
+          "weighted_value": 0.00394536454481372
+        },
+        {
+          "sector": 63,
+          "coefficient": "pearson_residual_pos_corr2",
+          "finite_branch_count": 24,
+          "weighted_value": -0.019933949354446586
+        },
+        {
+          "sector": 63,
+          "coefficient": "spearman_residual_pos_corr2",
+          "finite_branch_count": 24,
+          "weighted_value": -0.032442796627498514
+        },
+        {
+          "sector": 63,
+          "coefficient": "pearson_residual_mom_centr1",
+          "finite_branch_count": 24,
+          "weighted_value": 0.006272309984423458
+        },
+        {
+          "sector": 63,
+          "coefficient": "spearman_residual_mom_centr1",
+          "finite_branch_count": 24,
+          "weighted_value": 0.0031363411695007706
+        },
+        {
+          "sector": 63,
+          "coefficient": "pearson_residual_mom_centr2",
+          "finite_branch_count": 24,
+          "weighted_value": -0.01604591338310871
+        },
+        {
+          "sector": 63,
+          "coefficient": "spearman_residual_mom_centr2",
+          "finite_branch_count": 24,
+          "weighted_value": -0.02803479962263494
+        },
+        {
+          "sector": 64,
+          "coefficient": "pearson_residual_sap_bkg",
+          "finite_branch_count": 24,
+          "weighted_value": -0.015376952775438569
+        },
+        {
+          "sector": 64,
+          "coefficient": "spearman_residual_sap_bkg",
+          "finite_branch_count": 24,
+          "weighted_value": -0.04056155873533284
+        },
+        {
+          "sector": 64,
+          "coefficient": "pearson_residual_pos_corr1",
+          "finite_branch_count": 24,
+          "weighted_value": 0.001646467697822031
+        },
+        {
+          "sector": 64,
+          "coefficient": "spearman_residual_pos_corr1",
+          "finite_branch_count": 24,
+          "weighted_value": 0.014821403466994973
+        },
+        {
+          "sector": 64,
+          "coefficient": "pearson_residual_pos_corr2",
+          "finite_branch_count": 24,
+          "weighted_value": 0.006535062415368779
+        },
+        {
+          "sector": 64,
+          "coefficient": "spearman_residual_pos_corr2",
+          "finite_branch_count": 24,
+          "weighted_value": 0.016358821628459533
+        },
+        {
+          "sector": 64,
+          "coefficient": "pearson_residual_mom_centr1",
+          "finite_branch_count": 24,
+          "weighted_value": 0.0016147674296378407
+        },
+        {
+          "sector": 64,
+          "coefficient": "spearman_residual_mom_centr1",
+          "finite_branch_count": 24,
+          "weighted_value": 0.015793423002144244
+        },
+        {
+          "sector": 64,
+          "coefficient": "pearson_residual_mom_centr2",
+          "finite_branch_count": 24,
+          "weighted_value": 0.006451459860056663
+        },
+        {
+          "sector": 64,
+          "coefficient": "spearman_residual_mom_centr2",
+          "finite_branch_count": 24,
+          "weighted_value": 0.01626319464026531
+        },
+        {
+          "sector": 90,
+          "coefficient": "pearson_residual_sap_bkg",
+          "finite_branch_count": 24,
+          "weighted_value": -0.04146891630957864
+        },
+        {
+          "sector": 90,
+          "coefficient": "spearman_residual_sap_bkg",
+          "finite_branch_count": 24,
+          "weighted_value": -0.13576028712432847
+        },
+        {
+          "sector": 90,
+          "coefficient": "pearson_residual_pos_corr1",
+          "finite_branch_count": 24,
+          "weighted_value": -0.0027393083345666914
+        },
+        {
+          "sector": 90,
+          "coefficient": "spearman_residual_pos_corr1",
+          "finite_branch_count": 24,
+          "weighted_value": 0.003792649858495052
+        },
+        {
+          "sector": 90,
+          "coefficient": "pearson_residual_pos_corr2",
+          "finite_branch_count": 24,
+          "weighted_value": 0.0008072306707114804
+        },
+        {
+          "sector": 90,
+          "coefficient": "spearman_residual_pos_corr2",
+          "finite_branch_count": 24,
+          "weighted_value": 0.015329552396717107
+        },
+        {
+          "sector": 90,
+          "coefficient": "pearson_residual_mom_centr1",
+          "finite_branch_count": 24,
+          "weighted_value": -0.0029331710904067195
+        },
+        {
+          "sector": 90,
+          "coefficient": "spearman_residual_mom_centr1",
+          "finite_branch_count": 24,
+          "weighted_value": 0.0049551632500385735
+        },
+        {
+          "sector": 90,
+          "coefficient": "pearson_residual_mom_centr2",
+          "finite_branch_count": 24,
+          "weighted_value": 0.0021491066073921713
+        },
+        {
+          "sector": 90,
+          "coefficient": "spearman_residual_mom_centr2",
+          "finite_branch_count": 24,
+          "weighted_value": 0.01892031206828111
+        },
+        {
+          "sector": 99,
+          "coefficient": "pearson_residual_sap_bkg",
+          "finite_branch_count": 24,
+          "weighted_value": -0.013236809411647578
+        },
+        {
+          "sector": 99,
+          "coefficient": "spearman_residual_sap_bkg",
+          "finite_branch_count": 24,
+          "weighted_value": -0.08429837432031992
+        },
+        {
+          "sector": 99,
+          "coefficient": "pearson_residual_pos_corr1",
+          "finite_branch_count": 24,
+          "weighted_value": 0.009080100821876175
+        },
+        {
+          "sector": 99,
+          "coefficient": "spearman_residual_pos_corr1",
+          "finite_branch_count": 24,
+          "weighted_value": 0.010745003728680692
+        },
+        {
+          "sector": 99,
+          "coefficient": "pearson_residual_pos_corr2",
+          "finite_branch_count": 24,
+          "weighted_value": -0.003967318757169559
+        },
+        {
+          "sector": 99,
+          "coefficient": "spearman_residual_pos_corr2",
+          "finite_branch_count": 24,
+          "weighted_value": -0.023263404690201238
+        },
+        {
+          "sector": 99,
+          "coefficient": "pearson_residual_mom_centr1",
+          "finite_branch_count": 24,
+          "weighted_value": 0.010272901427194881
+        },
+        {
+          "sector": 99,
+          "coefficient": "spearman_residual_mom_centr1",
+          "finite_branch_count": 24,
+          "weighted_value": 0.014233530340516842
+        },
+        {
+          "sector": 99,
+          "coefficient": "pearson_residual_mom_centr2",
+          "finite_branch_count": 24,
+          "weighted_value": -0.0027184712250665475
+        },
+        {
+          "sector": 99,
+          "coefficient": "spearman_residual_mom_centr2",
+          "finite_branch_count": 24,
+          "weighted_value": -0.02179866301340458
+        },
+        {
+          "sector": 100,
+          "coefficient": "pearson_residual_sap_bkg",
+          "finite_branch_count": 24,
+          "weighted_value": 0.01853166450902168
+        },
+        {
+          "sector": 100,
+          "coefficient": "spearman_residual_sap_bkg",
+          "finite_branch_count": 24,
+          "weighted_value": -0.033570076256335096
+        },
+        {
+          "sector": 100,
+          "coefficient": "pearson_residual_pos_corr1",
+          "finite_branch_count": 24,
+          "weighted_value": -0.003614303702173903
+        },
+        {
+          "sector": 100,
+          "coefficient": "spearman_residual_pos_corr1",
+          "finite_branch_count": 24,
+          "weighted_value": 0.0026963532365480523
+        },
+        {
+          "sector": 100,
+          "coefficient": "pearson_residual_pos_corr2",
+          "finite_branch_count": 24,
+          "weighted_value": -0.015307717005454436
+        },
+        {
+          "sector": 100,
+          "coefficient": "spearman_residual_pos_corr2",
+          "finite_branch_count": 24,
+          "weighted_value": -0.03758176267418187
+        },
+        {
+          "sector": 100,
+          "coefficient": "pearson_residual_mom_centr1",
+          "finite_branch_count": 24,
+          "weighted_value": -0.00393599353763354
+        },
+        {
+          "sector": 100,
+          "coefficient": "spearman_residual_mom_centr1",
+          "finite_branch_count": 24,
+          "weighted_value": -0.00012301926175554956
+        },
+        {
+          "sector": 100,
+          "coefficient": "pearson_residual_mom_centr2",
+          "finite_branch_count": 24,
+          "weighted_value": -0.015914009618701316
+        },
+        {
+          "sector": 100,
+          "coefficient": "spearman_residual_mom_centr2",
+          "finite_branch_count": 24,
+          "weighted_value": -0.04167672742992713
+        }
+      ],
+      "strongest_absolute_weighted_correlation": {
+        "sector": 90,
+        "coefficient": "spearman_residual_sap_bkg",
+        "finite_branch_count": 24,
+        "weighted_value": -0.13576028712432847
+      },
+      "diagnostic_only": true,
+      "cause_assigned": false
+    },
+    "draw_identity_checks": {
+      "phase6r_draw_model_ids_exact": true,
+      "phase6r_draw_weights_exact": true,
+      "phase6r_draw_weights_sum_one": true,
+      "phase6r_draw_parameter_names_exact": true,
+      "phase6r_draw_shape_exact": true,
+      "phase6r_draws_finite": true
+    },
+    "fit_source": "outputs/faz6r_joint_fits.csv",
+    "geometry_draw_source": "data/faz6r_geometry_draws.npz"
+  },
+  "residual_artifact_validity": {
+    "versions": [
+      {
+        "version": "v1",
+        "status": "QUARANTINED_INVALID_NUMERICAL_RESULT",
+        "authoritative_phase6_status": "FAIL_STATIONARITY",
+        "artifacts": [
+          {
+            "name": "residual_acf",
+            "relative_path": "outputs/faz6_residual_acf.csv",
+            "row_count": 30408,
+            "sha256": "7955d3a6d7ce7a9986ec5e09e6172d12ee8a111f026ea20099920107eadc751a",
+            "scientifically_usable": false
+          },
+          {
+            "name": "residual_beta",
+            "relative_path": "outputs/faz6_residual_beta.csv",
+            "row_count": 1008,
+            "sha256": "ac8e396dff6b9fc0e23f447a34580a6ddfad0be46fd9adf205d804bc412d7b92",
+            "scientifically_usable": false
+          },
+          {
+            "name": "residual_periodogram",
+            "relative_path": "outputs/faz6_residual_periodogram.csv",
+            "row_count": 156997,
+            "sha256": "22efd701fa4e7baa53daaae17d032d1b422052c43ca717fcbd04151c5f7fc9dd",
+            "scientifically_usable": false
+          },
+          {
+            "name": "residual_peaks",
+            "relative_path": "outputs/faz6_residual_peaks.csv",
+            "row_count": 120,
+            "sha256": "c6605859b20120641ca079ed3312912894c6655de677832e82cc814531f08e2d",
+            "scientifically_usable": false
+          }
+        ],
+        "reason": "All V1 optimizer attempts were unchanged from their initial values."
+      },
+      {
+        "version": "v2",
+        "status": "EMPTY_AFTER_STATIONARITY_FAILURE",
+        "authoritative_phase6_status": "FAIL_STATIONARITY",
+        "artifacts": [
+          {
+            "name": "residual_acf",
+            "relative_path": "outputs/faz6_residual_acf_v2.csv",
+            "row_count": 0,
+            "sha256": "3dbc4ea7c9a802af5b214c1d0772380b0dc802a2c22bb5c65c770207b1e0ebda",
+            "scientifically_usable": false
+          },
+          {
+            "name": "residual_beta",
+            "relative_path": "outputs/faz6_residual_beta_v2.csv",
+            "row_count": 0,
+            "sha256": "c53db72c8bb566c9b130c9f0ab7ba04da0be1276b8152e9fd07a94305c9a31df",
+            "scientifically_usable": false
+          },
+          {
+            "name": "residual_periodogram",
+            "relative_path": "outputs/faz6_residual_periodogram_v2.csv",
+            "row_count": 0,
+            "sha256": "3dbc4ea7c9a802af5b214c1d0772380b0dc802a2c22bb5c65c770207b1e0ebda",
+            "scientifically_usable": false
+          },
+          {
+            "name": "residual_peaks",
+            "relative_path": "outputs/faz6_residual_peaks_v2.csv",
+            "row_count": 0,
+            "sha256": "3dbc4ea7c9a802af5b214c1d0772380b0dc802a2c22bb5c65c770207b1e0ebda",
+            "scientifically_usable": false
+          }
+        ],
+        "reason": "V2 stopped at 22/24 stationarity and did not run residual diagnostics."
+      }
+    ],
+    "phase6r_persisted_residual_artifacts": false,
+    "phase6r_stage3_reconstruction_status": "DERIVED_FROM_FROZEN_MAP_NO_REFIT",
+    "authoritative_gate_source": "outputs/faz6_gate_audit.json"
+  },
+  "questions": [
+    {
+      "id": 1,
+      "support": "SUPPORTED",
+      "finding": "OU, Matern-3/2, and SHO boundary folds are enumerated by branch and held sector in the boundary map.",
+      "evidence": [
+        "outputs/faz6_loso_scores.csv",
+        "outputs/stage3_phase6_boundary_map.csv"
+      ]
+    },
+    {
+      "id": 2,
+      "support": "SUPPORTED",
+      "finding": "Every boundary flag is the upper shared log-timescale bound; no amplitude or jitter boundary flag occurs.",
+      "evidence": [
+        "outputs/faz6_loso_scores.csv",
+        "outputs/stage3_phase6_boundary_map.csv"
+      ]
+    },
+    {
+      "id": 3,
+      "support": "PARTIALLY_SUPPORTED",
+      "finding": "Sector-level mask interactions are identified. Individual cadence predictive effects cannot be recovered without refitting or saved pointwise densities.",
+      "evidence": [
+        "outputs/faz6_kernel_sector_mixture.csv",
+        "outputs/stage3_phase6_mask_influence.csv"
+      ]
+    },
+    {
+      "id": 4,
+      "support": "SUPPORTED_DESCRIPTIVE_ONLY",
+      "finding": "All 60 raw-only cadences are linked to sector, time, quality, background, pointing, and registered transit-window eligibility.",
+      "evidence": [
+        "outputs/faz5b_cadence_lineage.csv",
+        "data/toi3492_cadence_ledger_120s.csv.gz",
+        "outputs/stage3_phase6_mask_influence.csv"
+      ]
+    },
+    {
+      "id": 5,
+      "support": "SUPPORTED",
+      "finding": "The Phase-6R beta excess is decomposed into all 24 branches, six sectors, and six registered timescales.",
+      "evidence": [
+        "outputs/faz6r_joint_fits.csv",
+        "outputs/stage3_phase6_beta_by_sector.csv"
+      ]
+    },
+    {
+      "id": 6,
+      "support": "SUPPORTED",
+      "finding": "V1 ACF/beta/periodogram artifacts are quarantined numerical no-op products; V2 artifacts are empty. Valid Stage-3 summaries are derived separately from frozen Phase-6R endpoints.",
+      "evidence": [
+        "outputs/faz6_gate_audit.json",
+        "outputs/faz6_final_noise_model.json",
+        "outputs/faz6_final_noise_model_v2.json"
+      ]
+    },
+    {
+      "id": 7,
+      "support": "ASSOCIATION_ONLY",
+      "finding": "Boundary saturation is associated with baseline degree, but current artifacts do not prove polynomial-kernel competition.",
+      "evidence": [
+        "outputs/stage3_phase6_boundary_map.csv"
+      ]
+    },
+    {
+      "id": 8,
+      "support": "UNSUPPORTED",
+      "finding": "No complex kernel reached a joint transit/noise fit, so screening-to-joint instability cannot be measured from existing artifacts.",
+      "evidence": [
+        "outputs/faz6_kernel_comparison.json",
+        "outputs/faz6_gate_audit.json"
+      ]
+    },
+    {
+      "id": 9,
+      "support": "PARTIALLY_SUPPORTED_DESCRIPTIVE_ONLY",
+      "finding": "Frozen Phase-6R residual-telemetry correlations are reported without causal attribution. Cross-reduction residual comparison is unavailable because the joint model used only PDCSAP.",
+      "evidence": [
+        "outputs/stage3_phase6_residual_summary.csv",
+        "data/toi3492_cadence_ledger_120s.csv.gz"
+      ]
+    },
+    {
+      "id": 10,
+      "support": "UNSUPPORTED",
+      "finding": "The existing screening artifacts cannot establish that a correlated kernel consumes ingress or egress because no complex-kernel joint transit fit exists.",
+      "evidence": [
+        "outputs/faz6_kernel_comparison.json",
+        "outputs/faz6_gate_audit.json"
+      ]
+    }
+  ],
+  "supported_explanations": [
+    {
+      "statement": "Complex-kernel screening failures include shared timescale saturation at the registered upper bound.",
+      "evidence": [
+        "outputs/stage3_phase6_boundary_map.csv"
+      ]
+    },
+    {
+      "statement": "Mask interaction is concentrated in identifiable held-sector folds, while its sign is negative for the aggregate of every complex kernel.",
+      "evidence": [
+        "outputs/stage3_phase6_mask_influence.csv",
+        "outputs/faz6_kernel_comparison.json"
+      ]
+    },
+    {
+      "statement": "Phase-6R residual correlation is sector- and timescale-dependent, rather than a uniform excess scatter across sectors.",
+      "evidence": [
+        "outputs/stage3_phase6_beta_by_sector.csv",
+        "outputs/faz6r_result.json"
+      ]
+    }
+  ],
+  "unsupported_explanations": [
+    {
+      "statement": "A particular one of the 60 cadences caused a predictive gain.",
+      "reason": "No pointwise predictive contributions or influence functions were saved."
+    },
+    {
+      "statement": "The event polynomial definitively competed with the kernel.",
+      "reason": "The boundary-degree pattern is observational and no controlled refit exists."
+    },
+    {
+      "statement": "A complex kernel would remain stable in the joint transit fit.",
+      "reason": "No complex kernel passed the frozen screening gate or reached that fit."
+    },
+    {
+      "statement": "The red-noise source is a specific reduction or telemetry variable.",
+      "reason": "Correlations are descriptive and only the PDCSAP joint residual exists."
+    },
+    {
+      "statement": "A complex kernel consumed transit ingress or egress.",
+      "reason": "No complex-kernel joint transit residual artifact exists."
+    }
+  ],
+  "artifacts": {
+    "stage3_phase6_boundary_map": {
+      "relative_path": "outputs/stage3_phase6_boundary_map.csv",
+      "size_bytes": 1628211,
+      "sha256": "106b1cebec708ff68d494aa57dff8ec4935c5f49ef382ca6752d54da84fe17a2",
+      "row_count": 6480,
+      "columns": [
+        "source_artifact",
+        "source_csv_row",
+        "model_id",
+        "mask_id",
+        "cell_id",
+        "window_hours",
+        "polynomial_degree",
+        "kernel_id",
+        "held_sector",
+        "screening_valid",
+        "optimizer_success",
+        "branch_log_predictive_density",
+        "input_fold_any_parameter_at_boundary",
+        "parameter_index",
+        "parameter_name",
+        "parameter_value",
+        "lower_bound",
+        "upper_bound",
+        "nearest_boundary",
+        "distance_fraction",
+        "at_boundary",
+        "transformation",
+        "transformed_value",
+        "transformed_unit"
+      ]
+    },
+    "stage3_phase6_mask_influence": {
+      "relative_path": "outputs/stage3_phase6_mask_influence.csv",
+      "size_bytes": 43545,
+      "sha256": "2f7ee49a3b7ec3ce0acc42c0c88c7fbf1f4c145b9b51029ac71b56fa755f23c0",
+      "row_count": 78,
+      "columns": [
+        "record_type",
+        "source_artifact",
+        "source_csv_row",
+        "comparator_source_artifact",
+        "comparator_source_csv_row",
+        "kernel_id",
+        "held_sector",
+        "absolute_interaction_rank_within_kernel",
+        "raw_kernel_log_predictive_density",
+        "reference_kernel_log_predictive_density",
+        "combined_kernel_log_predictive_density",
+        "raw_k0_log_predictive_density",
+        "reference_k0_log_predictive_density",
+        "combined_k0_log_predictive_density",
+        "raw_kernel_gain_vs_k0",
+        "reference_kernel_gain_vs_k0",
+        "combined_kernel_gain_vs_k0",
+        "mask_interaction",
+        "boundary_fold_count",
+        "held_sector_raw_only_cadence_count",
+        "training_sectors_raw_only_cadence_count",
+        "held_sector_screening_eligible_any_raw_branch_count",
+        "training_sectors_screening_eligible_any_raw_branch_count",
+        "cadence_effect_attribution_supported",
+        "attribution_limit",
+        "sector",
+        "cadenceno",
+        "time_btjd",
+        "quality",
+        "exclusion_reason",
+        "pdcsap_flux",
+        "pdcsap_flux_err",
+        "nearest_used_event_id",
+        "nearest_used_event_distance_hours",
+        "inside_inner_transit_mask",
+        "inside_w13",
+        "inside_w16",
+        "inside_w20",
+        "inside_w26",
+        "inside_w32",
+        "screening_oot_eligible_w13",
+        "screening_oot_eligible_w16",
+        "screening_oot_eligible_w20",
+        "screening_oot_eligible_w26",
+        "screening_oot_eligible_w32",
+        "joint_raw_branch_cells",
+        "screening_raw_branch_cells",
+        "potential_screening_training_held_sectors",
+        "sap_bkg",
+        "sap_bkg_err",
+        "pos_corr1",
+        "pos_corr2",
+        "mom_centr1",
+        "mom_centr2",
+        "camera",
+        "ccd"
+      ]
+    },
+    "stage3_phase6_beta_by_sector": {
+      "relative_path": "outputs/stage3_phase6_beta_by_sector.csv",
+      "size_bytes": 227141,
+      "sha256": "4839290dbf02795ab3302c7b56c06e4e8008b460965017e99b349af24f6851f8",
+      "row_count": 864,
+      "columns": [
+        "source_artifact",
+        "source_csv_row",
+        "model_id",
+        "mask_id",
+        "cell_id",
+        "window_hours",
+        "polynomial_degree",
+        "joint_model_weight",
+        "sector",
+        "timescale_minutes",
+        "filled_bins",
+        "eligible",
+        "unbinned_rms",
+        "binned_rms",
+        "effective_cadences_per_bin",
+        "finite_bin_correction",
+        "white_noise_rms",
+        "beta",
+        "weighted_beta_contribution"
+      ]
+    },
+    "stage3_phase6_residual_summary": {
+      "relative_path": "outputs/stage3_phase6_residual_summary.csv",
+      "size_bytes": 131638,
+      "sha256": "495b2ed3fe02da473d356960905cbcb31fbaa408dc1921ed1c1e085da4117647",
+      "row_count": 144,
+      "columns": [
+        "source_artifact",
+        "source_csv_row",
+        "source_data_artifacts",
+        "model_id",
+        "mask_id",
+        "cell_id",
+        "window_hours",
+        "polynomial_degree",
+        "joint_model_weight",
+        "sector",
+        "cadence_count",
+        "event_count",
+        "time_min_btjd",
+        "time_max_btjd",
+        "mean_residual",
+        "centered_rms",
+        "uncentered_rms",
+        "median_residual",
+        "mad_sigma",
+        "q01_residual",
+        "q05_residual",
+        "q95_residual",
+        "q99_residual",
+        "maximum_absolute_residual",
+        "median_flux_error",
+        "frozen_sector_jitter",
+        "maximum_beta",
+        "maximum_beta_timescale_minutes",
+        "maximum_absolute_acf_nonzero_lag",
+        "acf_at_maximum_absolute_nonzero_lag",
+        "maximum_absolute_acf_lag_minutes",
+        "branch_periodogram_peak_period_minutes",
+        "branch_periodogram_peak_power",
+        "pearson_residual_sap_bkg",
+        "spearman_residual_sap_bkg",
+        "pearson_residual_pos_corr1",
+        "spearman_residual_pos_corr1",
+        "pearson_residual_pos_corr2",
+        "spearman_residual_pos_corr2",
+        "pearson_residual_mom_centr1",
+        "spearman_residual_mom_centr1",
+        "pearson_residual_mom_centr2",
+        "spearman_residual_mom_centr2",
+        "telemetry_association_diagnostic_only"
+      ]
+    }
+  },
+  "report_artifact": {
+    "relative_path": "outputs/stage3_phase6_postmortem.json",
+    "self_hash_recorded": false
+  }
+}

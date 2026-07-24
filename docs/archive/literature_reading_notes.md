@@ -1,4 +1,8 @@
-# Literature Reading Notes
+# Historical Literature Reading Notes
+
+> Archived on 2026-07-23. These are first-pass reading notes, not current project
+> status or scientific authority. Active literature tracking is maintained in
+> `../literature_matrix.md`.
 
 Purpose: extract methodology from open-access papers before writing the TOI-3492.01 article. These notes should summarize methods and structure, not copy wording.
 

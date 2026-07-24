@@ -1,0 +1,1161 @@
+{
+  "schema_version": "1.0",
+  "work_package": "S3-04A_SYNTHETIC_CALIBRATION_PROTOCOL",
+  "generated_utc": "2026-07-23T20:59:43.318718+00:00",
+  "status": "PASS",
+  "scope": {
+    "analysis_mode": "PROTOCOL_FROZEN_BEFORE_SYNTHETIC_RESULTS",
+    "real_data_fit_executed": false,
+    "synthetic_results_observed": false,
+    "phase_7_may_begin": false,
+    "thresholds_not_chosen_post_hoc": true
+  },
+  "source_integrity": {
+    "stage3_manifest": "data/stage3_input_manifest.json",
+    "architecture_decision": "data/stage3_model_architecture_decision.json",
+    "checks": {
+      "manifest_status_pass": true,
+      "decision_status_pass": true,
+      "decision_candidate_count_1": true,
+      "decision_real_data_closed": true,
+      "phase5b_model_count_24": true,
+      "phase5b_raw_count_11": true,
+      "phase5b_reference_count_13": true,
+      "weights_sum_one": true,
+      "t14_positive": true,
+      "ingress_positive": true,
+      "timescale_bounds_positive": true,
+      "oot_inner_positive": true
+    },
+    "sources": {
+      "data/stage3_input_manifest.json": {
+        "relative_path": "data/stage3_input_manifest.json",
+        "size_bytes": 17604,
+        "sha256": "85526a306f89712cdcf6f7f638521e8f048042704a4bad3dc674dfd620b3e45d"
+      },
+      "data/stage3_model_architecture_decision.json": {
+        "relative_path": "data/stage3_model_architecture_decision.json",
+        "size_bytes": 21115,
+        "sha256": "b1ae8596b10207f5d3dcb2dd21a8f65bddc2e5e098f2619bfa17ec2884a8999e"
+      },
+      "outputs/faz2_transit_inventory.json": {
+        "relative_path": "outputs/faz2_transit_inventory.json",
+        "size_bytes": 360697,
+        "sha256": "baa33f45578be3caf855fd5fbb8bd425b34c572347440150e43ae1865d1dabb4"
+      },
+      "outputs/faz4_reduction_comparison.json": {
+        "relative_path": "outputs/faz4_reduction_comparison.json",
+        "size_bytes": 440561,
+        "sha256": "f7ecb8496e1698d6e42a6921778ade0158ab2adb75ff4fb81643f46446c762c1"
+      },
+      "outputs/faz5b_remediation.json": {
+        "relative_path": "outputs/faz5b_remediation.json",
+        "size_bytes": 18234,
+        "sha256": "075971b71a0598362f7abcfac65e17dffbf9ba9d8d0c5a0fda3d61dbaf63f3c4"
+      },
+      "data/toi3492_cadence_ledger_120s.csv.gz": {
+        "relative_path": "data/toi3492_cadence_ledger_120s.csv.gz",
+        "size_bytes": 13898271,
+        "sha256": "5756337fce460d5e6d2bcc8e9fd62f53948c85d6517f842c4f028d7dd630b8b2"
+      },
+      "data/toi3492_faz4_reductions_120s.csv.gz": {
+        "relative_path": "data/toi3492_faz4_reductions_120s.csv.gz",
+        "size_bytes": 13182053,
+        "sha256": "4d36e6888029b160055531d88542d6b0f4427710693f89181ed60abfbc06ebca"
+      },
+      "scripts/build_stage3_synthetic_calibration_protocol.py": {
+        "relative_path": "scripts/build_stage3_synthetic_calibration_protocol.py",
+        "size_bytes": 23445,
+        "sha256": "d18688766688516bc9bdbade6b6c2cec91396b00626be1e9132fac43cb373824"
+      }
+    }
+  },
+  "data_reuse": {
+    "cadence_timestamps": "Real TESS 120-s timestamps, cadence gaps, event identities, and sector boundaries are used from the frozen Phase-1 ledger. Real flux values are NOT used.",
+    "error_templates": "Real propagated flux uncertainties are used from the frozen Phase-4 PDCSAP long table.",
+    "masks_and_branches": "The two frozen masks (raw_valid, reference_included) and all 24 branch windows/polynomials are used exactly as in Phase 5B handoff.",
+    "oot_masking": "The same 0.75*T14 inner mask is applied to training data."
+  },
+  "deterministic_seeds": {
+    "base_seed": 349204,
+    "scheme": "realization_seed = base_seed + class_index * 10000 + realization_index * 100. This is independent of worker count and execution order."
+  },
+  "generative_pipeline": {
+    "step_1_prior_draw": "Draw noise and (if applicable) transit geometry parameters from the class distributions using the realization seed.",
+    "step_2_latent_gp": "Generate one GP realization per sector on the union cadence set, using the drawn parameters and the real timestamp/gap structure. Sector GP realizations are independent.",
+    "step_3_baseline": "Draw event-baseline coefficients from N(0, 0.01^2). One independent draw per event per branch.",
+    "step_4_transit": "If inject_transit=True, generate the exposure-integrated transit model at the drawn geometry.",
+    "step_5_flux": "observed_flux = baseline + transit + gp + N(0, flux_err). One latent realization covers both masks and all 24 branches.",
+    "step_6_mask_derivation": "Derive raw_valid and reference_included fluxes from the single latent realization. Branches derive their windows from the same flux realization."
+  },
+  "simulation_classes": [
+    {
+      "class_index": 0,
+      "name": "C01_white_jitter_transit",
+      "description": "White noise plus sector jitter with transit. Calibrates: K0 false-positive rate for M1 selection.",
+      "requested_count": 30,
+      "noise_family": "K0_white",
+      "noise_parameters": {
+        "mu_jitter_ratio": -1.0,
+        "jitter_offset_sigma": 0.5,
+        "mu_amplitude_ratio": null,
+        "amplitude_offset_sigma": null,
+        "mu_log_timescale": null,
+        "timescale_offset_sigma": null
+      },
+      "inject_transit": true,
+      "geometry_injection": {
+        "method": "Draw geometry from broad uniform distributions, NOT centered on the observed TOI-3492.01 values. This prevents the calibration from being tuned to the target.",
+        "rp_rs": {
+          "distribution": "uniform",
+          "bounds": [
+            0.03,
+            0.09
+          ]
+        },
+        "a_rs": {
+          "distribution": "uniform",
+          "bounds": [
+            5.0,
+            16.0
+          ]
+        },
+        "impact_parameter": {
+          "distribution": "uniform",
+          "bounds": [
+            0.0,
+            0.95
+          ],
+          "physical_check": "b < 1.0 + rp_rs AND b < a_rs"
+        },
+        "target_values_not_used": true,
+        "target_values_listed_for_audit_only": {
+          "rp_rs": 0.055,
+          "a_rs": 10.2,
+          "impact_parameter": 0.73
+        }
+      },
+      "seed_offset": 0,
+      "evaluation": {
+        "screening_required": true,
+        "joint_fit_required": true,
+        "measured_quantities": [
+          "rp_rs_bias",
+          "a_rs_bias",
+          "impact_parameter_bias",
+          "t14_bias",
+          "rp_rs_coverage_68",
+          "rp_rs_coverage_95",
+          "a_rs_coverage_68",
+          "a_rs_coverage_95",
+          "impact_parameter_coverage_68",
+          "impact_parameter_coverage_95",
+          "t14_coverage_68",
+          "t14_coverage_95",
+          "delta_elpd_m1_vs_k0",
+          "sign_flip_p_value",
+          "mask_interaction",
+          "any_parameter_at_boundary",
+          "transit_depth_attenuation_fraction",
+          "ingress_egress_rms_residual_mm_s",
+          "optimizer_no_op_count",
+          "optimizer_local_mode_count",
+          "weighted_residual_beta_max",
+          "k0_selected",
+          "m1_selected",
+          "neither_selected"
+        ]
+      }
+    },
+    {
+      "class_index": 1,
+      "name": "C02_m1_160_transit",
+      "description": "Matern-3/2 at the M1 design-center timescale (160 min) with transit. Calibrates: M1 true-positive rate, transit bias and coverage under the nominal model.",
+      "requested_count": 30,
+      "noise_family": "M1_matern32",
+      "noise_parameters": {
+        "mu_jitter_ratio": -1.0,
+        "jitter_offset_sigma": 0.5,
+        "mu_amplitude_ratio": -1.0,
+        "amplitude_offset_sigma": 0.35,
+        "mu_log_timescale": 5.075173815233827,
+        "timescale_offset_sigma": 0.35,
+        "timescale_lower_minutes": 4.0,
+        "timescale_upper_minutes": 780.0
+      },
+      "inject_transit": true,
+      "geometry_injection": {
+        "method": "Draw geometry from broad uniform distributions, NOT centered on the observed TOI-3492.01 values. This prevents the calibration from being tuned to the target.",
+        "rp_rs": {
+          "distribution": "uniform",
+          "bounds": [
+            0.03,
+            0.09
+          ]
+        },
+        "a_rs": {
+          "distribution": "uniform",
+          "bounds": [
+            5.0,
+            16.0
+          ]
+        },
+        "impact_parameter": {
+          "distribution": "uniform",
+          "bounds": [
+            0.0,
+            0.95
+          ],
+          "physical_check": "b < 1.0 + rp_rs AND b < a_rs"
+        },
+        "target_values_not_used": true,
+        "target_values_listed_for_audit_only": {
+          "rp_rs": 0.055,
+          "a_rs": 10.2,
+          "impact_parameter": 0.73
+        }
+      },
+      "seed_offset": 10000,
+      "evaluation": {
+        "screening_required": true,
+        "joint_fit_required": true,
+        "measured_quantities": [
+          "rp_rs_bias",
+          "a_rs_bias",
+          "impact_parameter_bias",
+          "t14_bias",
+          "rp_rs_coverage_68",
+          "rp_rs_coverage_95",
+          "a_rs_coverage_68",
+          "a_rs_coverage_95",
+          "impact_parameter_coverage_68",
+          "impact_parameter_coverage_95",
+          "t14_coverage_68",
+          "t14_coverage_95",
+          "delta_elpd_m1_vs_k0",
+          "sign_flip_p_value",
+          "mask_interaction",
+          "any_parameter_at_boundary",
+          "transit_depth_attenuation_fraction",
+          "ingress_egress_rms_residual_mm_s",
+          "optimizer_no_op_count",
+          "optimizer_local_mode_count",
+          "weighted_residual_beta_max",
+          "k0_selected",
+          "m1_selected",
+          "neither_selected"
+        ]
+      }
+    },
+    {
+      "class_index": 2,
+      "name": "C03_m1_80_transit",
+      "description": "Matern-3/2 at 80 min (shorter than design center). Calibrates: M1 robustness to shorter true timescale.",
+      "requested_count": 20,
+      "noise_family": "M1_matern32",
+      "noise_parameters": {
+        "mu_jitter_ratio": -1.0,
+        "jitter_offset_sigma": 0.5,
+        "mu_amplitude_ratio": -1.0,
+        "amplitude_offset_sigma": 0.35,
+        "mu_log_timescale": 4.382026634673881,
+        "timescale_offset_sigma": 0.35,
+        "timescale_lower_minutes": 4.0,
+        "timescale_upper_minutes": 780.0
+      },
+      "inject_transit": true,
+      "geometry_injection": {
+        "method": "Draw geometry from broad uniform distributions, NOT centered on the observed TOI-3492.01 values. This prevents the calibration from being tuned to the target.",
+        "rp_rs": {
+          "distribution": "uniform",
+          "bounds": [
+            0.03,
+            0.09
+          ]
+        },
+        "a_rs": {
+          "distribution": "uniform",
+          "bounds": [
+            5.0,
+            16.0
+          ]
+        },
+        "impact_parameter": {
+          "distribution": "uniform",
+          "bounds": [
+            0.0,
+            0.95
+          ],
+          "physical_check": "b < 1.0 + rp_rs AND b < a_rs"
+        },
+        "target_values_not_used": true,
+        "target_values_listed_for_audit_only": {
+          "rp_rs": 0.055,
+          "a_rs": 10.2,
+          "impact_parameter": 0.73
+        }
+      },
+      "seed_offset": 20000,
+      "evaluation": {
+        "screening_required": true,
+        "joint_fit_required": true,
+        "measured_quantities": [
+          "rp_rs_bias",
+          "a_rs_bias",
+          "impact_parameter_bias",
+          "t14_bias",
+          "rp_rs_coverage_68",
+          "rp_rs_coverage_95",
+          "a_rs_coverage_68",
+          "a_rs_coverage_95",
+          "impact_parameter_coverage_68",
+          "impact_parameter_coverage_95",
+          "t14_coverage_68",
+          "t14_coverage_95",
+          "delta_elpd_m1_vs_k0",
+          "sign_flip_p_value",
+          "mask_interaction",
+          "any_parameter_at_boundary",
+          "transit_depth_attenuation_fraction",
+          "ingress_egress_rms_residual_mm_s",
+          "optimizer_no_op_count",
+          "optimizer_local_mode_count",
+          "weighted_residual_beta_max",
+          "k0_selected",
+          "m1_selected",
+          "neither_selected"
+        ]
+      }
+    },
+    {
+      "class_index": 3,
+      "name": "C04_m1_320_transit",
+      "description": "Matern-3/2 at 320 min (longer than design center). Calibrates: M1 robustness to longer true timescale.",
+      "requested_count": 20,
+      "noise_family": "M1_matern32",
+      "noise_parameters": {
+        "mu_jitter_ratio": -1.0,
+        "jitter_offset_sigma": 0.5,
+        "mu_amplitude_ratio": -1.0,
+        "amplitude_offset_sigma": 0.35,
+        "mu_log_timescale": 5.768320995793772,
+        "timescale_offset_sigma": 0.35,
+        "timescale_lower_minutes": 4.0,
+        "timescale_upper_minutes": 780.0
+      },
+      "inject_transit": true,
+      "geometry_injection": {
+        "method": "Draw geometry from broad uniform distributions, NOT centered on the observed TOI-3492.01 values. This prevents the calibration from being tuned to the target.",
+        "rp_rs": {
+          "distribution": "uniform",
+          "bounds": [
+            0.03,
+            0.09
+          ]
+        },
+        "a_rs": {
+          "distribution": "uniform",
+          "bounds": [
+            5.0,
+            16.0
+          ]
+        },
+        "impact_parameter": {
+          "distribution": "uniform",
+          "bounds": [
+            0.0,
+            0.95
+          ],
+          "physical_check": "b < 1.0 + rp_rs AND b < a_rs"
+        },
+        "target_values_not_used": true,
+        "target_values_listed_for_audit_only": {
+          "rp_rs": 0.055,
+          "a_rs": 10.2,
+          "impact_parameter": 0.73
+        }
+      },
+      "seed_offset": 30000,
+      "evaluation": {
+        "screening_required": true,
+        "joint_fit_required": true,
+        "measured_quantities": [
+          "rp_rs_bias",
+          "a_rs_bias",
+          "impact_parameter_bias",
+          "t14_bias",
+          "rp_rs_coverage_68",
+          "rp_rs_coverage_95",
+          "a_rs_coverage_68",
+          "a_rs_coverage_95",
+          "impact_parameter_coverage_68",
+          "impact_parameter_coverage_95",
+          "t14_coverage_68",
+          "t14_coverage_95",
+          "delta_elpd_m1_vs_k0",
+          "sign_flip_p_value",
+          "mask_interaction",
+          "any_parameter_at_boundary",
+          "transit_depth_attenuation_fraction",
+          "ingress_egress_rms_residual_mm_s",
+          "optimizer_no_op_count",
+          "optimizer_local_mode_count",
+          "weighted_residual_beta_max",
+          "k0_selected",
+          "m1_selected",
+          "neither_selected"
+        ]
+      }
+    },
+    {
+      "class_index": 4,
+      "name": "C05_m1_720_boundary",
+      "description": "Matern-3/2 near the 780-min upper bound. Calibrates: boundary behavior, timescale recovery near limit.",
+      "requested_count": 15,
+      "noise_family": "M1_matern32",
+      "noise_parameters": {
+        "mu_jitter_ratio": -1.0,
+        "jitter_offset_sigma": 0.5,
+        "mu_amplitude_ratio": -1.0,
+        "amplitude_offset_sigma": 0.35,
+        "mu_log_timescale": 6.579251212010101,
+        "timescale_offset_sigma": 0.35,
+        "timescale_lower_minutes": 4.0,
+        "timescale_upper_minutes": 780.0
+      },
+      "inject_transit": true,
+      "geometry_injection": {
+        "method": "Draw geometry from broad uniform distributions, NOT centered on the observed TOI-3492.01 values. This prevents the calibration from being tuned to the target.",
+        "rp_rs": {
+          "distribution": "uniform",
+          "bounds": [
+            0.03,
+            0.09
+          ]
+        },
+        "a_rs": {
+          "distribution": "uniform",
+          "bounds": [
+            5.0,
+            16.0
+          ]
+        },
+        "impact_parameter": {
+          "distribution": "uniform",
+          "bounds": [
+            0.0,
+            0.95
+          ],
+          "physical_check": "b < 1.0 + rp_rs AND b < a_rs"
+        },
+        "target_values_not_used": true,
+        "target_values_listed_for_audit_only": {
+          "rp_rs": 0.055,
+          "a_rs": 10.2,
+          "impact_parameter": 0.73
+        }
+      },
+      "seed_offset": 40000,
+      "evaluation": {
+        "screening_required": true,
+        "joint_fit_required": true,
+        "measured_quantities": [
+          "rp_rs_bias",
+          "a_rs_bias",
+          "impact_parameter_bias",
+          "t14_bias",
+          "rp_rs_coverage_68",
+          "rp_rs_coverage_95",
+          "a_rs_coverage_68",
+          "a_rs_coverage_95",
+          "impact_parameter_coverage_68",
+          "impact_parameter_coverage_95",
+          "t14_coverage_68",
+          "t14_coverage_95",
+          "delta_elpd_m1_vs_k0",
+          "sign_flip_p_value",
+          "mask_interaction",
+          "any_parameter_at_boundary",
+          "transit_depth_attenuation_fraction",
+          "ingress_egress_rms_residual_mm_s",
+          "optimizer_no_op_count",
+          "optimizer_local_mode_count",
+          "weighted_residual_beta_max",
+          "k0_selected",
+          "m1_selected",
+          "neither_selected"
+        ]
+      }
+    },
+    {
+      "class_index": 5,
+      "name": "C06_ou_160_misspec",
+      "description": "OU (rougher kernel) at 160 min. Calibrates: M1 rejection or acceptance when true kernel is OU.",
+      "requested_count": 15,
+      "noise_family": "OU",
+      "noise_parameters": {
+        "mu_jitter_ratio": -1.0,
+        "jitter_offset_sigma": 0.5,
+        "mu_amplitude_ratio": -1.0,
+        "amplitude_offset_sigma": 0.35,
+        "mu_log_timescale": 5.075173815233827,
+        "timescale_offset_sigma": 0.35,
+        "timescale_lower_minutes": 4.0,
+        "timescale_upper_minutes": 780.0
+      },
+      "inject_transit": true,
+      "geometry_injection": {
+        "method": "Draw geometry from broad uniform distributions, NOT centered on the observed TOI-3492.01 values. This prevents the calibration from being tuned to the target.",
+        "rp_rs": {
+          "distribution": "uniform",
+          "bounds": [
+            0.03,
+            0.09
+          ]
+        },
+        "a_rs": {
+          "distribution": "uniform",
+          "bounds": [
+            5.0,
+            16.0
+          ]
+        },
+        "impact_parameter": {
+          "distribution": "uniform",
+          "bounds": [
+            0.0,
+            0.95
+          ],
+          "physical_check": "b < 1.0 + rp_rs AND b < a_rs"
+        },
+        "target_values_not_used": true,
+        "target_values_listed_for_audit_only": {
+          "rp_rs": 0.055,
+          "a_rs": 10.2,
+          "impact_parameter": 0.73
+        }
+      },
+      "seed_offset": 50000,
+      "evaluation": {
+        "screening_required": true,
+        "joint_fit_required": true,
+        "measured_quantities": [
+          "rp_rs_bias",
+          "a_rs_bias",
+          "impact_parameter_bias",
+          "t14_bias",
+          "rp_rs_coverage_68",
+          "rp_rs_coverage_95",
+          "a_rs_coverage_68",
+          "a_rs_coverage_95",
+          "impact_parameter_coverage_68",
+          "impact_parameter_coverage_95",
+          "t14_coverage_68",
+          "t14_coverage_95",
+          "delta_elpd_m1_vs_k0",
+          "sign_flip_p_value",
+          "mask_interaction",
+          "any_parameter_at_boundary",
+          "transit_depth_attenuation_fraction",
+          "ingress_egress_rms_residual_mm_s",
+          "optimizer_no_op_count",
+          "optimizer_local_mode_count",
+          "weighted_residual_beta_max",
+          "k0_selected",
+          "m1_selected",
+          "neither_selected"
+        ]
+      }
+    },
+    {
+      "class_index": 6,
+      "name": "C07_sho_160_misspec",
+      "description": "SHO (oscillator kernel) at 160 min. Calibrates: M1 behavior when true kernel has oscillator structure.",
+      "requested_count": 15,
+      "noise_family": "SHO",
+      "noise_parameters": {
+        "mu_jitter_ratio": -1.0,
+        "jitter_offset_sigma": 0.5,
+        "mu_amplitude_ratio": -1.0,
+        "amplitude_offset_sigma": 0.35,
+        "mu_log_timescale": 5.075173815233827,
+        "timescale_offset_sigma": 0.35,
+        "timescale_lower_minutes": 4.0,
+        "timescale_upper_minutes": 780.0
+      },
+      "inject_transit": true,
+      "geometry_injection": {
+        "method": "Draw geometry from broad uniform distributions, NOT centered on the observed TOI-3492.01 values. This prevents the calibration from being tuned to the target.",
+        "rp_rs": {
+          "distribution": "uniform",
+          "bounds": [
+            0.03,
+            0.09
+          ]
+        },
+        "a_rs": {
+          "distribution": "uniform",
+          "bounds": [
+            5.0,
+            16.0
+          ]
+        },
+        "impact_parameter": {
+          "distribution": "uniform",
+          "bounds": [
+            0.0,
+            0.95
+          ],
+          "physical_check": "b < 1.0 + rp_rs AND b < a_rs"
+        },
+        "target_values_not_used": true,
+        "target_values_listed_for_audit_only": {
+          "rp_rs": 0.055,
+          "a_rs": 10.2,
+          "impact_parameter": 0.73
+        }
+      },
+      "seed_offset": 60000,
+      "evaluation": {
+        "screening_required": true,
+        "joint_fit_required": true,
+        "measured_quantities": [
+          "rp_rs_bias",
+          "a_rs_bias",
+          "impact_parameter_bias",
+          "t14_bias",
+          "rp_rs_coverage_68",
+          "rp_rs_coverage_95",
+          "a_rs_coverage_68",
+          "a_rs_coverage_95",
+          "impact_parameter_coverage_68",
+          "impact_parameter_coverage_95",
+          "t14_coverage_68",
+          "t14_coverage_95",
+          "delta_elpd_m1_vs_k0",
+          "sign_flip_p_value",
+          "mask_interaction",
+          "any_parameter_at_boundary",
+          "transit_depth_attenuation_fraction",
+          "ingress_egress_rms_residual_mm_s",
+          "optimizer_no_op_count",
+          "optimizer_local_mode_count",
+          "weighted_residual_beta_max",
+          "k0_selected",
+          "m1_selected",
+          "neither_selected"
+        ]
+      }
+    },
+    {
+      "class_index": 7,
+      "name": "C08_sector_vary_amplitude",
+      "description": "M1 with increased sector-amplitude dispersion (0.7 vs 0.35). Calibrates: M1 handling of heterogeneous sector amplitudes.",
+      "requested_count": 15,
+      "noise_family": "M1_matern32",
+      "noise_parameters": {
+        "mu_jitter_ratio": -1.0,
+        "jitter_offset_sigma": 0.5,
+        "mu_amplitude_ratio": -1.0,
+        "amplitude_offset_sigma": 0.7,
+        "mu_log_timescale": 5.075173815233827,
+        "timescale_offset_sigma": 0.35,
+        "timescale_lower_minutes": 4.0,
+        "timescale_upper_minutes": 780.0
+      },
+      "inject_transit": true,
+      "geometry_injection": {
+        "method": "Draw geometry from broad uniform distributions, NOT centered on the observed TOI-3492.01 values. This prevents the calibration from being tuned to the target.",
+        "rp_rs": {
+          "distribution": "uniform",
+          "bounds": [
+            0.03,
+            0.09
+          ]
+        },
+        "a_rs": {
+          "distribution": "uniform",
+          "bounds": [
+            5.0,
+            16.0
+          ]
+        },
+        "impact_parameter": {
+          "distribution": "uniform",
+          "bounds": [
+            0.0,
+            0.95
+          ],
+          "physical_check": "b < 1.0 + rp_rs AND b < a_rs"
+        },
+        "target_values_not_used": true,
+        "target_values_listed_for_audit_only": {
+          "rp_rs": 0.055,
+          "a_rs": 10.2,
+          "impact_parameter": 0.73
+        }
+      },
+      "seed_offset": 70000,
+      "evaluation": {
+        "screening_required": true,
+        "joint_fit_required": true,
+        "measured_quantities": [
+          "rp_rs_bias",
+          "a_rs_bias",
+          "impact_parameter_bias",
+          "t14_bias",
+          "rp_rs_coverage_68",
+          "rp_rs_coverage_95",
+          "a_rs_coverage_68",
+          "a_rs_coverage_95",
+          "impact_parameter_coverage_68",
+          "impact_parameter_coverage_95",
+          "t14_coverage_68",
+          "t14_coverage_95",
+          "delta_elpd_m1_vs_k0",
+          "sign_flip_p_value",
+          "mask_interaction",
+          "any_parameter_at_boundary",
+          "transit_depth_attenuation_fraction",
+          "ingress_egress_rms_residual_mm_s",
+          "optimizer_no_op_count",
+          "optimizer_local_mode_count",
+          "weighted_residual_beta_max",
+          "k0_selected",
+          "m1_selected",
+          "neither_selected"
+        ]
+      }
+    },
+    {
+      "class_index": 8,
+      "name": "C09_sector_vary_timescale",
+      "description": "M1 with increased sector-timescale dispersion (0.7 vs 0.35). Calibrates: M1 handling of heterogeneous sector timescales.",
+      "requested_count": 15,
+      "noise_family": "M1_matern32",
+      "noise_parameters": {
+        "mu_jitter_ratio": -1.0,
+        "jitter_offset_sigma": 0.5,
+        "mu_amplitude_ratio": -1.0,
+        "amplitude_offset_sigma": 0.35,
+        "mu_log_timescale": 5.075173815233827,
+        "timescale_offset_sigma": 0.7,
+        "timescale_lower_minutes": 4.0,
+        "timescale_upper_minutes": 780.0
+      },
+      "inject_transit": true,
+      "geometry_injection": {
+        "method": "Draw geometry from broad uniform distributions, NOT centered on the observed TOI-3492.01 values. This prevents the calibration from being tuned to the target.",
+        "rp_rs": {
+          "distribution": "uniform",
+          "bounds": [
+            0.03,
+            0.09
+          ]
+        },
+        "a_rs": {
+          "distribution": "uniform",
+          "bounds": [
+            5.0,
+            16.0
+          ]
+        },
+        "impact_parameter": {
+          "distribution": "uniform",
+          "bounds": [
+            0.0,
+            0.95
+          ],
+          "physical_check": "b < 1.0 + rp_rs AND b < a_rs"
+        },
+        "target_values_not_used": true,
+        "target_values_listed_for_audit_only": {
+          "rp_rs": 0.055,
+          "a_rs": 10.2,
+          "impact_parameter": 0.73
+        }
+      },
+      "seed_offset": 80000,
+      "evaluation": {
+        "screening_required": true,
+        "joint_fit_required": true,
+        "measured_quantities": [
+          "rp_rs_bias",
+          "a_rs_bias",
+          "impact_parameter_bias",
+          "t14_bias",
+          "rp_rs_coverage_68",
+          "rp_rs_coverage_95",
+          "a_rs_coverage_68",
+          "a_rs_coverage_95",
+          "impact_parameter_coverage_68",
+          "impact_parameter_coverage_95",
+          "t14_coverage_68",
+          "t14_coverage_95",
+          "delta_elpd_m1_vs_k0",
+          "sign_flip_p_value",
+          "mask_interaction",
+          "any_parameter_at_boundary",
+          "transit_depth_attenuation_fraction",
+          "ingress_egress_rms_residual_mm_s",
+          "optimizer_no_op_count",
+          "optimizer_local_mode_count",
+          "weighted_residual_beta_max",
+          "k0_selected",
+          "m1_selected",
+          "neither_selected"
+        ]
+      }
+    },
+    {
+      "class_index": 9,
+      "name": "C10_background_correlated",
+      "description": "M1 at 160 min with additional SAP_BKG-correlated systematics injected at 0.5-2x the observed slope. Calibrates: M1 robustness against realistic external systematics.",
+      "requested_count": 15,
+      "noise_family": "M1_matern32",
+      "noise_parameters": {
+        "mu_jitter_ratio": -1.0,
+        "jitter_offset_sigma": 0.5,
+        "mu_amplitude_ratio": -1.0,
+        "amplitude_offset_sigma": 0.35,
+        "mu_log_timescale": 5.075173815233827,
+        "timescale_offset_sigma": 0.35,
+        "timescale_lower_minutes": 4.0,
+        "timescale_upper_minutes": 780.0
+      },
+      "inject_transit": true,
+      "geometry_injection": {
+        "method": "Draw geometry from broad uniform distributions, NOT centered on the observed TOI-3492.01 values. This prevents the calibration from being tuned to the target.",
+        "rp_rs": {
+          "distribution": "uniform",
+          "bounds": [
+            0.03,
+            0.09
+          ]
+        },
+        "a_rs": {
+          "distribution": "uniform",
+          "bounds": [
+            5.0,
+            16.0
+          ]
+        },
+        "impact_parameter": {
+          "distribution": "uniform",
+          "bounds": [
+            0.0,
+            0.95
+          ],
+          "physical_check": "b < 1.0 + rp_rs AND b < a_rs"
+        },
+        "target_values_not_used": true,
+        "target_values_listed_for_audit_only": {
+          "rp_rs": 0.055,
+          "a_rs": 10.2,
+          "impact_parameter": 0.73
+        }
+      },
+      "seed_offset": 90000,
+      "evaluation": {
+        "screening_required": true,
+        "joint_fit_required": true,
+        "measured_quantities": [
+          "rp_rs_bias",
+          "a_rs_bias",
+          "impact_parameter_bias",
+          "t14_bias",
+          "rp_rs_coverage_68",
+          "rp_rs_coverage_95",
+          "a_rs_coverage_68",
+          "a_rs_coverage_95",
+          "impact_parameter_coverage_68",
+          "impact_parameter_coverage_95",
+          "t14_coverage_68",
+          "t14_coverage_95",
+          "delta_elpd_m1_vs_k0",
+          "sign_flip_p_value",
+          "mask_interaction",
+          "any_parameter_at_boundary",
+          "transit_depth_attenuation_fraction",
+          "ingress_egress_rms_residual_mm_s",
+          "optimizer_no_op_count",
+          "optimizer_local_mode_count",
+          "weighted_residual_beta_max",
+          "k0_selected",
+          "m1_selected",
+          "neither_selected"
+        ]
+      },
+      "systematic_injection": {
+        "telemetry": "SAP_BKG",
+        "slope_ppm_per_e_per_s": [
+          5e-07,
+          2e-06
+        ],
+        "method": "Add deterministic telemetry-correlated trend to the flux before fitting."
+      }
+    },
+    {
+      "class_index": 10,
+      "name": "C11_no_transit_null",
+      "description": "M1 noise only, no transit injected. Calibrates: false-transit detection rate, transit-depth background level.",
+      "requested_count": 10,
+      "noise_family": "M1_matern32",
+      "noise_parameters": {
+        "mu_jitter_ratio": -1.0,
+        "jitter_offset_sigma": 0.5,
+        "mu_amplitude_ratio": -1.0,
+        "amplitude_offset_sigma": 0.35,
+        "mu_log_timescale": 5.075173815233827,
+        "timescale_offset_sigma": 0.35,
+        "timescale_lower_minutes": 4.0,
+        "timescale_upper_minutes": 780.0
+      },
+      "inject_transit": false,
+      "geometry_injection": {
+        "method": "Draw geometry from broad uniform distributions, NOT centered on the observed TOI-3492.01 values. This prevents the calibration from being tuned to the target.",
+        "rp_rs": {
+          "distribution": "uniform",
+          "bounds": [
+            0.03,
+            0.09
+          ]
+        },
+        "a_rs": {
+          "distribution": "uniform",
+          "bounds": [
+            5.0,
+            16.0
+          ]
+        },
+        "impact_parameter": {
+          "distribution": "uniform",
+          "bounds": [
+            0.0,
+            0.95
+          ],
+          "physical_check": "b < 1.0 + rp_rs AND b < a_rs"
+        },
+        "target_values_not_used": true,
+        "target_values_listed_for_audit_only": {
+          "rp_rs": 0.055,
+          "a_rs": 10.2,
+          "impact_parameter": 0.73
+        }
+      },
+      "seed_offset": 100000,
+      "evaluation": {
+        "screening_required": true,
+        "joint_fit_required": true,
+        "measured_quantities": [
+          "rp_rs_bias",
+          "a_rs_bias",
+          "impact_parameter_bias",
+          "t14_bias",
+          "rp_rs_coverage_68",
+          "rp_rs_coverage_95",
+          "a_rs_coverage_68",
+          "a_rs_coverage_95",
+          "impact_parameter_coverage_68",
+          "impact_parameter_coverage_95",
+          "t14_coverage_68",
+          "t14_coverage_95",
+          "delta_elpd_m1_vs_k0",
+          "sign_flip_p_value",
+          "mask_interaction",
+          "any_parameter_at_boundary",
+          "transit_depth_attenuation_fraction",
+          "ingress_egress_rms_residual_mm_s",
+          "optimizer_no_op_count",
+          "optimizer_local_mode_count",
+          "weighted_residual_beta_max",
+          "k0_selected",
+          "m1_selected",
+          "neither_selected"
+        ]
+      }
+    },
+    {
+      "class_index": 11,
+      "name": "C12_near_boundary_tau4",
+      "description": "Matern-3/2 very near the 4-min lower bound. Calibrates: optimizer stability and boundary behavior at extreme.",
+      "requested_count": 10,
+      "noise_family": "M1_matern32",
+      "noise_parameters": {
+        "mu_jitter_ratio": -1.0,
+        "jitter_offset_sigma": 0.5,
+        "mu_amplitude_ratio": -1.0,
+        "amplitude_offset_sigma": 0.35,
+        "mu_log_timescale": 1.410986973710262,
+        "timescale_offset_sigma": 0.35,
+        "timescale_lower_minutes": 4.0,
+        "timescale_upper_minutes": 780.0
+      },
+      "inject_transit": true,
+      "geometry_injection": {
+        "method": "Draw geometry from broad uniform distributions, NOT centered on the observed TOI-3492.01 values. This prevents the calibration from being tuned to the target.",
+        "rp_rs": {
+          "distribution": "uniform",
+          "bounds": [
+            0.03,
+            0.09
+          ]
+        },
+        "a_rs": {
+          "distribution": "uniform",
+          "bounds": [
+            5.0,
+            16.0
+          ]
+        },
+        "impact_parameter": {
+          "distribution": "uniform",
+          "bounds": [
+            0.0,
+            0.95
+          ],
+          "physical_check": "b < 1.0 + rp_rs AND b < a_rs"
+        },
+        "target_values_not_used": true,
+        "target_values_listed_for_audit_only": {
+          "rp_rs": 0.055,
+          "a_rs": 10.2,
+          "impact_parameter": 0.73
+        }
+      },
+      "seed_offset": 110000,
+      "evaluation": {
+        "screening_required": true,
+        "joint_fit_required": true,
+        "measured_quantities": [
+          "rp_rs_bias",
+          "a_rs_bias",
+          "impact_parameter_bias",
+          "t14_bias",
+          "rp_rs_coverage_68",
+          "rp_rs_coverage_95",
+          "a_rs_coverage_68",
+          "a_rs_coverage_95",
+          "impact_parameter_coverage_68",
+          "impact_parameter_coverage_95",
+          "t14_coverage_68",
+          "t14_coverage_95",
+          "delta_elpd_m1_vs_k0",
+          "sign_flip_p_value",
+          "mask_interaction",
+          "any_parameter_at_boundary",
+          "transit_depth_attenuation_fraction",
+          "ingress_egress_rms_residual_mm_s",
+          "optimizer_no_op_count",
+          "optimizer_local_mode_count",
+          "weighted_residual_beta_max",
+          "k0_selected",
+          "m1_selected",
+          "neither_selected"
+        ]
+      }
+    }
+  ],
+  "requested_total": 210,
+  "provisional_gate_thresholds": {
+    "predictive": {
+      "delta_elpd": {
+        "strict_gt_2se": true,
+        "calibrated_from_synthetic": true,
+        "provisional_value": 2.0
+      },
+      "sign_flip": {
+        "p_at_most_0p05": true,
+        "calibrated_from_synthetic": true,
+        "provisional_value": 0.05
+      },
+      "mask_interaction": {
+        "absolute_at_most_2se": true,
+        "calibrated_from_synthetic": true,
+        "provisional_value": 2.0
+      },
+      "both_mask_deltas_positive": true,
+      "all_six_folds_valid": true,
+      "all_map_parameters_outside_boundary": true
+    },
+    "transit": {
+      "rp_rs": {
+        "bias_tolerance": null,
+        "derived_from_synthetic": true,
+        "provisional": 0.001
+      },
+      "a_rs": {
+        "bias_tolerance": null,
+        "derived_from_synthetic": true,
+        "provisional": 0.5
+      },
+      "impact_parameter": {
+        "bias_tolerance": null,
+        "derived_from_synthetic": true,
+        "provisional": 0.05
+      },
+      "t14_hours": {
+        "bias_tolerance": null,
+        "derived_from_synthetic": true,
+        "provisional": 0.05
+      },
+      "coverage_68_minimum": 0.5,
+      "coverage_95_minimum": 0.85,
+      "transit_depth_attenuation_max": 0.05,
+      "ingress_egress_rms_excess_max_mm_s": null
+    },
+    "model_selection": {
+      "false_m1_rate_on_white_max": 0.1,
+      "true_m1_rate_on_m1_minimum": 0.7,
+      "false_transit_on_null_max": 0.0
+    },
+    "numerical": {
+      "optimizer_no_op_max_rate": 0.0,
+      "optimizer_local_mode_max_rate": 0.05,
+      "boundary_concentration_warning_threshold": 0.2
+    }
+  },
+  "threshold_derivation_rules": {
+    "principle": "All thresholds are derived from synthetic results using rules frozen in this protocol. No threshold is chosen after examining the real-data output.",
+    "bias_tolerance": "For each geometry parameter, bias_tolerance = 2 * standard_deviation(bias across C02 realizations). This sets a 2-sigma acceptance window around zero bias under the nominal model.",
+    "coverage_acceptance": "68% coverage >= 0.50 AND 95% coverage >= 0.85 on C02. More stringent than the commonly used '>= 0.68 for 68%' because the Stage-3 model uses only MAP + conditional Laplace, not full MCMC.",
+    "model_selection_rates": "Calculated on C01 (white) and C02 (M1). false_m1_rate = fraction of C01 where M1 is selected. true_m1_rate = fraction of C02 where M1 is selected. If either fails the gate, the model is not calibrated.",
+    "transit_preservation": "On C02 (nominal M1 + transit): median(transit depth attenuation) <= 0.05. Attenuation = (injected_depth - recovered_depth) / injected_depth. Ingress/egress residual RMS measured on C02 and C06 (OU) to detect GP absorption of transit edges.",
+    "null_transit": "On C11 (no transit): zero realizations may produce a positive transit detection at the calibrated threshold."
+  },
+  "calibration_failure": {
+    "conditions": [
+      "Any mandatory simulation class has 0 completed realizations",
+      "Bias tolerance cannot be computed (all C02 failed)",
+      "Coverage below minimum on C02",
+      "False-M1 rate exceeds 0.10 on C01",
+      "True-M1 rate below 0.70 on C02",
+      "Transit depth attenuation exceeds 0.05 on C02",
+      "Optimizer no-op rate > 0.0 on any class",
+      "Any false transit detection on C11",
+      "More than 20% of realizations hit a parameter boundary"
+    ],
+    "action": "If calibration fails, do not run S3-07 (real-data fit). Report the failure, the specific failed condition(s), and the completed simulation counts. S3-03 may be revised as a new versioned amendment, after which all synthetic calibration must restart from untouched seeds.",
+    "partial_completion": "If fewer realizations complete than requested for a class, the protocol gate is NOT automatically failed. Report completed vs requested. If the completed count is at least 50% of requested AND all completed realizations are valid, the class is accepted with reduced statistical power noted."
+  },
+  "s3_04b_artifacts": {
+    "per_realization_csv": "outputs/stage3_synthetic_calibration.csv",
+    "summary_json": "outputs/stage3_synthetic_calibration_summary.json",
+    "threshold_json": "outputs/stage3_threshold_calibration.json"
+  },
+  "gate": {
+    "checks": {
+      "all_source_checks_pass": true,
+      "all_14_simulation_classes_defined": true,
+      "every_class_has_noise_params": true,
+      "every_class_has_requested_count": true,
+      "seed_scheme_deterministic": true,
+      "threshold_derivation_frozen": true,
+      "calibration_failure_rules_defined": true,
+      "real_data_not_authorized": true,
+      "phase_7_closed": true,
+      "protocol_hashed_before_synthetic": true
+    },
+    "status": "PASS"
+  }
+}

@@ -4,9 +4,11 @@ An independent photometric analysis of TESS Object of Interest TOI-3492.01
 (TIC 81077799). Catalog parameters are consistent with a large, evolved
 F-type target, but the source and planetary nature of the signal are unconfirmed.
 
-**Status:** Scientific remediation in progress. The object remains unvalidated
-and unconfirmed; source localization, RVs, and high-resolution imaging are still
-needed.
+**Status:** Stage 3 bounded method development is protocol-only. S3-00 through
+S3-03 passed; S3-04 synthetic calibration protocol is next. New real-data fitting
+and Phase 7 remain closed.
+The object remains unvalidated and unconfirmed; source localization, RVs, and
+high-resolution imaging are still needed for stronger claims.
 
 ## Quick Summary
 
@@ -21,8 +23,9 @@ needed.
 | Formal FPP | Not reported; current diagnostics are not a calibrated population model |
 | Key caveat | Circular transit density is about 2.6 times the catalog-model density, but a converged total-width 13-h fit shifts Rp/Rs by 1.95 adopted posterior half-widths; no calibrated significance is claimed |
 
-These intervals are not final native-cadence system parameters. The active
-problem list and quantitative acceptance gates are in `currentproblem.md`.
+These intervals are not final native-cadence system parameters. Historical
+gates are in `currentproblem.md` and `currentproblemstage2.md`; the approved
+bounded continuation is in `stage3.md`.
 
 ## Repository Structure
 
@@ -58,7 +61,7 @@ regeneration utilities.
 |---:|---|---|
 | 1 | `scripts/build_120s_reference_lightcurve.py` | Network regeneration of the six-sector 120-s reference CSV; frozen CSV is included |
 | 2 | `scripts/check_20s_independent.py` | Same-pixel 20-s cadence-product consistency data and summaries |
-| 3 | `scripts/transit_model_120s_corrected.py` | Adopted converged folded/binned circular reference fit; no stellar-density prior |
+| 3 | `scripts/transit_model_120s_corrected.py` | Converged folded/binned descriptive reference fit; not an adopted native-cadence posterior |
 | 4 | `scripts/transit_fit_robust.py` | Native-cadence 120-s and 20-s diagnostic fits; not adopted because chains are unconverged |
 | 5 | `scripts/transit_stability_checks.py` | Window/bin perturbation diagnostics |
 | 6 | `scripts/false_positive_tests_120s.py` | Odd/even and phase-0.5 secondary checks |
@@ -90,6 +93,9 @@ Active remediation phases supersede the historical stage numbering above:
 | 5 | `scripts/run_faz5_window_grid.py` | Original preregistered result remains `FAIL` |
 | 5B | `scripts/run_faz5b_remediation.py` | `CONDITIONAL_CONTINUE`; 24 discrete mask/window/polynomial branches handed to Phase 6 |
 | 6 | `scripts/run_faz6_noise_models.py`, `scripts/run_faz6_joint_diagnostics.py` | `FAIL_STATIONARITY`; screening complete, Phase 7 closed |
+| 6R | `scripts/run_faz6r.py` | 24/24 stationarity, then `FAIL_RESIDUAL_CORRELATION`; frozen result preserved |
+| S3-02 | `scripts/run_stage3_phase6_postmortem.py` | `PASS`; existing-artifact boundary, mask, sector-beta, and residual map; no new fit |
+| S3-03 | `scripts/build_stage3_model_architecture_decision.py` | `PASS`; single Matern-3/2 candidate with sector-partially-pooled timescales frozen before fit |
 
 `scripts/ttv_analysis.py`, `scripts/stellar_activity.py`, and
 `scripts/triceratops_validation.py` are retained for provenance but are not
@@ -106,6 +112,7 @@ The machine-readable current claim gate is `outputs/release_status.json`.
 python scripts/audit_science_consistency.py
 python scripts/audit_manuscript_math.py
 python scripts/run_faz5b_remediation.py --verify-only
+python scripts/run_stage3_phase6_postmortem.py --verify-only
 python -m pytest -q
 ```
 

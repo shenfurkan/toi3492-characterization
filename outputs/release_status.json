@@ -1,6 +1,6 @@
 {
-  "schema_version": "1.0",
-  "as_of_date": "2026-07-23",
+  "schema_version": "1.1",
+  "as_of_date": "2026-07-24",
   "release_version": "1.0.1",
   "target": "TOI-3492.01 / TIC 81077799",
   "strongest_supported_gate": "working_draft_under_scientific_remediation",
@@ -9,35 +9,39 @@
     "local_release_package_ready": false,
     "zenodo_deposit_verified": false,
     "candidate_paper_ready": false,
+    "final_native_cadence_geometry_ready": false,
     "central_density_or_eccentricity_claim_ready": false,
     "statistical_validation_ready": false,
     "planet_confirmation_ready": false
   },
   "safe_claims": [
     "A persistent transit-like signal is present in six 120-s TESS sectors.",
-    "A giant-planet-sized scale is conditional on a planetary event originating on the catalog target and on the catalog single-star assumptions.",
+    "A giant-planet-sized scale is conditional on a planetary event originating on the catalog target and on the catalog single-star and dilution assumptions.",
     "The phase-folded transit fit is a descriptive reference, not an adopted native-cadence posterior.",
     "A converged fit-window sensitivity comparison shows that the descriptive statistical intervals do not include window choice.",
     "Formal sector-depth errors reject a constant-depth model, but the cause is not assigned as astrophysical.",
+    "Phase 6R passed numerical stationarity in 24 of 24 branches but failed the frozen residual-correlation gate.",
     "No calibrated population false-positive probability is reported.",
     "The object remains an unvalidated and unconfirmed candidate.",
-    "No Zenodo DOI is claimed until the corrected package deposit resolves successfully."
+    "No Zenodo DOI is claimed until a future frozen package is deposited and independently verified."
   ],
   "unsafe_claims": [
     "The density mismatch is a calibrated 4.3-sigma discovery.",
     "The eccentricity is measured near 0.28 or 0.31.",
     "The transit source is formally localized to the target.",
     "The candidate is statistically validated.",
-    "The candidate is dynamically confirmed or has a measured mass."
+    "The candidate is dynamically confirmed or has a measured mass.",
+    "Phase 6R passed the residual-correlation gate.",
+    "Stage 3 has produced a new real-data noise or transit posterior."
   ],
   "material_incomplete_controls": [
-    "Converged native-cadence circular and eccentric transit posteriors.",
+    "A Stage-3 correlated-noise model passing frozen synthetic, numerical, predictive, residual, and convergence gates.",
+    "Converged native-cadence circular transit posterior with all accepted model uncertainties.",
     "Event-level or sector-level timing-offset model.",
-    "Alternative limb-darkening atmosphere prescription.",
+    "Alternative atmosphere-based limb-darkening prescription.",
     "Hierarchical sector-depth excess-scatter model.",
-    "Marginalized correlated-noise, baseline, and residual-dilution parameters.",
-    "A Phase 6 joint noise fit passing the frozen stationarity gate in all 24 branches.",
-    "A principled fit-window model or uncertainty term covering the observed window sensitivity.",
+    "Marginalized correlated-noise, baseline, reduction, and residual-dilution parameters.",
+    "A principled fit-window model or uncertainty treatment covering the observed sensitivity.",
     "Coherent passband-integrated atmosphere and isochrone posterior with mass-radius covariance.",
     "Secondary-eclipse scan over eccentric orbital phases.",
     "Calibrated TESS PRF source-localization likelihood and contrast curve.",
@@ -45,19 +49,20 @@
     "Target-specific epoch radial velocities or equivalent dynamical evidence.",
     "AASTeX conversion and a newly compiled canonical PDF.",
     "Regenerated scientific and mathematical audits against the final source.",
-    "Verified Zenodo deposit and resolvable DOI for a future corrected release."
+    "Regenerated release manifest after scientific freeze.",
+    "Verified public deposit and resolvable DOI for a future release."
   ],
   "phase_0_claim_audit": {
     "completed": true,
-    "manuscript_gate_passed": true,
+    "major_wording_corrections_applied": true,
+    "manuscript_gate_passed": false,
     "binding_plan": "currentproblemstage2.md",
-    "selected_path": "B_LIMITED_CANDIDATE_PAPER",
-    "current_record": "currentproblemstage2.md section 21",
+    "current_scope": "STAGE3_BOUNDED_METHOD_DEVELOPMENT",
     "blocking_reasons": [
+      "The final Stage-3 scientific path is not closed.",
       "A passband-integrated atmosphere and isochrone stellar posterior is not complete.",
-      "Formal sector heterogeneity has not yet been closed as WP-09A.",
       "The transit source remains unresolved without calibrated PRF localization and external imaging.",
-      "The existing release mathematical audit and SHA-256 manifest intentionally predate the Path-B TeX rewrite."
+      "The current mathematical audit and SHA-256 release manifest predate the current TeX and roadmap."
     ]
   },
   "phase_6_noise_model_audit": {
@@ -72,25 +77,80 @@
     "authoritative_audit": "outputs/faz6_gate_audit.json"
   },
   "phase_6r_numerical_remediation": {
-    "completed": false,
-    "status": "REOPENED_FOR_METHOD_REVIEW",
-    "real_data_executed": false,
+    "completed": true,
+    "status": "FAIL_RESIDUAL_CORRELATION",
+    "real_data_executed": true,
+    "model": "unchanged Phase-6 V2 K0 white+jitter joint model",
+    "stationary_branches_valid": 24,
+    "stationary_branches_total": 24,
+    "maximum_weighted_beta": 1.2936064512125263,
+    "maximum_beta_timescale_minutes": 80,
+    "frozen_beta_maximum": 1.2,
     "phase_7_may_begin": false,
-    "selected_path": "UNDECIDED",
-    "previous_calibration_status": "DIAGNOSTIC_ONLY_NOT_USER_APPROVED",
-    "current_record": "currentproblemstage2.md section 21"
+    "historical_stage2_closure": "B_LIMITED_CANDIDATE_PAPER",
+    "standalone_preregistration_package_complete": false,
+    "authoritative_result": "outputs/faz6r_result.json",
+    "current_record": "currentproblemstage2.md section 21.5"
   },
   "wp09a_formal_sector_heterogeneity": {
     "completed": true,
     "status": "PASS",
+    "adoption": "FORMAL_HETEROGENEITY_ONLY",
     "chi_square": 29.84993816215844,
     "degrees_of_freedom": 5,
     "p_value": 1.5786269411100997e-05,
     "cause_assigned": false,
     "authoritative_audit": "outputs/wp09a_formal_sector_audit.json"
   },
+  "stage3_scope_amendment": {
+    "approved": true,
+    "approval_date": "2026-07-23",
+    "approval_record": "User instructed the project to continue gradually to the next phase.",
+    "status": "PROTOCOL_ONLY",
+    "current_work_package": "S3-04B_REMEDIATION_AND_FULL_SYNTHETIC_EXECUTION",
+    "completed_work_packages": [
+      "S3-00_SCOPE_SYNCHRONIZATION",
+      "S3-01_IMMUTABLE_INPUT_MANIFEST",
+      "S3-02_PHASE6_POSTMORTEM",
+      "S3-03_MODEL_ARCHITECTURE_DECISION",
+      "S3-04A_CALIBRATION_PROTOCOL",
+      "S3-04B_FEASIBILITY_CHECK"
+    ],
+    "s3_00_status": "PASS",
+    "s3_00_audit": "outputs/stage3_scope_audit.json",
+    "s3_01_status": "PASS",
+    "s3_01_manifest": "data/stage3_input_manifest.json",
+    "s3_02_status": "PASS",
+    "s3_02_report": "outputs/stage3_phase6_postmortem.json",
+    "s3_02_real_data_fit_executed": false,
+    "s3_03_status": "PASS",
+    "s3_03_decision": "data/stage3_model_architecture_decision.json",
+    "s3_03_real_data_fit_executed": false,
+    "s3_04a_status": "PASS",
+    "s3_04a_protocol": "data/stage3_synthetic_calibration_protocol.json",
+    "s3_04b_status": "SMOKE_TEST_INVALID_FOR_FORMAL_CALIBRATION",
+    "s3_04b_feasibility_report": "outputs/stage3_feasibility_check.csv",
+    "s3_04b_feasibility_log": "outputs/stage3_feasibility_check.log",
+    "s3_04b_code_modules": ["scripts/stage3_noise_core.py", "scripts/stage3_synthetic_generator.py", "scripts/run_stage3_feasibility_check.py"],
+    "s3_04b_test_count": 44,
+    "s3_04b_real_data_fit_executed": false,
+    "s3_04b_smoke_test_limitations": [
+      "The previous Celerite GP draw used a process-global random generator and was not reproducible from the recorded realization seed.",
+      "The smoke test evaluated only C01/C02, one branch, one mask, and one held sector rather than the frozen full calibration universe.",
+      "The smoke-test CSV must not be used for threshold derivation, model adoption, or real-data authorization."
+    ],
+    "test_suite_total": 165,
+    "real_data_fit_authorized": false,
+    "phase_7_may_begin": false,
+    "new_model_candidates_maximum": 2,
+    "synthetic_calibration_required": true,
+    "second_protocol_approval_required_before_real_data": true,
+    "binding_plan": "stage3.md"
+  },
   "authoritative_documents": [
+    "currentproblem.md",
     "currentproblemstage2.md",
+    "stage3.md",
     "toi3492_characterization.tex",
     "outputs/release_status.json",
     "EXOPLANET_RELEASE_ROADMAP.md"

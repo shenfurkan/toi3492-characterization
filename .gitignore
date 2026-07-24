@@ -94,12 +94,28 @@ outputs/*.txt
 !outputs/release_status.json
 !outputs/wp09a_formal_sector_audit.json
 !outputs/wp09a_sector_descriptors.csv
+!outputs/stage3_scope_audit.json
+!outputs/stage3_phase6_postmortem.json
+!outputs/stage3_phase6_boundary_map.csv
+!outputs/stage3_phase6_mask_influence.csv
+!outputs/stage3_phase6_beta_by_sector.csv
+!outputs/stage3_phase6_residual_summary.csv
+!outputs/stage3_synthetic_screening_detail.csv
+!outputs/stage3_synthetic_calibration.csv
+!outputs/stage3_synthetic_screening_metadata.json
+!outputs/stage3_synthetic_joint_recovery.csv
+!outputs/stage3_synthetic_joint_recovery_metadata.json
+!outputs/stage3_numerical_validation.json
+!outputs/stage3_threshold_calibration.json
 
 # Generated data and figures (untracked)
 data/*.json
 data/*.csv
 data/*.npy
 !data/wp09a_formal_sector_protocol.json
+!data/stage3_input_manifest.json
+!data/stage3_model_architecture_decision.json
+!data/stage3_synthetic_calibration_protocol.json
 figures/*.png
 *.png
 
@@ -121,7 +137,6 @@ pyproject.toml
 # Miscellaneous
 human.txt
 references.bib
-EXOPLANET_RELEASE_ROADMAP.md
 toi3492_reproducible_release_v1.0.0.zip.sha256
 docs/publication_process_howto.md
 docs/potansiyel.md
@@ -149,3 +164,5 @@ data/toi3492_faz6_k0_geometry_draws_v2.npz
 currentproblemstage2.md
 .gitignore
 currentproblemstage2.md
+RNAAS.md
+toi3492_characterization.tex

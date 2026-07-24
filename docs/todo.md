@@ -1,41 +1,65 @@
 # TOI-3492.01 Current Work List
 
-Last synchronized: 2026-07-22.
+Last synchronized: 2026-07-23.
 
-`../currentproblem.md` is the binding scientific work plan. This file is only a
-short operational index and does not duplicate the 31 phase definitions.
+This file is a short operational index. Binding scientific history remains in
+`../currentproblem.md` and `../currentproblemstage2.md`; the plain-language
+review and proposed continuation are in `../analiz.md`.
 
-## Current State
+## Completed and Preserved
 
-- [x] Consolidate superseded drafts and diagnostics into the verified legacy ZIP.
-- [x] Remove regenerated caches and LaTeX intermediates.
-- [x] Complete the Phase 0 manuscript claim audit.
-- [x] Record the 24-item claim matrix in `currentproblem.md`.
-- [x] Complete Phases 1-3 raw-data, event, and quality audits.
-- [x] Complete Phase 4 reduction comparison with conditional systematic handoff.
-- [x] Preserve the original Phase 5 FAIL and complete Phase 5B remediation.
-- [x] Complete the Phase 6 kernel screen and record the joint stationarity failure.
-- [ ] Apply the Phase 0 wording corrections to the canonical manuscript.
-- [ ] Decide whether to preregister a Phase 6 numerical remediation; Phase 7 is blocked.
+- [x] Verify all 18 raw SPOC products and time standards.
+- [x] Inventory 18 expected transit windows; retain 16 usable events.
+- [x] Complete quality, background, pointing, CBV, and control-star audits.
+- [x] Compare four reductions and retain the Phase 4 systematic.
+- [x] Preserve the original Phase 5 `FAIL`.
+- [x] Carry 24 mask/window/polynomial branches through Phase 5B.
+- [x] Complete all 576 Phase 6 kernel-screening folds.
+- [x] Preserve the authoritative Phase 6 `FAIL_STATIONARITY` result.
+- [x] Run the Phase 6R calculation: 24/24 stationarity followed by
+  `FAIL_RESIDUAL_CORRELATION` at maximum beta 1.293606.
+- [x] Complete WP-09A formal sector heterogeneity (`PASS`, cause not assigned).
+- [x] Remove the central 4.3-sigma, measured-eccentricity, validation,
+  confirmation, and asteroseismology claims from the working manuscript.
 
-## Current Scientific Gate
+## Immediate Work
+
+- [x] Synchronize `outputs/release_status.json` with Phase 6R, WP-09A, and the
+  Stage-3 scope decision.
+- [x] Recreate `EXOPLANET_RELEASE_ROADMAP.md` as the version-neutral methodology
+  and release contract.
+- [x] Correct the stale Phase 6R paragraph in the canonical TeX.
+- [x] Remove the remaining numerical interval derived from an unconverged
+  native-cadence analysis.
+- [x] Record the dated Stage-3 scope amendment before any new real-data model.
+- [x] Create the bounded continuation draft in `../stage3.md`.
+- [x] Obtain explicit Stage-3 scope approval for gradual S3-00 through S3-05
+  preparation.
+- [ ] Obtain the separate S3-06 protocol approval before any new real-data fit.
+- [x] Complete S3-00 scope synchronization and machine-readable audit.
+- [x] Build and verify the S3-01 immutable input manifest.
+- [x] Complete the S3-02 existing-artifact Phase-6 post-mortem without new fits.
+- [x] Complete S3-03 by limiting the model architecture to a single Matern-3/2
+  candidate with sector-partially-pooled timescales; K0 retained as failed
+  reference only; froze before any real-data fit.
+- [ ] Freeze and pass the S3-04 synthetic-calibration protocol before any new
+  real-data model.
+- [ ] Keep Phase 7 closed until a newly authorized Phase 6 model passes its
+  frozen gates.
+- [ ] Develop the coherent atmosphere/SED/isochrone stellar posterior in
+  parallel where it does not depend on Phase 6.
+
+## Scientific Gates
 
 - [ ] Candidate-paper-ready.
-- [ ] Central density/eccentricity claim-ready.
+- [ ] Final native-cadence geometry ready.
+- [ ] Central density/eccentricity claim ready.
 - [ ] Statistical-validation-ready.
 - [ ] Planet-confirmation-ready.
 
-All four gates remain closed. The strongest permitted wording is a descriptive,
-unvalidated, and unconfirmed transit candidate under scientific remediation.
-
-## Immediate Order
-
-1. Remove the uncalibrated 4.3-standard-deviation statement.
-2. Stop presenting unconverged native-cadence intervals as reportable results.
-3. Keep Phase 7 closed while Phase 6 remains `FAIL_STATIONARITY`.
-4. If Phase 6 is retried, freeze a separate optimizer-remediation protocol first.
-5. Decide whether to complete or remove the asteroseismology section.
-6. Continue only through dependencies not blocked by the Phase 6 gate.
+All gates remain closed. A completed photometric characterization may still end
+with an unvalidated and unconfirmed candidate; analysis completion does not
+require a planet-validation or mass result.
 
 ## External Inputs
 
@@ -44,7 +68,11 @@ unvalidated, and unconfirmed transit candidate under scientific remediation.
 - [ ] Transit-time source-localization imaging where feasible.
 - [ ] Target-specific reconnaissance and precision radial velocities.
 
+These external inputs limit localization, validation, and mass claims. Their
+absence does not prevent completion of a properly scoped TESS photometric paper.
+
 ## Publication Block
 
-Do not build or upload a new arXiv/Zenodo package until the scientific phases,
-AASTeX conversion, final PDF, audits, and clean verification are complete.
+Do not build, upload, tag, or cite a new arXiv/Zenodo package until the science
+is frozen, the final TeX and PDF pass review, all audits and tests are current,
+and a newly generated manifest matches the staged files.

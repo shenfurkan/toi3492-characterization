@@ -1,0 +1,90 @@
+{
+  "schema_version": "1.0",
+  "work_package": "S3-00_SCOPE_SYNCHRONIZATION",
+  "generated_utc": "2026-07-23T18:34:44.529795+00:00",
+  "status": "PASS",
+  "real_data_fit_executed": false,
+  "phase_7_may_begin": false,
+  "checks": {
+    "all_sources_exist": true,
+    "release_schema_is_stage3": true,
+    "stage3_document_protocol_only": true,
+    "stage3_document_real_data_closed": true,
+    "stage3_scope_approved": true,
+    "stage3_scope_protocol_only": true,
+    "stage3_real_data_not_authorized": true,
+    "stage3_phase7_closed": true,
+    "stage3_model_family_bounded": true,
+    "stage3_synthetic_calibration_required": true,
+    "stage3_second_approval_required": true,
+    "phase6_original_failure_preserved": true,
+    "phase6r_completed": true,
+    "phase6r_real_data_recorded": true,
+    "phase6r_failure_preserved": true,
+    "phase6r_stationarity_exact": true,
+    "phase6r_beta_exact": true,
+    "phase6r_beta_threshold_exact": true,
+    "phase6r_beta_failed": true,
+    "phase6r_phase7_closed": true,
+    "phase6r_provenance_limit_recorded": true,
+    "wp09a_pass_preserved": true,
+    "wp09a_cause_unassigned": true,
+    "manuscript_records_phase6r_failure": true,
+    "manuscript_records_stationarity_24_of_24": true,
+    "manuscript_records_beta_and_threshold": true,
+    "manuscript_stage3_is_protocol_only": true,
+    "stale_no_real_data_statement_removed": true,
+    "unconverged_sector_radius_range_removed": true,
+    "release_gates_remain_closed": true,
+    "authoritative_documents_include_stage3": true
+  },
+  "facts": {
+    "phase6_status": "FAIL_STATIONARITY",
+    "phase6r_status": "FAIL_RESIDUAL_CORRELATION",
+    "phase6r_stationary_branches": 24,
+    "phase6r_branch_count": 24,
+    "phase6r_maximum_weighted_beta": 1.2936064512125263,
+    "phase6r_beta_maximum": 1.2,
+    "wp09a_status": "PASS",
+    "wp09a_cause_assigned": false,
+    "stage3_status": "PROTOCOL_ONLY"
+  },
+  "sources": {
+    "currentproblem.md": {
+      "sha256": "fc8ff5329c848633569469504e9f3c30a5b7ab388e24322d027c099bc645454c",
+      "size_bytes": 83449
+    },
+    "currentproblemstage2.md": {
+      "sha256": "4ab8ed5a7f435fef3952d420cba90353499d88c68aeb841d28b718b9d54ea584",
+      "size_bytes": 63826
+    },
+    "stage3.md": {
+      "sha256": "eebcf0caae8236b1c0aeb5c053ed5efdcd753ec521cda19ab90d76f092109321",
+      "size_bytes": 34358
+    },
+    "toi3492_characterization.tex": {
+      "sha256": "0e7943a8d6195c1648fa54e462f4d38a58684099829d88db29dc1cd078464ca6",
+      "size_bytes": 48123
+    },
+    "outputs/release_status.json": {
+      "sha256": "c6fb615fb1aafd6c81debcfcf18cc349ad0b9b22b729afa4efd21f55c78f0176",
+      "size_bytes": 6197
+    },
+    "outputs/faz6_gate_audit.json": {
+      "sha256": "e7814bc52efcc39619a53e50b6e871dba11f9ff9abee0327d9779e51709f2dee",
+      "size_bytes": 3182
+    },
+    "outputs/faz6r_result.json": {
+      "sha256": "3f3f49dffeeb8e43b374cbaa7fca30eddd171995ce6bfba229dcab9fc66a0697",
+      "size_bytes": 13914
+    },
+    "outputs/wp09a_formal_sector_audit.json": {
+      "sha256": "fe8e2c6cde290bc90d0e2285f407bc2620dbc78e30fee284e341ed7eff13d67a",
+      "size_bytes": 1305
+    },
+    "EXOPLANET_RELEASE_ROADMAP.md": {
+      "sha256": "94f3f1751bb66b1c0ff8bf0fa16afc065a6c71e4a32ed294726f4172db8ccf70",
+      "size_bytes": 40450
+    }
+  }
+}

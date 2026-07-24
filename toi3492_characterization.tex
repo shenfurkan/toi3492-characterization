@@ -498,11 +498,13 @@ Weighted mean & 2692 & 26 (formal) / 63 (scaled) \\
 
 The sector-to-sector scatter strongly exceeds the formal uncertainties:
 $\chi^2=29.85$ for 5 degrees of freedom ($p=1.58\times10^{-5}$), requiring an
-error scale factor of 2.44 for a unit reduced $\chi^2$.  The native-cadence
-model likewise finds sector radius ratios from 0.0534 to 0.0559.  Thus the
-signal is persistent but its depth is not statistically constant at the
-formal precision; sector-dependent depth is explicitly marginalized in the
-robustness fit and remains a central systematic limitation.
+error scale factor of 2.44 for a unit reduced $\chi^2$.  Thus the signal is
+persistent but its depth is not statistically constant at the formal
+precision.  This formal heterogeneity does not identify an astrophysical
+cause; camera, detector, aperture, background, reduction, and unmodeled
+covariance remain possible contributors.  A final hierarchical depth model is
+not yet available, so sector heterogeneity remains a central systematic
+limitation rather than an adopted astrophysical variation.
 
 The three available 20~s SPOC products provide a separate cadence-product
 check using 310\,533 measurements in Sectors~90, 99, and~100.  Their combined
@@ -824,14 +826,18 @@ secondary-eclipse phase scan for eccentric orbits was performed.
 \paragraph{Model limitations.}
 The phase-folded fit is not a final native-cadence posterior.  Accepted
 reduction, mask, window, and polynomial branches produce material sensitivity,
-and the preregistered K0 numerical-remediation calibration failed before any
-new real-data fit.  Phase~6 therefore remains at
-\texttt{FAIL\_STATIONARITY}; no residual-correlation gate, adopted geometry,
-stellar-density discrepancy, or eccentricity measurement follows from this
-analysis.  Native-cadence 120~s and 20~s parameter intervals are omitted, and
-the converged window comparison is retained only to demonstrate unpropagated
-baseline sensitivity.  A passband-integrated atmosphere/isochrone stellar
-posterior and reduction-family covariance propagation are also unavailable.
+and the original Phase~6 result remains
+\texttt{FAIL\_STATIONARITY}.  A later K0 white-plus-jitter numerical-remediation
+calculation moved all required starts and passed stationarity in 24/24 branches,
+but its maximum weighted residual beta was 1.2936, above the frozen limit of
+1.2, giving \texttt{FAIL\_RESIDUAL\_CORRELATION}.  The Stage-3 continuation is
+currently protocol-only and has not run a new real-data noise model.  No adopted
+geometry, stellar-density discrepancy, or eccentricity measurement follows
+from these calculations.  Native-cadence 120~s and 20~s parameter intervals are
+omitted, and the converged window comparison is retained only to demonstrate
+unpropagated baseline sensitivity.  A passband-integrated
+atmosphere/isochrone stellar posterior and reduction-family covariance
+propagation are also unavailable.
 
 \paragraph{Interpretation and remaining limitations.}
 If the signal is planetary, originates on TIC~81077799, and the catalog
