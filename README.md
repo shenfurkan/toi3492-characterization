@@ -29,9 +29,7 @@ toi3492-characterization/
 ├── tests/                   # Pytest test suite verifying pipeline components
 ├── data/                    # Protocol manifests and JSON input configurations
 ├── outputs/                 # Summary JSON/CSV audit outputs and execution logs
-├── .github/workflows/       # GitHub Actions CI workflow (Research Lab Verification)
 ├── pyproject.toml           # Package configuration and dependencies
-├── requirements-lock.txt    # Frozen dependency lockfile
 └── LICENSE                  # GNU General Public License v3.0 (GPL-3.0)
 ```
 
