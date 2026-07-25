@@ -323,9 +323,11 @@ def fit_joint_map(branch, mask, events, phase2, decision, laplace_seed,
             "multistart_objective_spread": objective_spread,
             "multistart_unit_parameter_spread": unit_spread,
             "noise_start_objective": float(noise_obj),
-            "noise_start_parameters": noise_params,
+            "noise_start_parameters": noise_params.tolist() if isinstance(noise_params, np.ndarray) else noise_params,
         }
-        return model.objective(np.concatenate((geo, fixed_noise)))
+
+    def geo_objective(geo_params):
+        return model.objective(np.concatenate((geo_params, fixed_noise)))
 
     hessian = covariance = None
     hessian_attempts = []
@@ -353,12 +355,12 @@ def fit_joint_map(branch, mask, events, phase2, decision, laplace_seed,
         "stationary": True,
         "recovered_geometry": model.recovered_geometry(parameters),
         "intervals": intervals,
-        "geometry_covariance": covariance,
+        "geometry_covariance": covariance.tolist() if isinstance(covariance, np.ndarray) else covariance,
         "hessian_attempts": hessian_attempts,
         "laplace_draw_diagnostics": draw_diagnostics,
         "multistart_objective_spread": objective_spread,
         "multistart_unit_parameter_spread": unit_spread,
         "noise_start_objective": float(noise_obj),
-        "noise_start_parameters": noise_params,
+        "noise_start_parameters": noise_params.tolist() if isinstance(noise_params, np.ndarray) else noise_params,
         "attempts": attempts,
     }
