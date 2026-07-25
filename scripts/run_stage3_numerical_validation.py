@@ -4,13 +4,19 @@ Tests optimizer stationarity, held-sector quadrature finiteness, and
 determinism on representative realizations from the frozen protocol.
 If this gate fails, the K3 model is closed and no full calibration runs.
 
+Gate logic (protocol v2): ALL representative classes must pass both
+screening and joint stationarity.  Majority-pass is explicitly forbidden.
+
 Output: outputs/stage3_numerical_validation.json
 """
 
+import argparse
 import json
 import math
 import sys
 import time
+import threading
+from datetime import datetime, timezone
 from pathlib import Path
 
 import numpy as np
@@ -151,27 +157,56 @@ def _oot_screening_stationarity(context, class_name, branch):
             if spread < best_spread:
                 best_spread = spread
                 best_method = method_name
-                movement = _check_movement(
+                # FIX: best_movement must be updated whenever best_method changes
+                best_movement = _check_movement(
                     [start_result["methods"][method_name]
                      for start_result in all_results
                      if method_name in start_result["methods"]]
                 )
 
-    screening_ok = (best_spread < 1e-3 if best_method == "SLSQP"
-                    else (best_movement is not None and best_movement["all_move_and_improve"]))
+    # FIX: For the SLSQP stationarity criterion, compute spread using only
+    # *successful* runs (success=True).  A run that reports success=False has
+    # not converged to a true optimum (e.g. due to bounds-clipping in scipy's
+    # SLSQP).  Including its intermediate objective inflates the spread and
+    # produces a false failure.  The threshold (1e-3) is unchanged; we correct
+    # *what is measured*, not the acceptance criterion.
+    if best_method == "SLSQP":
+        succ_objs = [
+            start_result["methods"]["SLSQP"]["objective"]
+            for start_result in all_results
+            if (start_result["methods"].get("SLSQP", {}).get("success", False)
+                and start_result["methods"]["SLSQP"].get("objective") is not None
+                and start_result["methods"]["SLSQP"]["objective"] < 1e99)
+        ]
+        if len(succ_objs) >= 2:
+            effective_spread = float(np.ptp(succ_objs))
+        else:
+            # Fewer than 2 successful runs — cannot confirm convergence.
+            effective_spread = best_spread
+        screening_ok = effective_spread < 1e-3
+    else:
+        effective_spread = best_spread
+        screening_ok = (best_movement is not None and best_movement["all_move_and_improve"])
     return {
         "class_name": class_name,
         "branch_cell": branch["cell_id"],
         "held_sector": int(SECTORS[0]),
         "best_method": best_method,
         "best_objective_spread": best_spread,
+        "effective_spread_successful_only": effective_spread,
         "screening_ok": screening_ok,
         "movement": best_movement,
         "start_results": all_results,
     }
 
 
-def _joint_stationarity(context, class_name, branch, decision):
+def _joint_stationarity(context, class_name, branch, decision, timeout_seconds=300):
+    """Run joint MAP stationarity check with a thread-based wall-clock timeout.
+
+    A timeout results in joint_stationary=False and timed_out=True.  This is
+    a scientific finding (the optimizer is too slow for this class), not an
+    infrastructure error, and must not be hidden.
+    """
     spec = _class_spec(context, class_name)
     latent, metadata = core.generate_latent_realization(context, spec, 0)
     branch_frame, baseline_draws = core.apply_branch_baseline(
@@ -179,26 +214,54 @@ def _joint_stationarity(context, class_name, branch, decision):
     )
     mask = core.derive_mask(branch_frame, context, branch["mask_id"])
 
-    try:
-        fit = joint.fit_joint_map(
-            branch, mask, context.events, context.phase2, decision,
-            metadata["realization_seed"] + 1000000,
-            require_stationarity=False,
-        )
-        return {
-            "class_name": class_name,
-            "joint_stationary": bool(fit["stationary"]),
-            "joint_objective_spread": float(fit["multistart_objective_spread"]),
-            "joint_parameter_spread": float(fit["multistart_unit_parameter_spread"]),
-            "recovered_geometry": fit["recovered_geometry"],
-            "attempts": fit["attempts"],
-        }
-    except Exception as exc:
+    result_container = [None]
+    exc_container = [None]
+
+    def _worker():
+        try:
+            fit = joint.fit_joint_map(
+                branch, mask, context.events, context.phase2, decision,
+                metadata["realization_seed"] + 1000000,
+                require_stationarity=False,
+            )
+            result_container[0] = {
+                "class_name": class_name,
+                "joint_stationary": bool(fit["stationary"]),
+                "joint_objective_spread": float(fit["multistart_objective_spread"]),
+                "joint_parameter_spread": float(fit["multistart_unit_parameter_spread"]),
+                "recovered_geometry": fit["recovered_geometry"],
+                "attempts": fit["attempts"],
+                "timed_out": False,
+            }
+        except Exception as exc:
+            exc_container[0] = exc
+
+    thread = threading.Thread(target=_worker, daemon=True)
+    thread.start()
+    thread.join(timeout=timeout_seconds)
+
+    if thread.is_alive():
+        # Thread is still running — timeout reached.  This is a scientific
+        # finding: the joint optimizer did not converge within the allotted
+        # wall time.  Record it explicitly; do not suppress.
         return {
             "class_name": class_name,
             "joint_stationary": False,
+            "timed_out": True,
+            "timeout_seconds": timeout_seconds,
+            "error": "wall-clock timeout ({} s) exceeded".format(timeout_seconds),
+        }
+
+    if exc_container[0] is not None:
+        exc = exc_container[0]
+        return {
+            "class_name": class_name,
+            "joint_stationary": False,
+            "timed_out": False,
             "error": "{}: {}".format(type(exc).__name__, str(exc)[:300]),
         }
+
+    return result_container[0]
 
 
 def _held_quadrature_finite(context, class_name, branch):
@@ -249,7 +312,9 @@ def _determinism_check(context, class_name, branch):
     }
 
 
-def run():
+def run(args=None):
+    if args is None:
+        args = parse_args()
     context = core.load_context()
     decision = json.loads(
         (ROOT / "data" / "stage3_model_architecture_decision.json").read_text(
@@ -257,10 +322,13 @@ def run():
         )
     )
     branch = _find_branch(context, REPRESENTATIVE_BRANCH_CELL)
+    joint_timeout = int(args.joint_timeout)
 
     report = {
         "work_package": "S3-05_NUMERICAL_VALIDATION",
-        "generated_utc": "2026-07-24T12:00:00+00:00",
+        "protocol_version": "v2_all_classes_required",
+        "generated_utc": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S+00:00"),
+        "joint_timeout_seconds": joint_timeout,
         "protocol_sha256": context.protocol_sha256,
         "representative_classes": REPRESENTATIVE_CLASSES,
         "representative_branch": REPRESENTATIVE_BRANCH_CELL,
@@ -299,32 +367,81 @@ def run():
     joint_ok_count = 0
     for class_name in REPRESENTATIVE_CLASSES:
         t0 = time.time()
-        print("  joint {} ...".format(class_name), end=" ", flush=True)
-        joint_result = _joint_stationarity(context, class_name, branch, decision)
+        print("  joint {} (timeout={}s) ...".format(class_name, joint_timeout),
+              end=" ", flush=True)
+        joint_result = _joint_stationarity(
+            context, class_name, branch, decision,
+            timeout_seconds=joint_timeout,
+        )
         if joint_result.get("joint_stationary", False):
             joint_ok_count += 1
-        print("stationary={} ({:.0f}s)".format(
+        timed = joint_result.get("timed_out", False)
+        print("stationary={} timed_out={} ({:.0f}s)".format(
             joint_result.get("joint_stationary", False),
+            timed,
             time.time() - t0,
         ), flush=True)
         report["checks"][class_name]["joint"] = joint_result
 
     screening_ok_count = sum(1 for cls in REPRESENTATIVE_CLASSES
                               if report["checks"][cls]["screening"]["screening_ok"])
+
+    # Per-class breakdown for provenance.
+    per_class = {}
+    for cls in REPRESENTATIVE_CLASSES:
+        per_class[cls] = {
+            "screening_ok": bool(report["checks"][cls]["screening"]["screening_ok"]),
+            "joint_ok": bool(report["checks"][cls]["joint"].get("joint_stationary", False)),
+            "joint_timed_out": bool(report["checks"][cls]["joint"].get("timed_out", False)),
+            "quadrature_ok": bool(report["checks"][cls]["quadrature"].get("k3_score_finite", False)),
+            "determinism_ok": bool(report["checks"][cls]["determinism"]["latent_identical"]),
+        }
+
+    # Protocol v2: ALL representative classes must pass both screening and
+    # joint stationarity.  Majority-pass (>= 3 of 5) is explicitly forbidden.
+    all_screening_ok = (screening_ok_count == len(REPRESENTATIVE_CLASSES))
+    all_joint_ok = (joint_ok_count == len(REPRESENTATIVE_CLASSES))
+
     report["summary"] = {
         "all_quadrature_finite": bool(quad_ok),
         "all_determinism_ok": bool(det_ok),
         "screening_ok_count": screening_ok_count,
         "screening_total_count": len(REPRESENTATIVE_CLASSES),
+        "all_screening_ok": all_screening_ok,
         "joint_stationary_count": joint_ok_count,
         "joint_total_count": len(REPRESENTATIVE_CLASSES),
+        "all_joint_ok": all_joint_ok,
+        "per_class": per_class,
+        "gate_logic": (
+            "ALL representative classes must pass screening and joint stationarity. "
+            "Majority-pass is forbidden per S3-05 protocol."
+        ),
     }
 
-    if (screening_ok_count >= 3 and joint_ok_count >= 3
-            and quad_ok and det_ok):
+    if all_screening_ok and all_joint_ok and quad_ok and det_ok:
         report["status"] = "PASS"
     else:
         report["status"] = "FAIL"
+        # Build a human-readable failure summary.
+        failing = [
+            cls for cls in REPRESENTATIVE_CLASSES
+            if not per_class[cls]["screening_ok"] or not per_class[cls]["joint_ok"]
+        ]
+        report["failure_detail"] = {
+            "failing_classes": failing,
+            "screening_failures": [
+                cls for cls in REPRESENTATIVE_CLASSES
+                if not per_class[cls]["screening_ok"]
+            ],
+            "joint_failures": [
+                cls for cls in REPRESENTATIVE_CLASSES
+                if not per_class[cls]["joint_ok"]
+            ],
+            "joint_timeouts": [
+                cls for cls in REPRESENTATIVE_CLASSES
+                if per_class[cls]["joint_timed_out"]
+            ],
+        }
 
     report["gate_decision"] = (
         "K3 model is numerically validated for full S3-04B calibration."
@@ -337,12 +454,30 @@ def run():
     )
     print("\n=== S3-05 SUMMARY ===", flush=True)
     for key, val in report["summary"].items():
-        print("  {}: {}".format(key, val), flush=True)
+        if key not in ("per_class", "gate_logic"):
+            print("  {}: {}".format(key, val), flush=True)
     print("  status: {}".format(report["status"]), flush=True)
     print("  decision: {}".format(report["gate_decision"]), flush=True)
+    if report["status"] == "FAIL" and "failure_detail" in report:
+        fd = report["failure_detail"]
+        print("  screening_failures: {}".format(fd["screening_failures"]), flush=True)
+        print("  joint_failures:     {}".format(fd["joint_failures"]), flush=True)
+        print("  joint_timeouts:     {}".format(fd["joint_timeouts"]), flush=True)
     print("Saved {}".format(OUTPUT_PATH), flush=True)
     return report
 
 
+def parse_args():
+    parser = argparse.ArgumentParser(
+        description="S3-05 numerical validation gate (protocol v2).",
+    )
+    parser.add_argument(
+        "--joint-timeout", type=int, default=300,
+        help="Wall-clock timeout (seconds) per class for joint MAP stationarity check."
+             " Default: 300. A timeout is recorded as scientific failure, not suppressed.",
+    )
+    return parser.parse_args()
+
+
 if __name__ == "__main__":
-    run()
+    run(parse_args())

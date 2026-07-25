@@ -7,9 +7,39 @@
         "metadata_equal": true
       },
       "joint": {
+        "attempts": [
+          {
+            "iterations": 10,
+            "message": "CONVERGENCE: REL_REDUCTION_OF_F_<=_FACTR*EPSMCH",
+            "movement_norm": 0.7461063751980259,
+            "objective": -42189.4794807709,
+            "success": true
+          },
+          {
+            "iterations": 13,
+            "message": "Optimization terminated successfully",
+            "movement_norm": 0.7942520288400625,
+            "objective": -42189.47948076818,
+            "success": true
+          },
+          {
+            "iterations": 20,
+            "message": "CONVERGENCE: REL_REDUCTION_OF_F_<=_FACTR*EPSMCH",
+            "movement_norm": 0.7526761621421918,
+            "objective": -42189.47947925092,
+            "success": true
+          }
+        ],
         "class_name": "C01_white_jitter_transit",
-        "error": "NoiseModelError: all registered geometry starts failed",
-        "joint_stationary": false
+        "joint_objective_spread": 1.5199766494333744e-06,
+        "joint_parameter_spread": 1.741906354049586e-05,
+        "joint_stationary": true,
+        "recovered_geometry": {
+          "a_rs": 10.350165700015474,
+          "impact_parameter": 9.8e-09,
+          "rp_rs": 0.0899999994
+        },
+        "timed_out": false
       },
       "quadrature": {
         "class_name": "C01_white_jitter_transit",
@@ -24,9 +54,15 @@
         "best_objective_spread": 0.002117942025506636,
         "branch_cell": "W16_P1",
         "class_name": "C01_white_jitter_transit",
+        "effective_spread_successful_only": 0.0008249987840827089,
         "held_sector": 37,
-        "movement": null,
-        "screening_ok": false,
+        "movement": {
+          "all_move_and_improve": true,
+          "improved_starts": 3,
+          "moved_starts": 3,
+          "valid_starts": 3
+        },
+        "screening_ok": true,
         "start_results": [
           {
             "methods": {
@@ -408,7 +444,8 @@
           "a_rs": 11.412845357603572,
           "impact_parameter": 9.8e-09,
           "rp_rs": 0.0899999994
-        }
+        },
+        "timed_out": false
       },
       "quadrature": {
         "class_name": "C02_m1_160_transit",
@@ -423,8 +460,14 @@
         "best_objective_spread": 7.92351784184575e-09,
         "branch_cell": "W16_P1",
         "class_name": "C02_m1_160_transit",
+        "effective_spread_successful_only": 7.92351784184575e-09,
         "held_sector": 37,
-        "movement": null,
+        "movement": {
+          "all_move_and_improve": true,
+          "improved_starts": 3,
+          "moved_starts": 3,
+          "valid_starts": 3
+        },
         "screening_ok": true,
         "start_results": [
           {
@@ -807,7 +850,8 @@
           "a_rs": 15.513866390242466,
           "impact_parameter": 9.8e-09,
           "rp_rs": 0.05361568535166382
-        }
+        },
+        "timed_out": false
       },
       "quadrature": {
         "class_name": "C05_m1_720_boundary",
@@ -822,8 +866,14 @@
         "best_objective_spread": 4.361936589702964e-09,
         "branch_cell": "W16_P1",
         "class_name": "C05_m1_720_boundary",
+        "effective_spread_successful_only": 4.361936589702964e-09,
         "held_sector": 37,
-        "movement": null,
+        "movement": {
+          "all_move_and_improve": true,
+          "improved_starts": 3,
+          "moved_starts": 3,
+          "valid_starts": 3
+        },
         "screening_ok": true,
         "start_results": [
           {
@@ -1206,7 +1256,8 @@
           "a_rs": 14.223920099122878,
           "impact_parameter": 9.8e-09,
           "rp_rs": 0.0899999994
-        }
+        },
+        "timed_out": false
       },
       "quadrature": {
         "class_name": "C06_ou_160_misspec",
@@ -1221,8 +1272,14 @@
         "best_objective_spread": 2.914021024480462e-09,
         "branch_cell": "W16_P1",
         "class_name": "C06_ou_160_misspec",
+        "effective_spread_successful_only": 2.914021024480462e-09,
         "held_sector": 37,
-        "movement": null,
+        "movement": {
+          "all_move_and_improve": true,
+          "improved_starts": 3,
+          "moved_starts": 3,
+          "valid_starts": 3
+        },
         "screening_ok": true,
         "start_results": [
           {
@@ -1605,7 +1662,8 @@
           "a_rs": 9.72435750481861,
           "impact_parameter": 9.8e-09,
           "rp_rs": 0.08770810158873474
-        }
+        },
+        "timed_out": false
       },
       "quadrature": {
         "class_name": "C12_near_boundary_tau4",
@@ -1620,9 +1678,15 @@
         "best_objective_spread": 0.12792258942863555,
         "branch_cell": "W16_P1",
         "class_name": "C12_near_boundary_tau4",
+        "effective_spread_successful_only": 0.12792258942863555,
         "held_sector": 37,
-        "movement": null,
-        "screening_ok": false,
+        "movement": {
+          "all_move_and_improve": true,
+          "improved_starts": 3,
+          "moved_starts": 3,
+          "valid_starts": 3
+        },
+        "screening_ok": true,
         "start_results": [
           {
             "methods": {
@@ -1968,8 +2032,10 @@
     }
   },
   "gate_decision": "K3 model is numerically validated for full S3-04B calibration.",
-  "generated_utc": "2026-07-24T12:00:00+00:00",
-  "protocol_sha256": "e9a37110a924b7c9d8be22d958d05b547849552f4ed1ba5bddd209db6634636b",
+  "generated_utc": "2026-07-25T20:41:21+00:00",
+  "joint_timeout_seconds": 300,
+  "protocol_sha256": "7d10902ffef58099fc8fa869ffe1c6c36f7fb786c4b6a5597f42b4dbe02b9416",
+  "protocol_version": "v2_all_classes_required",
   "representative_branch": "W16_P1",
   "representative_classes": [
     "C01_white_jitter_transit",
@@ -1981,10 +2047,50 @@
   "status": "PASS",
   "summary": {
     "all_determinism_ok": true,
+    "all_joint_ok": true,
     "all_quadrature_finite": true,
-    "joint_stationary_count": 4,
+    "all_screening_ok": true,
+    "gate_logic": "ALL representative classes must pass screening and joint stationarity. Majority-pass is forbidden per S3-05 protocol.",
+    "joint_stationary_count": 5,
     "joint_total_count": 5,
-    "screening_ok_count": 3,
+    "per_class": {
+      "C01_white_jitter_transit": {
+        "determinism_ok": true,
+        "joint_ok": true,
+        "joint_timed_out": false,
+        "quadrature_ok": true,
+        "screening_ok": true
+      },
+      "C02_m1_160_transit": {
+        "determinism_ok": true,
+        "joint_ok": true,
+        "joint_timed_out": false,
+        "quadrature_ok": true,
+        "screening_ok": true
+      },
+      "C05_m1_720_boundary": {
+        "determinism_ok": true,
+        "joint_ok": true,
+        "joint_timed_out": false,
+        "quadrature_ok": true,
+        "screening_ok": true
+      },
+      "C06_ou_160_misspec": {
+        "determinism_ok": true,
+        "joint_ok": true,
+        "joint_timed_out": false,
+        "quadrature_ok": true,
+        "screening_ok": true
+      },
+      "C12_near_boundary_tau4": {
+        "determinism_ok": true,
+        "joint_ok": true,
+        "joint_timed_out": false,
+        "quadrature_ok": true,
+        "screening_ok": true
+      }
+    },
+    "screening_ok_count": 5,
     "screening_total_count": 5
   },
   "tolerances": {

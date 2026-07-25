@@ -3,12 +3,12 @@
   "as_of_date": "2026-07-25",
   "release_version": "1.0.1",
   "target": "TOI-3492.01 / TIC 81077799",
-  "strongest_supported_gate": "rnaas_candidate_paper_source_ready",
+  "strongest_supported_gate": "working_draft_under_scientific_remediation",
   "gates": {
     "archive_ready": false,
     "local_release_package_ready": true,
     "zenodo_deposit_verified": false,
-    "candidate_paper_ready": true,
+    "candidate_paper_ready": false,
     "characterization_paper_ready": false,
     "final_native_cadence_geometry_ready": false,
     "central_density_or_eccentricity_claim_ready": false,
@@ -132,7 +132,11 @@
     "s3_04b_status": "SMOKE_TEST_INVALID_FOR_FORMAL_CALIBRATION",
     "s3_04b_feasibility_report": "outputs/stage3_feasibility_check.csv",
     "s3_04b_feasibility_log": "outputs/stage3_feasibility_check.log",
-    "s3_04b_code_modules": ["scripts/stage3_noise_core.py", "scripts/stage3_synthetic_generator.py", "scripts/run_stage3_feasibility_check.py"],
+    "s3_04b_code_modules": [
+      "scripts/stage3_noise_core.py",
+      "scripts/stage3_synthetic_generator.py",
+      "scripts/run_stage3_feasibility_check.py"
+    ],
     "s3_04b_test_count": 44,
     "s3_04b_real_data_fit_executed": false,
     "s3_04b_smoke_test_limitations": [

@@ -12,6 +12,7 @@ import os
 import sys
 import time
 from multiprocessing import Pool, cpu_count
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 import numpy as np
@@ -31,11 +32,13 @@ METADATA_PATH = ROOT / "outputs" / "stage3_synthetic_screening_metadata.json"
 SECTORS = core.SECTORS
 
 _CONTEXT = None
+_FOLD_WORKERS = 1
 
 
-def _init_worker():
-    global _CONTEXT
+def _init_worker(fold_workers=1):
+    global _CONTEXT, _FOLD_WORKERS
     _CONTEXT = core.load_context()
+    _FOLD_WORKERS = max(1, int(fold_workers))
 
 
 def _class_spec(class_index):
@@ -53,8 +56,7 @@ def _score_branch(latent, metadata, branch):
     training, held = phase6.build_model_sector_data(
         mask, _CONTEXT.validation, _CONTEXT.events, _CONTEXT.phase2, branch,
     )
-    rows = []
-    for held_sector in SECTORS:
+    def score_fold(held_sector):
         sectors = tuple(
             training[sector] for sector in SECTORS if sector != held_sector
         )
@@ -75,7 +77,7 @@ def _score_branch(latent, metadata, branch):
         if not k0_ok and not m1_ok:
             raise RuntimeError("both K0 and M1 held-sector fit failed")
 
-        rows.append({
+        return {
             "class_index": metadata["class_index"],
             "class_name": metadata["class_name"],
             "realization_index": metadata["realization_index"],
@@ -99,8 +101,12 @@ def _score_branch(latent, metadata, branch):
             "baseline_draws_json": json.dumps(baseline_draws, sort_keys=True),
             "injected_geometry_json": json.dumps(metadata["drawn_geometry"], sort_keys=True),
             "sector_noise_json": json.dumps(metadata["sector_draws"], sort_keys=True),
-        })
-    return rows
+        }
+
+    if _FOLD_WORKERS == 1:
+        return [score_fold(held_sector) for held_sector in SECTORS]
+    with ThreadPoolExecutor(max_workers=min(_FOLD_WORKERS, len(SECTORS))) as executor:
+        return list(executor.map(score_fold, SECTORS))
 
 
 def _run_realization(task):
@@ -218,6 +224,7 @@ def run(args):
         "formal_gate_emitted": False,
         "expected_folds_per_realization": expected_folds,
         "workers": min(args.workers, cpu_count()),
+        "fold_workers": args.fold_workers,
     }
     if args.verify_only:
         print("S3-04B synthetic-screening checkpoint is structurally valid")
@@ -232,7 +239,7 @@ def run(args):
     print("S3-04B screening: {} realizations, {} workers, {} branches each".format(
         len(tasks), workers, args.branch_limit or len(context.branches),
     ), flush=True)
-    with Pool(workers, initializer=_init_worker) as pool:
+    with Pool(workers, initializer=_init_worker, initargs=(args.fold_workers,)) as pool:
         for result in pool.imap_unordered(
                 _run_realization,
                 [(index, realization, args.branch_limit) for index, realization in tasks]):
@@ -256,6 +263,10 @@ def parse_args():
     parser.add_argument("--start", type=int, default=0)
     parser.add_argument("--count", type=int)
     parser.add_argument("--workers", type=int, default=4)
+    parser.add_argument(
+        "--fold-workers", type=int, default=1,
+        help="Parallel held-sector fits per realization branch; use with care on small hosts.",
+    )
     parser.add_argument("--branch-limit", type=int,
                         help="Development-only limit; formal runs omit this option.")
     parser.add_argument("--verify-only", action="store_true")

@@ -2,9 +2,10 @@
   "branch_count": 24,
   "calibration_protocol": {
     "path": "data/stage3_synthetic_calibration_protocol.json",
-    "sha256": "e9a37110a924b7c9d8be22d958d05b547849552f4ed1ba5bddd209db6634636b"
+    "sha256": "7d10902ffef58099fc8fa869ffe1c6c36f7fb786c4b6a5597f42b4dbe02b9416"
   },
   "expected_folds_per_realization": 144,
+  "fold_workers": 4,
   "formal_gate_emitted": false,
   "raw_template_rows": 102562,
   "reference_template_rows": 102502,

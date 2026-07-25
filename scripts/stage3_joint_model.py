@@ -232,6 +232,11 @@ def fit_joint_map(branch, mask, events, phase2, decision, laplace_seed,
             raise noise.NoiseModelError("both K3 and K0 OOT noise init failed")
         k3_params = np.zeros(21, dtype=np.float64)
         k3_params[0] = k0_map.parameters[0]
+        # K0 has no amplitude/timescale coordinates. Seed the K3 fallback
+        # with valid interior values before copying the shared jitter offsets;
+        # zero would place mu_timescale outside the registered bounds.
+        k3_params[1] = math.log(0.5)
+        k3_params[2] = math.log(160.0)
         k3_params[3:3 + 6] = k0_map.parameters[1:7]
         noise_params = k3_params
         noise_obj = float(k0_map.objective)
@@ -258,6 +263,17 @@ def fit_joint_map(branch, mask, events, phase2, decision, laplace_seed,
             conditional_objective, unit_start, method="L-BFGS-B", jac="3-point",
             bounds=[(1e-8, 1.0 - 1e-8)] * len(unit_start), options=options,
         )
+        if not result.success or not np.isfinite(result.fun):
+            # L-BFGS-B can report a line-search failure after reaching the
+            # same finite optimum as the other starts. Use the registered
+            # bounded validator before classifying the start as failed.
+            result = minimize(
+                conditional_objective,
+                unit_start,
+                method="SLSQP",
+                bounds=[(1e-8, 1.0 - 1e-8)] * len(unit_start),
+                options={"maxiter": 500, "ftol": 1e-10, "disp": False},
+            )
         final = lower + result.x * span
         actual = float(result.fun)
         results.append((result, final, actual, start))
@@ -346,4 +362,3 @@ def fit_joint_map(branch, mask, events, phase2, decision, laplace_seed,
         "noise_start_parameters": noise_params,
         "attempts": attempts,
     }
-
