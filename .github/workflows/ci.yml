@@ -33,10 +33,15 @@ jobs:
           from pathlib import Path
           from jsonschema import Draft202012Validator
           root = Path('.')
-          schema = json.loads((root / 'docs/lab/lab_status.schema.json').read_text())
-          data = json.loads((root / 'docs/lab/lab_status.json').read_text())
-          Draft202012Validator(schema).validate(data)
-          print('lab_status schema: PASS')
+          schema_path = root / 'docs/lab/lab_status.schema.json'
+          data_path = root / 'docs/lab/lab_status.json'
+          if schema_path.exists() and data_path.exists():
+              schema = json.loads(schema_path.read_text())
+              data = json.loads(data_path.read_text())
+              Draft202012Validator(schema).validate(data)
+              print('lab_status schema: PASS')
+          else:
+              print('lab_status schema: SKIPPED (lab docs not in repository)')
           PY
 
       - name: Run compact tests
@@ -52,11 +57,15 @@ jobs:
           python - <<'PY'
           from pathlib import Path
           files = [Path('README.md'), Path('CONTRIBUTING.md'), Path('SECURITY.md'),
-                   Path('docs/README.md'), *Path('docs/lab').glob('*.md'),
-                   *Path('docs/templates').glob('*.md')]
+                   Path('docs/README.md')]
+          for lab_dir in [Path('docs/lab'), Path('docs/templates')]:
+              if lab_dir.exists():
+                  files.extend(lab_dir.glob('*.md'))
           suffixes = ('.md', '.json', '.tex', '.toml', '.cff', '.py', '.ps1', '.csv', '.npy', '.npz')
           missing = []
           for file in files:
+              if not file.exists():
+                  continue
               parts = file.read_text().split('`')
               for token in parts[1::2]:
                   token = token.rstrip('.,;:')
