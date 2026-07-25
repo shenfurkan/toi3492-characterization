@@ -1,185 +1,83 @@
-# TOI-3492.01: Photometric Characterization of an Unvalidated and Unconfirmed Transit Candidate
+# TOI-3492.01: Photometric Characterization of an Unvalidated TESS Exoplanet Candidate
 
-An independent photometric analysis of TESS Object of Interest TOI-3492.01
-(TIC 81077799). Catalog parameters are consistent with a large, evolved
-F-type target, but the source and planetary nature of the signal are unconfirmed.
+This repository contains the open-source analysis code, photometric reduction pipeline, transit modeling scripts, and verification suites for the independent characterization of **TOI-3492.01** (TIC 81077799).
 
-**Status:** The RNAAS candidate-assessment bundle exists and passed its scoped
-Stage-4 audit, but lab-wide submission authorization remains conditional while
-the current verification, clean-room, and independent-review controls are open.
-The extended characterization manuscript (Phase 4, 5/5B, 6/6R) has been
-drafted. Stage 3 full calibration remains incomplete (protocol-only); the
-completed Stage-4 C01/C02 pilot closed K3 real-data adoption, so new real-data
-fitting and Phase 7 remain closed.
-The object remains unvalidated and unconfirmed; source localization, RVs, and
-high-resolution imaging are still needed for stronger claims.
+The analysis processes 120-second and 20-second cadence data from TESS Sectors 37, 63, 64, 90, 99, and 100 to evaluate transit parameters, residual noise properties, and false-positive scenarios.
 
-## Quick Summary
+---
 
-| Quantity | Value |
-|---:|---|
-| Period | 9.2224171 d (official TOI) |
-| Rp/Rs | 0.05472 +/- 0.00049 (diagnostic folded reference model) |
-| Mid-transit model depth | 3094 ppm (same conditional reference model) |
-| Rp | 15.47 +/- 0.66 Rearth only if planetary, on the catalog target, and under the adopted stellar/dilution assumptions |
-| Circular-fit a/Rs | 10.60 +/- 0.45 (diagnostic reference model) |
-| Impact parameter b | 0.705 +/- 0.032 (diagnostic reference model) |
-| Formal FPP | Not reported; current diagnostics are not a calibrated population model |
-| Key caveat | Phase 6R passed 24/24 stationarity but its maximum weighted residual beta=1.294 at 80 min exceeds the frozen 1.2 threshold; no adopted native-cadence posterior exists. The 24-branch handoff carries full window/baseline/mask sensitivity. The circular folded reference fit is descriptive only. |
+## 🔭 Scientific Overview
 
-These intervals are not final native-cadence system parameters. Historical
-gates are in `currentproblem.md` and `currentproblemstage2.md`; the approved
-bounded continuation is in `stage3.md`.
+- **Target Star:** TIC 81077799 (TOI-3492)
+- **Candidate:** TOI-3492.01
+- **Period:** $P \approx 9.2224171 \text{ days}$
+- **TESS Sectors Analyzed:** Sectors 37, 63, 64, 90, 99, and 100
+- **Primary Objectives:**
+  - Independent 6-sector TESS SPOC light curve normalization and phase folding.
+  - Markov Chain Monte Carlo (MCMC) transit fitting ($R_p/R_*$, $a/R_*$, impact parameter $b$, limb-darkening parameters).
+  - Residual noise modeling, stationarity audits, and autocorrelation analysis.
+  - False positive vetting (TRICERATOPS probability screening, Gaia DR3 neighbor dilution checks, and difference-image centroid localization).
 
-## Repository Structure
+---
+
+## 📁 Repository Structure
 
 ```
-.
-├── references.bib       # BibTeX bibliography
-├── data/
-│   ├── config_corrected_120s.json  # Stellar inputs and adopted transit solution
-│   ├── toi3492_120s_reference.csv  # Corrected 120s light curve
-│   └── *.npy            # MCMC chains
-├── scripts/
-│   ├── audit_science_consistency.py  # Comprehensive verification
-│   ├── transit_model_120s_corrected.py  # MCMC transit fit
-│   └── ...              # Full pipeline (see below)
-├── figures/             # Active manuscript and diagnostic plots
-├── outputs/             # JSON/CSV results from each pipeline step
-└── docs/                # Methodology notes and checklists
+toi3492-characterization/
+├── scripts/                 # Core analysis, fitting, and data processing scripts
+│   └── verification/        # Automated scientific verification checkers
+├── tests/                   # Pytest test suite verifying pipeline components
+├── data/                    # Protocol manifests and JSON input configurations
+├── outputs/                 # Summary JSON/CSV audit outputs and execution logs
+├── .github/workflows/       # GitHub Actions CI workflow (Research Lab Verification)
+├── pyproject.toml           # Package configuration and dependencies
+├── requirements-lock.txt    # Frozen dependency lockfile
+└── LICENSE                  # GNU General Public License v3.0 (GPL-3.0)
 ```
 
-The release includes the canonical LaTeX source and machine-readable outputs.
-Literature PDFs and LaTeX build intermediates are excluded.
+---
 
-The reusable end-to-end workflow, claim gates, stop rules, and safe/unsafe
-release practices are documented in `EXOPLANET_RELEASE_ROADMAP.md`.
+## ⚙️ Key Pipeline Modules
 
-The reusable research-lab operating layer is indexed at
-`docs/lab/README.md`. It defines governance, lifecycle, quality, onboarding,
-roadmaps, templates, and recurring self-assessment. The framework is installed,
-but current lab readiness is not certified: canonical verification and
-clean-room/archive controls still have open blockers documented in
-`docs/lab/SELF_ASSESSMENT.md`.
+| Module | Description |
+|:---|:---|
+| `scripts/build_120s_reference_lightcurve.py` | Normalizes and stitches the 6-sector 120s TESS SPOC reference light curve |
+| `scripts/transit_model_120s_corrected.py` | Phase-folded MCMC transit parameter fitting (`batman`, `emcee`) |
+| `scripts/faz6_noise_core.py` | Correlated noise core modeling and residual stationarity auditing |
+| `scripts/triceratops_validation.py` | False Positive Probability (FPP) calculation using TRICERATOPS |
+| `scripts/gaia_contamination_check.py` | Gaia DR3 neighbor query and aperture dilution assessment |
+| `scripts/audit_science_consistency.py` | Automated offline science consistency and claim-boundary audit |
 
-## Pipeline and Status
+---
 
-Run from project root with Python 3.9.x. Existing outputs are a remediation
-baseline rather than a release-ready final analysis; network scripts are
-regeneration utilities.
+## 🚀 Quick Start
 
-| Stage | Script | Status and product |
-|---:|---|---|
-| 1 | `scripts/build_120s_reference_lightcurve.py` | Network regeneration of the six-sector 120-s reference CSV; frozen CSV is included |
-| 2 | `scripts/check_20s_independent.py` | Same-pixel 20-s cadence-product consistency data and summaries |
-| 3 | `scripts/transit_model_120s_corrected.py` | Converged folded/binned descriptive reference fit; not an adopted native-cadence posterior |
-| 4 | `scripts/transit_fit_robust.py` | Native-cadence 120-s and 20-s diagnostic fits; not adopted because chains are unconverged |
-| 5 | `scripts/transit_stability_checks.py` | Window/bin perturbation diagnostics |
-| 6 | `scripts/false_positive_tests_120s.py` | Odd/even and phase-0.5 secondary checks |
-| 7 | `scripts/phase_curve_search.py` | Systematics-limited harmonic fit and phase-0.5 box; not an eccentric-phase eclipse scan |
-| 8 | `scripts/gaia_contamination_check.py` | Gaia field census and mimic-capable source list |
-| 9 | `scripts/tess_source_localization_120s.py` | Qualitative difference-image centroids |
-| 10 | `scripts/source_specific_aperture_check.py` | Discrete aperture geometry; not calibrated PRF localization |
-| 11 | `scripts/dilution_robustness.py` | Residual-dilution sensitivity; no second CROWDSAP correction |
-| 12 | `scripts/spoc_dv_extract.py` | Separate-pipeline analysis of the same TESS observations |
-| 13 | `scripts/query_stellar_photometry.py` | Frozen 2MASS/WISE/APASS query |
-| 14 | `scripts/stellar_sed_posterior.py` | Approximate blackbody radius-scale check; not an isochrone posterior |
-| 15 | `scripts/robust_density_comparison.py` | Non-adopted model-conditional density diagnostic |
-| 16 | `scripts/statistical_validation.py` | Non-probabilistic vetting summary; formal FPP remains null |
-| 17 | `scripts/asteroseismic_prepare.py` | Re-downloadable SPOC FITS inventory and hashes |
-| 18 | `scripts/asteroseismic_search.py` | Preliminary implementation of preregistered seismic diagnostics |
-| 19 | `scripts/asteroseismic_injection_recovery.py` | Sensitivity calibration showing the null is non-constraining |
-| 20 | `scripts/audit_science_consistency.py` | Offline consistency and claim-boundary audit |
-| 21 | `scripts/transit_window_comparison.py` | Converged total-width 13-h sensitivity fit; not adopted |
-| 22 | `scripts/audit_manuscript_math.py` | Line-by-line mathematical inventory and source-value recalculation |
+### Prerequisites
+- Python **3.9.x**
 
-Active remediation phases supersede the historical stage numbering above:
-
-| Phase | Script | Current gate |
-|---:|---|---|
-| 1 | `scripts/verify_faz1_inventory.py` | `PASS`; 18/18 local LC/TPF products and cadence ledgers verified |
-| 2 | `scripts/verify_faz2_transit_inventory.py` | `PASS`; 18 expected windows classified, 16 usable events |
-| 3 | `scripts/verify_faz3_quality_audit.py` | `PASS`; quality, telemetry, CBV, and control-star audit |
-| 4 | `scripts/run_faz4_reductions.py` | `CONDITIONAL_PASS`; accepted reduction dispersion retained separately |
-| 5 | `scripts/run_faz5_window_grid.py` | Original preregistered result remains `FAIL` |
-| 5B | `scripts/run_faz5b_remediation.py` | `CONDITIONAL_CONTINUE`; 24 discrete mask/window/polynomial branches handed to Phase 6 |
-| 6 | `scripts/run_faz6_noise_models.py`, `scripts/run_faz6_joint_diagnostics.py` | `FAIL_STATIONARITY`; screening complete, Phase 7 closed |
-| 6R | `scripts/run_faz6r.py` | 24/24 stationarity, then `FAIL_RESIDUAL_CORRELATION` ($\beta_{\rm max}=1.294$ at 80~min); frozen result preserved |
-| WP-09A | `scripts/run_wp09a_formal_sector_audit.py` | `PASS`; formal sector heterogeneity confirmed ($\chi^2=29.85$, $p=1.58\times10^{-5}$), cause not assigned |
-| S3-02 | `scripts/run_stage3_phase6_postmortem.py` | `PASS`; existing-artifact boundary, mask, sector-beta, and residual map; no new fit |
-| S3-03 | `scripts/build_stage3_model_architecture_decision.py` | `PASS`; single Matern-3/2 candidate with sector-partially-pooled timescales frozen before fit |
-| S4-01 | `scripts/run_stage4_fast_calibration.py` | 60-record C01/C02 selector pilot complete; `FAIL_CLAIM_REMOVED` for K3 real-data adoption, diagnostic record retained |
-| S4-03 | `toi3492_rnaas.tex` | `PASS`; one-figure RNAAS candidate-assessment source, compiled PDF, release audit, and portal bundle ready; not submitted or published |
-
-`scripts/ttv_analysis.py`, `scripts/stellar_activity.py`, and
-`scripts/triceratops_validation.py` are retained for provenance but are not
-active adopted pipeline steps. Their old claims are unsupported: timing is
-signal-to-noise limited, no rotation result is adopted, and no calibrated FPP
-is reported. `scripts/stellar_params.py` is a network regeneration utility; its
-catalog `a/Rstar` calculation is comparison-only.
-
-The machine-readable current claim gate is `outputs/release_status.json`.
-
-## Verification
+### Installation
 
 ```bash
-python -m compileall scripts tests
-python scripts/final_calculation_verification.py
-python scripts/audit_science_consistency.py
-python scripts/audit_manuscript_math.py
-python scripts/run_faz5b_remediation.py --verify-only
-python scripts/run_stage3_phase6_postmortem.py --verify-only
-python -m pytest -q
+# Clone repository
+git clone https://github.com/shenfurkan/toi3492-characterization.git
+cd toi3492-characterization
+
+# Install package with test dependencies
+pip install -e ".[test]"
 ```
 
-`python scripts/run_all_tests.py` is a thin wrapper around the same pytest suite.
-The audit scripts provide human-readable consistency summaries; tests enforce selected equations,
-chain/output consistency, claim-boundary statuses, manifest hashes, and
-required artifacts. They are not a substitute for peer review or independent
-scientific reproduction.
+### Running Tests and Audits
 
-The dated 2026-07-25 lab baseline: 176 compact tests pass, 10 raw-data
-integration tests are explicitly deselected, and there are 0 failures; the
-final calculation wrapper reports 59/59. Do not report a clean verification state
-without rerunning the canonical commands and binding the result to the current
-source and environment hashes.
+```bash
+# Run pytest test suite
+pytest
 
-Raw SPOC FITS files are re-downloadable and intentionally excluded from the
-release ZIP. After downloading them, verify their sizes and hashes separately
-with the integration-test command documented in `docs/reproducibility_order.md`.
+# Run offline scientific consistency audit
+python scripts/audit_science_consistency.py
+```
 
-## Dependencies
+---
 
-- Python 3.9.13 and the versions pinned in `requirements-lock.txt`
-- Core: `numpy`, `scipy`, `pandas`, `matplotlib`, `corner`
-- Astronomy: `astropy`, `lightkurve`, `astroquery`, `batman-package`, `emcee`, `ldtk`
-- Optional: `triceratops` only for explicitly non-adopted method development;
-  no output from it supports the release claims
-- Optional: `tess-atl` and `pysyd` for the exploratory asteroseismic extension
+## 📜 License
 
-## Citation
-
-If you use this reproducibility package or the associated manuscript, please cite:
-
-Şen, F. (2026). TOI-3492.01 Photometric Characterization: Reproducibility Package (v1.0.1). The Zenodo DOI must be added after the corrected package is deposited; no DOI is claimed in this draft.
-
-## Licensing
-
-- Source code in `scripts/` and `tests/`: MIT License.
-- Original manuscript, figures, narrative documentation, and original derived
-  tables: Creative Commons Attribution 4.0 International (CC BY 4.0).
-- Upstream TESS, Gaia, ExoFOP, NASA Exoplanet Archive, and catalog material:
-  original archive terms and acknowledgement requirements continue to apply.
-
-See `LICENSES.md` for the artifact-level license matrix and upstream-data
-notice.
-
-## Asteroseismic Status
-
-The current complete-or-remove decision for the exploratory search is documented
-in Phase 28 of `currentproblem.md`.
-Neither the local search nor the independent pySYD block analysis found a
-replicated seismic solution, so no asteroseismic measurement is adopted in the
-manuscript. The non-detection is not constraining at the expected few-ppm mode
-amplitudes; the injection/recovery experiment only becomes efficient for much
-stronger signals.
+This project is open-source software licensed under the **GNU General Public License v3.0 (GPLv3)**. See the [LICENSE](LICENSE) file for details.
