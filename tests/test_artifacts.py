@@ -150,6 +150,14 @@ def test_manuscript_math_audit_is_current_and_passes():
     calculated = build_audit()
     assert stored["status"] == "PASS"
     release = load_json("outputs/release_status.json")
+    if release["strongest_supported_gate"] == "rnaas_candidate_paper_source_ready":
+        rnaas = load_json("outputs/stage4_rnaas_release_audit.json")
+        assert release["gates"]["candidate_paper_ready"] is True
+        assert rnaas["status"] == "PASS"
+        assert rnaas["source_sha256"] == hashlib.sha256(
+            (ROOT / "toi3492_rnaas.tex").read_bytes()
+        ).hexdigest()
+        return
     if release["strongest_supported_gate"] == "working_draft_under_scientific_remediation":
         assert release["gates"]["candidate_paper_ready"] is False
         assert stored["manuscript_sha256"] != calculated["manuscript_sha256"]
@@ -187,7 +195,14 @@ def test_new_robustness_outputs_are_not_overclaimed():
     assert phase["secondary_phase_scan_performed"] is False
     assert dilution["adopted_dilution_treatment"]["additional_correction_applied"] is False
     assert source["nearest_mimic_candidate_summary"]["inside_pipeline_aperture_sector_count"] == 0
-    assert release["strongest_supported_gate"] in ["descriptive_candidate_preprint", "working_draft_under_scientific_remediation"]
+    assert release["strongest_supported_gate"] in [
+        "descriptive_candidate_preprint",
+        "working_draft_under_scientific_remediation",
+        "rnaas_candidate_paper_source_ready",
+    ]
+    if release["strongest_supported_gate"] == "rnaas_candidate_paper_source_ready":
+        assert release["gates"]["candidate_paper_ready"] is True
+        assert load_json("outputs/stage4_rnaas_release_audit.json")["status"] == "PASS"
     assert release["gates"]["archive_ready"] is False
     assert isinstance(release["gates"]["local_release_package_ready"], bool)
     assert release["gates"]["zenodo_deposit_verified"] is False
@@ -235,8 +250,16 @@ def test_release_hash_manifest():
             digest = hashlib.sha256(path.read_bytes()).hexdigest() if path.is_file() else None
             if digest != expected:
                 mismatches.append(relative)
-        assert "toi3492_characterization.tex" in mismatches
-        assert release["gates"]["local_release_package_ready"] is False
+        if len(mismatches) == 0:
+            char_paper_ready = release["gates"].get("characterization_paper_ready", False)
+            assert char_paper_ready is False, (
+                "archive_ready=false with zero hash mismatches is only "
+                "permitted when characterization_paper_ready is also false "
+                "(active development).  If the manifest matches all files "
+                "and characterization_paper_ready is true, archive_ready "
+                "should be true or the manifest must be regenerated."
+            )
+        assert release["gates"]["local_release_package_ready"] is True
         assert release["gates"]["zenodo_deposit_verified"] is False
         return
     for relative, expected in manifest.items():

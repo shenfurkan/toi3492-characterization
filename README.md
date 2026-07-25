@@ -4,9 +4,13 @@ An independent photometric analysis of TESS Object of Interest TOI-3492.01
 (TIC 81077799). Catalog parameters are consistent with a large, evolved
 F-type target, but the source and planetary nature of the signal are unconfirmed.
 
-**Status:** Stage 3 bounded method development is protocol-only. S3-00 through
-S3-03 passed; S3-04 synthetic calibration protocol is next. New real-data fitting
-and Phase 7 remain closed.
+**Status:** The RNAAS candidate-assessment bundle exists and passed its scoped
+Stage-4 audit, but lab-wide submission authorization remains conditional while
+the current verification, clean-room, and independent-review controls are open.
+The extended characterization manuscript (Phase 4, 5/5B, 6/6R) has been
+drafted. Stage 3 full calibration remains incomplete (protocol-only); the
+completed Stage-4 C01/C02 pilot closed K3 real-data adoption, so new real-data
+fitting and Phase 7 remain closed.
 The object remains unvalidated and unconfirmed; source localization, RVs, and
 high-resolution imaging are still needed for stronger claims.
 
@@ -21,7 +25,7 @@ high-resolution imaging are still needed for stronger claims.
 | Circular-fit a/Rs | 10.60 +/- 0.45 (diagnostic reference model) |
 | Impact parameter b | 0.705 +/- 0.032 (diagnostic reference model) |
 | Formal FPP | Not reported; current diagnostics are not a calibrated population model |
-| Key caveat | Circular transit density is about 2.6 times the catalog-model density, but a converged total-width 13-h fit shifts Rp/Rs by 1.95 adopted posterior half-widths; no calibrated significance is claimed |
+| Key caveat | Phase 6R passed 24/24 stationarity but its maximum weighted residual beta=1.294 at 80 min exceeds the frozen 1.2 threshold; no adopted native-cadence posterior exists. The 24-branch handoff carries full window/baseline/mask sensitivity. The circular folded reference fit is descriptive only. |
 
 These intervals are not final native-cadence system parameters. Historical
 gates are in `currentproblem.md` and `currentproblemstage2.md`; the approved
@@ -50,6 +54,13 @@ Literature PDFs and LaTeX build intermediates are excluded.
 
 The reusable end-to-end workflow, claim gates, stop rules, and safe/unsafe
 release practices are documented in `EXOPLANET_RELEASE_ROADMAP.md`.
+
+The reusable research-lab operating layer is indexed at
+`docs/lab/README.md`. It defines governance, lifecycle, quality, onboarding,
+roadmaps, templates, and recurring self-assessment. The framework is installed,
+but current lab readiness is not certified: canonical verification and
+clean-room/archive controls still have open blockers documented in
+`docs/lab/SELF_ASSESSMENT.md`.
 
 ## Pipeline and Status
 
@@ -93,9 +104,12 @@ Active remediation phases supersede the historical stage numbering above:
 | 5 | `scripts/run_faz5_window_grid.py` | Original preregistered result remains `FAIL` |
 | 5B | `scripts/run_faz5b_remediation.py` | `CONDITIONAL_CONTINUE`; 24 discrete mask/window/polynomial branches handed to Phase 6 |
 | 6 | `scripts/run_faz6_noise_models.py`, `scripts/run_faz6_joint_diagnostics.py` | `FAIL_STATIONARITY`; screening complete, Phase 7 closed |
-| 6R | `scripts/run_faz6r.py` | 24/24 stationarity, then `FAIL_RESIDUAL_CORRELATION`; frozen result preserved |
+| 6R | `scripts/run_faz6r.py` | 24/24 stationarity, then `FAIL_RESIDUAL_CORRELATION` ($\beta_{\rm max}=1.294$ at 80~min); frozen result preserved |
+| WP-09A | `scripts/run_wp09a_formal_sector_audit.py` | `PASS`; formal sector heterogeneity confirmed ($\chi^2=29.85$, $p=1.58\times10^{-5}$), cause not assigned |
 | S3-02 | `scripts/run_stage3_phase6_postmortem.py` | `PASS`; existing-artifact boundary, mask, sector-beta, and residual map; no new fit |
 | S3-03 | `scripts/build_stage3_model_architecture_decision.py` | `PASS`; single Matern-3/2 candidate with sector-partially-pooled timescales frozen before fit |
+| S4-01 | `scripts/run_stage4_fast_calibration.py` | 60-record C01/C02 selector pilot complete; `FAIL_CLAIM_REMOVED` for K3 real-data adoption, diagnostic record retained |
+| S4-03 | `toi3492_rnaas.tex` | `PASS`; one-figure RNAAS candidate-assessment source, compiled PDF, release audit, and portal bundle ready; not submitted or published |
 
 `scripts/ttv_analysis.py`, `scripts/stellar_activity.py`, and
 `scripts/triceratops_validation.py` are retained for provenance but are not
@@ -109,6 +123,8 @@ The machine-readable current claim gate is `outputs/release_status.json`.
 ## Verification
 
 ```bash
+python -m compileall scripts tests
+python scripts/final_calculation_verification.py
 python scripts/audit_science_consistency.py
 python scripts/audit_manuscript_math.py
 python scripts/run_faz5b_remediation.py --verify-only
@@ -121,6 +137,12 @@ The audit scripts provide human-readable consistency summaries; tests enforce se
 chain/output consistency, claim-boundary statuses, manifest hashes, and
 required artifacts. They are not a substitute for peer review or independent
 scientific reproduction.
+
+The dated 2026-07-25 lab baseline: 176 compact tests pass, 10 raw-data
+integration tests are explicitly deselected, and there are 0 failures; the
+final calculation wrapper reports 59/59. Do not report a clean verification state
+without rerunning the canonical commands and binding the result to the current
+source and environment hashes.
 
 Raw SPOC FITS files are re-downloadable and intentionally excluded from the
 release ZIP. After downloading them, verify their sizes and hashes separately

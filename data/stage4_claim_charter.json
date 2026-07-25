@@ -1,0 +1,49 @@
+{
+  "schema_version": "1.0",
+  "work_package": "S4-00_CANDIDATE_PAPER_CLAIM_CHARTER",
+  "status": "FROZEN",
+  "publication_track": "RNAAS candidate assessment",
+  "claims": [
+    {
+      "id": "S4-C01",
+      "status": "SUPPORTED",
+      "permitted_wording": "A persistent transit-like signal is present at the official ephemeris in six 120-s TESS sectors.",
+      "artifact": "outputs/faz2_transit_inventory.json"
+    },
+    {
+      "id": "S4-C02",
+      "status": "DIAGNOSTIC_ONLY",
+      "permitted_wording": "The folded circular fit supplies a descriptive scale reference, not an adopted native-cadence posterior.",
+      "artifact": "outputs/mcmc_diagnostics_120s_corrected.json"
+    },
+    {
+      "id": "S4-C03",
+      "status": "CONDITIONAL",
+      "permitted_wording": "A giant-companion scale is conditional on a planetary event on TIC 81077799 and the catalog single-star assumptions.",
+      "artifact": "data/config_corrected_120s.json"
+    },
+    {
+      "id": "S4-C04",
+      "status": "SUPPORTED_LIMITATION",
+      "permitted_wording": "Formal sector depths are heterogeneous, and the cause is not assigned.",
+      "artifact": "outputs/wp09a_formal_sector_audit.json"
+    },
+    {
+      "id": "S4-C05",
+      "status": "NOT_CLAIMED",
+      "forbidden_wording": [
+        "validated planet",
+        "confirmed planet",
+        "on-target transit",
+        "measured mass",
+        "measured eccentricity",
+        "calibrated false-positive probability"
+      ],
+      "artifact": "outputs/release_status.json"
+    }
+  ],
+  "stage3_boundary": {
+    "status": "INCOMPLETE",
+    "statement": "The limited Stage-4 selector pilot does not validate or adopt the Stage-3 K3 model for real data."
+  }
+}

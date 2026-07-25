@@ -7,6 +7,7 @@ from collections import Counter, defaultdict
 from pathlib import Path
 
 import numpy as np
+import pytest
 from astropy.io import fits
 
 
@@ -116,6 +117,7 @@ def test_faz1_exact_products_schema_hashes_pairs_and_apertures():
         assert all(pair["metadata_field_matches"].values())
 
 
+@pytest.mark.integration
 def test_faz1_actual_fits_time_round_trip_required_columns_and_aperture_hash():
     inventory = load_json("outputs/faz1_product_inventory.json")
     measured_maximum = 0.0

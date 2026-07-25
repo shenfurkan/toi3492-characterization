@@ -1,0 +1,88 @@
+name: Research Lab Verification
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  compact-verification:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.9'
+
+      - name: Install project and test dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[test]"
+
+      - name: Compile sources
+        run: python -m compileall scripts tests
+
+      - name: Validate lab status schema
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          from jsonschema import Draft202012Validator
+          root = Path('.')
+          schema = json.loads((root / 'docs/lab/lab_status.schema.json').read_text())
+          data = json.loads((root / 'docs/lab/lab_status.json').read_text())
+          Draft202012Validator(schema).validate(data)
+          print('lab_status schema: PASS')
+          PY
+
+      - name: Run compact tests
+        run: python -m pytest -q -m "not integration"
+
+      - name: Run current scientific audits
+        run: |
+          python scripts/audit_science_consistency.py
+          python scripts/audit_manuscript_math.py
+
+      - name: Check documentation paths
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          files = [Path('README.md'), Path('CONTRIBUTING.md'), Path('SECURITY.md'),
+                   Path('docs/README.md'), *Path('docs/lab').glob('*.md'),
+                   *Path('docs/templates').glob('*.md')]
+          suffixes = ('.md', '.json', '.tex', '.toml', '.cff', '.py', '.ps1', '.csv', '.npy', '.npz')
+          missing = []
+          for file in files:
+              parts = file.read_text().split('`')
+              for token in parts[1::2]:
+                  token = token.rstrip('.,;:')
+                  if ' ' in token or '*' in token or token.startswith(('http://', 'https://')):
+                      continue
+                  if not token.endswith(suffixes):
+                      continue
+                  if not (file.parent / token).exists():
+                      missing.append(f'{file}: {token}')
+          if missing:
+              raise SystemExit('\n'.join(missing))
+          print('documentation paths: PASS')
+          PY
+
+  integration:
+    if: ${{ github.event_name == 'workflow_dispatch' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.9'
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[test]"
+      - name: Run explicitly requested integration tests
+        run: python -m pytest -q -m integration

@@ -1,14 +1,15 @@
 {
   "schema_version": "1.1",
-  "as_of_date": "2026-07-24",
+  "as_of_date": "2026-07-25",
   "release_version": "1.0.1",
   "target": "TOI-3492.01 / TIC 81077799",
-  "strongest_supported_gate": "working_draft_under_scientific_remediation",
+  "strongest_supported_gate": "rnaas_candidate_paper_source_ready",
   "gates": {
     "archive_ready": false,
-    "local_release_package_ready": false,
+    "local_release_package_ready": true,
     "zenodo_deposit_verified": false,
-    "candidate_paper_ready": false,
+    "candidate_paper_ready": true,
+    "characterization_paper_ready": false,
     "final_native_cadence_geometry_ready": false,
     "central_density_or_eccentricity_claim_ready": false,
     "statistical_validation_ready": false,
@@ -147,11 +148,43 @@
     "second_protocol_approval_required_before_real_data": true,
     "binding_plan": "stage3.md"
   },
+  "stage4_candidate_publication": {
+    "status": "PASS",
+    "purpose": "Close a conservative RNAAS candidate-assessment paper without relabeling incomplete Stage-3 calibration as a pass.",
+    "claim_charter": "data/stage4_claim_charter.json",
+    "limited_selector_protocol": "data/stage4_fast_calibration_protocol.json",
+    "limited_selector_scientific_use": "DIAGNOSTIC_ONLY",
+    "limited_selector_status": "FAIL_CLAIM_REMOVED",
+    "limited_selector_audit": "outputs/stage4_fast_calibration_gate.json",
+    "limited_selector_result": "60/60 records completed; selector eligibility was 2/30 in C01 and 19/30 in C02, so K3 is not authorized for real-data adoption.",
+    "rnaas_source": "toi3492_rnaas.tex",
+    "rnaas_requirements": "One figure or table, at most 1500 words, abstract required, and final compilation with the official aastex701 class.",
+    "rnaas_release_audit": "outputs/stage4_rnaas_release_audit.json",
+    "rnaas_submission_bundle": "outputs/toi3492_rnaas_submission.zip",
+    "candidate_paper_ready": true,
+    "publication_status": "NOT_SUBMITTED",
+    "remaining_external_action": "Enter portal metadata and submit the frozen RNAAS bundle. Journal moderation, publication, DOI issuance, and indexing remain external events.",
+    "full_characterization_feedback_resolved": false,
+    "stage5_pixel_source_analysis": {
+      "status": "centroids_closer_to_target_in_most_sectors",
+      "artifact": "outputs/stage5_pixel_source_analysis.json",
+      "result": "Depth-map centroid closer to target in 4/6 sectors. Source outside aperture in all sectors. Sectors 64 and 99 show centroid closer to source."
+    },
+    "unresolved_full_characterization_controls": [
+      "Calibrated TESS PRF source localization for the 56.29-arcsec mimic-capable Gaia source.",
+      "High-resolution imaging contrast curve and a complete host/dilution scenario set.",
+      "A calibrated formal FPP; quarantined TRICERATOPS experiments do not supply one.",
+      "An adopted correlated-noise native-cadence posterior with propagated limb darkening and stellar covariance.",
+      "Target-specific reconnaissance spectroscopy and epoch radial velocities."
+    ]
+  },
   "authoritative_documents": [
     "currentproblem.md",
     "currentproblemstage2.md",
     "stage3.md",
+    "stage4.md",
     "toi3492_characterization.tex",
+    "toi3492_rnaas.tex",
     "outputs/release_status.json",
     "EXOPLANET_RELEASE_ROADMAP.md"
   ]

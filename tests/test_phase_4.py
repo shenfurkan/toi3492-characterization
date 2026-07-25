@@ -115,6 +115,7 @@ def test_frozen_inputs_exact_events_table_schema_and_counts(report, faz2, long_t
     )
 
 
+@pytest.mark.integration
 def test_recompute_branch_sector_counts_and_native_alignment(report, faz1, long_table):
     products = products_120s(faz1)
     cbv_inputs = {
@@ -205,6 +206,7 @@ def test_recompute_branch_sector_counts_and_native_alignment(report, faz1, long_
             assert np.array_equal(actual["quality"], quality[valid][order])
 
 
+@pytest.mark.integration
 def test_one_time_crowdsap_and_pipeline_formula(report, faz1, long_table):
     formulas = report["correction_formulas"]
     assert formulas["pdcsap"]["additional_crowdsap_applications"] == 0

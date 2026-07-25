@@ -1,0 +1,16 @@
+cff-version: 1.2.0
+message: "If you use this analysis or its data products, please cite the versioned release; add the Zenodo DOI after deposit."
+title: "TOI-3492.01: Photometric Characterization of an Unvalidated and Unconfirmed Transit Candidate"
+type: software
+authors:
+  - family-names: "Sen"
+    given-names: "Furkan"
+    affiliation: "Department of Astronomy and Space Sciences, Ankara University"
+version: "2.0.0-dev"
+license: MIT
+repository-code: "https://github.com/shenfurkan/toi3492-characterization"
+keywords:
+  - exoplanets
+  - TESS
+  - transit photometry
+  - planet candidates

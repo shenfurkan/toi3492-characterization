@@ -80,6 +80,7 @@ def main():
     assert release_status["strongest_supported_gate"] in [
         "descriptive_candidate_preprint",
         "working_draft_under_scientific_remediation",
+        "rnaas_candidate_paper_source_ready",
     ]
     assert not release_status["gates"]["statistical_validation_ready"]
     assert not release_status["gates"]["planet_confirmation_ready"]

@@ -1,0 +1,35 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "toi3492-photometric-characterization"
+version = "1.0.1"
+description = "Reproducible TESS photometric characterization of TOI-3492.01"
+requires-python = "==3.9.*"
+dependencies = [
+  "numpy==1.26.4",
+  "scipy==1.13.1",
+  "pandas==2.3.3",
+  "matplotlib==3.9.4",
+  "astropy==6.0.1",
+  "astroquery==0.4.11",
+  "lightkurve==2.6.0",
+  "batman-package==2.5.3",
+  "celerite==0.4.3",
+  "emcee==3.1.6",
+  "corner==2.3.0",
+  "ldtk==1.8.6"
+]
+
+[project.optional-dependencies]
+test = ["pytest==8.4.2", "Pillow==11.3.0", "jsonschema==4.25.1"]
+screening = ["triceratops==1.0.20"]
+asteroseismology = ["pysyd==6.10.5", "tess-atl==0.0.3.1"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra -m 'not integration'"
+markers = [
+  "integration: requires re-downloadable raw external data excluded from the release archive",
+]

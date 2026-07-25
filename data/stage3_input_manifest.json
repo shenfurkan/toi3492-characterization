@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0",
   "work_package": "S3-01_IMMUTABLE_INPUT_MANIFEST",
-  "generated_utc": "2026-07-23T18:45:00.222873+00:00",
+  "generated_utc": "2026-07-24T23:13:53.580951+00:00",
   "status": "PASS",
   "real_data_fit_executed": false,
   "phase_7_may_begin": false,
@@ -504,8 +504,8 @@
       },
       {
         "path": "provenance/environment.json",
-        "size_bytes": 7980,
-        "sha256": "752213e6933aad6f79fedae71e225270a392760f169c5968f54f77145f509ef0"
+        "size_bytes": 8075,
+        "sha256": "553f943da980df90506e962d0edfeaa16569358b23fda78b2b549096d361a529"
       },
       {
         "path": "requirements-lock.txt",

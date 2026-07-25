@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0",
   "work_package": "S3-04A_SYNTHETIC_CALIBRATION_PROTOCOL",
-  "generated_utc": "2026-07-23T20:59:43.318718+00:00",
+  "generated_utc": "2026-07-24T23:40:51.284605+00:00",
   "status": "PASS",
   "scope": {
     "analysis_mode": "PROTOCOL_FROZEN_BEFORE_SYNTHETIC_RESULTS",
@@ -31,12 +31,12 @@
       "data/stage3_input_manifest.json": {
         "relative_path": "data/stage3_input_manifest.json",
         "size_bytes": 17604,
-        "sha256": "85526a306f89712cdcf6f7f638521e8f048042704a4bad3dc674dfd620b3e45d"
+        "sha256": "17ce8838506b33228d633ab77f0a6b4171a7253d6c95097b2518ca3ce35f9c48"
       },
       "data/stage3_model_architecture_decision.json": {
         "relative_path": "data/stage3_model_architecture_decision.json",
         "size_bytes": 21115,
-        "sha256": "b1ae8596b10207f5d3dcb2dd21a8f65bddc2e5e098f2619bfa17ec2884a8999e"
+        "sha256": "a6c2e94dfbb3976677ad4d487d795257bc333c3eb75b25557f84502e719e10cf"
       },
       "outputs/faz2_transit_inventory.json": {
         "relative_path": "outputs/faz2_transit_inventory.json",

@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0",
   "work_package": "S3-02_PHASE6_POSTMORTEM",
-  "generated_utc": "2026-07-23T19:25:15.691574+00:00",
+  "generated_utc": "2026-07-24T23:29:51.515673+00:00",
   "status": "PASS",
   "scope": {
     "analysis_mode": "EXISTING_ARTIFACTS_AND_FROZEN_ENDPOINT_DIAGNOSTICS_ONLY",
@@ -144,7 +144,7 @@
       "data/stage3_input_manifest.json": {
         "path": "data/stage3_input_manifest.json",
         "size_bytes": 17604,
-        "sha256": "85526a306f89712cdcf6f7f638521e8f048042704a4bad3dc674dfd620b3e45d"
+        "sha256": "17ce8838506b33228d633ab77f0a6b4171a7253d6c95097b2518ca3ce35f9c48"
       }
     }
   },

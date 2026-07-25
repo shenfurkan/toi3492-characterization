@@ -30,21 +30,24 @@ TOI-3492.01 (TIC~81077799) is a TESS Object of Interest with an official
 period of $P=9.2224171$~d.  We analyze six publicly available 120-s SPOC
 light curves spanning five years.  A several-thousand-ppm transit-like signal
 is present at the official ephemeris in every sector, although formal
-sector-depth estimates are heterogeneous.  A circular fit to phase-folded,
-8-minute-binned photometry is retained only as a descriptive reference model;
-window and cadence-mask tests show that its statistical intervals do not
-capture the full reduction and baseline sensitivity.  If the event is
-planetary, originates on TIC~81077799, and the catalog single-star parameters
-are correct, the reference radius ratio corresponds to a giant-planet-sized
-companion.  Native-cadence 120-s and 20-s fits are not reported as measurements
-because their convergence and noise-model gates fail.  Odd/even and fixed
-phase-0.5 secondary checks are inconclusive screening tests, and archival SPOC,
-Gaia, aperture, and first-pass difference-image diagnostics do not provide
-calibrated source localization.  No formal false-positive probability,
-eccentricity, mass, statistical validation, or dynamical confirmation is
-claimed.  TOI-3492.01 remains an unvalidated and unconfirmed transit-like
-candidate requiring PRF-level localization, high-resolution imaging,
-spectroscopy, and epoch radial velocities.
+sector-depth estimates are heterogeneous ($\chi^2=29.85$ for 5~dof,
+$p=1.58\times10^{-5}$).  Four independent reductions (PDCSAP, SAP+CBV, TPF
+optimal-aperture, and TPF PLD) recover the signal, but a $0.90\sigma$ geometry
+dispersion between them is preserved as a systematic uncertainty.  A 15-cell
+grid of fit-window durations and baseline polynomial degrees fails to identify a
+single adopted model, yielding a 24-branch discrete handoff that carries forward
+the window, baseline, and cadence-mask sensitivity.  A Gaussian-process kernel
+screening (576 leave-one-sector-out fits, 4 kernel families) finds that
+correlated-noise models (OU, Mat\'ern-3/2, SHO) improve predictive performance
+by $\sim$19~ELPD over white noise, but they fail boundary-stability and
+mask-interaction gates.  A white-noise joint fit passes numerical stationarity in
+24/24 branches, yet the maximum weighted residual beta is $1.294$ at 80~min,
+exceeding the frozen 1.2 threshold.  No adopted native-cadence posterior,
+calibrated population false-positive probability, eccentricity measurement,
+statistical validation, or dynamical confirmation is claimed.  TOI-3492.01
+remains an unvalidated and unconfirmed transit-like candidate requiring
+PRF-level localization, high-resolution imaging, spectroscopy, and epoch
+radial velocities.
 \end{abstract}
 
 % -----------------------------------------------------------------------
@@ -128,6 +131,45 @@ Figure~\ref{fig:fold}.
   window.  This product supports the descriptive phase-folded reference fit.}
 \label{fig:fold}
 \end{figure}
+
+% -----------------------------------------------------------------------
+\subsection{Four-Way Reduction Comparison}
+\label{sec:reductions}
+% -----------------------------------------------------------------------
+
+Transit geometry can be sensitive to the choice of flux extraction and
+systematics correction.  To quantify this sensitivity, the same six-sector
+TESS observations were reduced through four independent pipelines:
+\begin{enumerate}
+  \item \textbf{PDCSAP} --- the standard SPOC Presearch Data Conditioning
+    simple-aperture-photometry light curve, which includes co-trending basis
+    vector (CBV) detrending and a CROWDSAP crowding correction;
+  \item \textbf{SAP+CBV} --- simple-aperture-photometry flux with a separate
+    per-sector CBV regression;
+  \item \textbf{TPF optimal aperture} --- a custom circular-aperture sum
+    extracted from the target-pixel files using the SPOC optimal aperture
+    mask; and
+  \item \textbf{TPF PLD} --- pixel-level decorrelation applied to the TPF
+    aperture-sum flux.
+\end{enumerate}
+Each branch was required to recover the transit signal at $\geq 3\sigma$
+per-sector depth significance, to pass a synthetic-transit injection-recovery
+test ($\geq 90\%$ recovery, $\leq 5\%$ median fractional bias over 24
+injected transits per branch), and to produce a finite geometry covariance.
+
+All four branches passed their individual gates.  A shared Mandel--Agol
+geometry was fitted to each reduction independently, keeping the stellar
+limb-darkening coefficients and the orbital period fixed.  The between-branch
+dispersion in the fitted radius ratio is $0.90$ combined-$\sigma$, exceeding
+the preregistered $0.5\sigma$ acceptance gate.  The reduction comparison
+therefore receives a conditional pass: the PDCSAP product is used as the
+reference light curve throughout, but the between-reduction systematic
+(approximately $2.2\times10^{-4}$ in $R_p/R_\star$, $0.022$ in $a/R_\star$) is
+preserved and propagated in quadrature into the Phase~5B mixture intervals
+(Section~\ref{sec:sensitivity}).
+No single reduction was selected on the basis of its output values, and the
+four branches were not treated as independent likelihoods.  The CROWDSAP
+correction present in the SPOC PDCSAP product was not applied a second time.
 
 % -----------------------------------------------------------------------
 \section{Stellar Characterization}
@@ -387,6 +429,181 @@ the corresponding posterior distributions, respectively.
   acceptance fraction of 0.512.}
 \label{fig:corner}
 \end{figure}
+
+% -----------------------------------------------------------------------
+\section{Window, Baseline, and Noise-Model Sensitivity}
+\label{sec:sensitivity}
+% -----------------------------------------------------------------------
+
+The descriptive reference fit in Section~\ref{sec:model} folds the six
+sectors onto a single phase curve, bins the photometry to 8-minute intervals,
+and assumes that the residuals are uncorrelated.  This section reports three
+quantitative sensitivity analyses that test those assumptions.
+
+\subsection{Window and Polynomial Grid}
+\label{sec:window_grid}
+
+To characterize the sensitivity of the transit geometry to the choice of
+out-of-transit baseline window, we constructed a preregistered 15-cell grid:
+five total-window durations (13, 16, 20, 26, and 32~h) crossed with three
+baseline polynomial degrees (constant P0, linear P1, quadratic P2).  Each
+cell used the identical PDCSAP light curve, 16 usable transit events,
+fixed quadratic limb darkening, and a blocked out-of-transit predictive
+comparison in which one side of each transit was held out and scored.
+
+All 15 cells completed with full-rank baseline designs and valid Laplace
+covariance matrices.  The cell with the highest raw expected log predictive
+density (ELPD) was W16\_P1 (16-h window, linear baseline).  However,
+under the preregistered rule requiring every competing cell to be excluded
+by at least 2 standard errors before a single model could be adopted, 11 of
+the 15 cells could not be eliminated.  The original grid therefore receives a
+\emph{fail} gate: no single window-and-polynomial combination can be adopted
+as the canonical model on predictive grounds alone.
+%
+The failure does not indicate that the signal is absent.  It indicates that
+the transit geometry inferred from these data is materially sensitive to the
+choice of fit window and baseline degree.
+
+\subsection{24-Branch Cadence-Mask Handoff}
+\label{sec:handoff}
+
+A subsequent cadence-lineage audit identified a 60-cadence subset
+(0.06\% of the reference product) that was excluded by the Phase~3 quality
+selection but retained in the original Phase~5 reference light curve.  This
+small mask difference tips the 2-SE retention classification of two cells
+(W26\_P0 in the \texttt{raw\_valid} mask and W32\_P2 in the
+\texttt{reference\_included} mask).  Rather than silently discarding the
+affected cells or selecting a single mask, we constructed a 24-branch
+discrete model universe that carries the full window, polynomial, and
+cadence-mask sensitivity into downstream analysis.
+
+The handoff comprises 11~branches on the \texttt{raw\_valid} mask and
+13~branches on the \texttt{reference\_included} mask, with mask-level
+prior weights of $0.5/0.5$ and uniform conditional weights within each
+mask.  All fold-overlap constraints are satisfied (zero cadences shared
+between transit, held-side, and validation sets).  The resulting
+model-averaged geometry mixture gives
+$R_p/R_\star = 0.05549^{+0.00038}_{-0.00038}$,
+$a/R_\star = 10.13^{+0.22}_{-0.22}$,
+$b = 0.734^{+0.014}_{-0.014}$, and
+$T_{14} = 5.29^{+0.03}_{-0.03}$~h (median and 68\% quantiles).
+The Phase~4 between-reduction systematic is added once, in quadrature,
+yielding cumulative 68\% intervals of
+$R_p/R_\star = [0.05504, 0.05591]$ and
+$a/R_\star = [9.93, 10.34]$.
+
+The handoff receives a \emph{conditional continue} gate: the original
+Phase~5 failure is immutable, the 24 branches are not independent
+observations, and a final adopted geometry requires a passing noise model
+and native-cadence convergence gates that are not yet satisfied.
+
+\subsection{Kernel Screening (Phase~6)}
+\label{sec:kernel_screening}
+
+Residual temporal correlation in the out-of-transit light curve can bias
+transit parameters if it is modeled as white noise.  We compared four
+Gaussian-process kernel families using leave-one-sector-out (LOSO)
+predictive scoring on the 24-branch handoff universe:
+%
+\begin{description}
+  \item[K0 (white)] --- per-sector jitter only, no temporal correlation;
+  \item[K1 (OU)] --- Ornstein--Uhlenbeck (CAR-1) exponential kernel;
+  \item[K2 (Mat\'ern-3/2)] --- smoother Mat\'ern-3/2 kernel;
+  \item[K3 (SHO)] --- stochastically-driven simple harmonic oscillator.
+\end{description}
+%
+Each kernel was evaluated in $24 \times 6 = 144$ separate fits, yielding the
+full 576-score LOSO contract.  All three correlated-noise kernels produce
+strict predictive improvements over K0 (Table~\ref{tab:kernels}):
+OU by $\Delta\mathrm{ELPD} = 18.68 \pm 4.34$,
+Mat\'ern-3/2 by $19.55 \pm 4.60$, and
+SHO by $19.72 \pm 4.84$, each significant at $p=0.0156$ (exact sign-flip).
+The absolute mask-interaction in all three cases exceeds 2~SE, meaning that
+the predictive gain differs between the \texttt{raw\_valid} and
+\texttt{reference\_included} masks by more than the sampling noise can
+explain.  In addition, all three complex kernels approach the
+360-minute correlation-timescale upper boundary in some branches.
+
+\begin{table}[ht]
+\centering
+\caption{Phase~6 kernel screening: leave-one-sector-out predictive comparison
+  against K0 (white noise).  Positive $\Delta$ELPD favors the correlated
+  kernel.}
+\label{tab:kernels}
+\begin{tabular}{lccc}
+\toprule
+Kernel & $\Delta$ELPD & SE & Sign-flip $p$ \\
+\midrule
+OU (CAR-1)            & 18.68 & 4.34 & 0.0156 \\
+Mat\'ern-3/2          & 19.55 & 4.60 & 0.0156 \\
+SHO                   & 19.72 & 4.84 & 0.0156 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Because no kernel satisfied all preregistered predictive, boundary, and
+mask-interaction gates, the complex-kernel candidate count is zero.  The
+Phase~6 kernel screening is complete and its gate status is
+\texttt{FAIL\_STATIONARITY}: Phase~7 (timing and final native-cadence
+analysis) may not begin.
+
+\subsection{White-Noise Joint Diagnostics and Remediation (Phase~6R)}
+\label{sec:phase6r}
+
+With no complex kernel eligible, the mandatory diagnostic is a K0
+white-plus-jitter joint transit-and-noise fit on all 24~branches.  The
+first attempt (V1) was invalidated because its optimizer did not move from
+its 72 starting coordinates (an undiagnosed scaling defect).  The rescaled
+V2 fit achieved objective descent and parameter movement on all branches;
+22 of 24 branches passed the preregistered stationarity gate (three starts
+within $10^{-3}$ objective spread).  Two branches
+(\texttt{raw\_valid::W20\_P0} and \texttt{reference\_included::W32\_P2})
+failed stationarity owing to a line-search warning, although their
+non-convergent starts reached the same optimum as the other two starts.
+
+A subsequent numerical remediation calculation (Phase~6R, unchanged V2
+model) passed stationarity in 24/24 branches and Hessian validity in
+24/24 branches.  However, the residual-correlation gate failed.
+Table~\ref{tab:beta} reports the maximum weighted residual beta across the
+24 branches for six logarithmically spaced time scales.
+
+\begin{table}[ht]
+\centering
+\caption{Phase~6R maximum weighted residual beta ($\beta$) as a function of
+  binning time scale, averaged over 24 branches with model weights.  A value
+  of $\beta=1$ corresponds to ideal white-noise behavior; the frozen
+  acceptance threshold is $\beta_{\rm max}=1.2$.}
+\label{tab:beta}
+\begin{tabular}{cc}
+\toprule
+Time scale (min) & Maximum weighted $\beta$ \\
+\midrule
+ 20  & 1.1384 \\
+ 40  & 1.2262 \\
+ 80  & 1.2936 \\
+160  & 1.2883 \\
+320  & 1.2278 \\
+360  & 1.1900 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The maximum $\beta = 1.2936$ occurs at 80~minutes, exceeding the frozen
+1.2 limit.  The 40--320~minute range, where $\beta > 1.2$, spans the
+transit ingress/egress time scale ($\sim$34~min for this system), meaning
+that the K0 white-noise model does not fully account for the temporal
+correlation that affects the transit shape.  Phase~6R therefore closes with
+\texttt{FAIL\_RESIDUAL\_CORRELATION}, and Phase~7 remains blocked.
+
+The 24-branch K0 weighted mixture yields geometry quantiles
+compatible with the Phase~5B Laplace mixture (the difference in
+$R_p/R_\star$ is $\lesssim 3\times10^{-5}$), but the residual correlation
+means that the K0 statistical intervals are formally optimistic at the
+transit time scale.  An adopted native-cadence posterior would require a
+correlated-noise model that passes frozen predictive, stationarity,
+boundary-stability, mask-interaction, and residual-correlation gates --- a
+set of conditions that no model in the current screening universe has
+satisfied.
 
 % -----------------------------------------------------------------------
 \section{Results}
@@ -824,13 +1041,25 @@ calibrated PRF-level source localization remain absent.  No
 secondary-eclipse phase scan for eccentric orbits was performed.
 
 \paragraph{Model limitations.}
-The phase-folded fit is not a final native-cadence posterior.  Accepted
-reduction, mask, window, and polynomial branches produce material sensitivity,
-and the original Phase~6 result remains
-\texttt{FAIL\_STATIONARITY}.  A later K0 white-plus-jitter numerical-remediation
-calculation moved all required starts and passed stationarity in 24/24 branches,
-but its maximum weighted residual beta was 1.2936, above the frozen limit of
-1.2, giving \texttt{FAIL\_RESIDUAL\_CORRELATION}.  The Stage-3 continuation is
+The phase-folded fit is not a final native-cadence posterior.  Four independent
+reductions recover the signal but exhibit a $0.90\sigma$ between-branch
+geometry dispersion that exceeds the preregistered acceptance gate
+(Section~\ref{sec:reductions}).  A 15-cell window-and-polynomial grid fails
+to identify a single adopted model; the resulting 24-branch handoff
+carries the full baseline, window, and cadence-mask sensitivity forward
+(Section~\ref{sec:window_grid}--\ref{sec:handoff}).  A 576-fold GP kernel
+screening finds that correlated-noise models (OU, Mat\'ern-3/2, SHO) improve
+predictive performance by $\sim$19~ELPD over white noise, but all three fail
+boundary-stability and mask-interaction gates
+(Section~\ref{sec:kernel_screening}).  The original Phase~6 result therefore
+remains \texttt{FAIL\_STATIONARITY}.  A subsequent K0 white-plus-jitter
+numerical-remediation calculation moved all required starts and passed
+stationarity in 24/24 branches, but its maximum weighted residual beta was
+1.2936~at 80~min, exceeding the frozen 1.2~threshold
+(Section~\ref{sec:phase6r}, Table~\ref{tab:beta}), giving
+\texttt{FAIL\_RESIDUAL\_CORRELATION}.  The 40--320~min band where $\beta>1.2$
+spans the transit ingress/egress time scale, so the K0 statistical intervals
+are formally optimistic for the transit shape.  The Stage-3 continuation is
 currently protocol-only and has not run a new real-data noise model.  No adopted
 geometry, stellar-density discrepancy, or eccentricity measurement follows
 from these calculations.  Native-cadence 120~s and 20~s parameter intervals are
@@ -878,23 +1107,42 @@ analyzed, yielding the following:
   \item A targeted 120~s BLS analysis recovers a periodic signal near the
     official TOI period; it does not independently establish
     the quoted ephemeris precision.
+  \item Four independent reductions (PDCSAP, SAP+CBV, TPF, PLD) all recover the
+    signal with consistent depth scale.  A $0.90\sigma$ geometry dispersion
+    between them is preserved as a systematic uncertainty rather than selecting
+    a single reduction.
   \item A circular fit to phase-folded, binned photometry provides a
     descriptive reference only.  Its parameter intervals are not adopted as
     native-cadence measurements.  A giant-planet-sized physical scale is
     conditional on a planetary event originating on TIC~81077799 and on the
     catalog single-star parameters.
+  \item A 15-cell fit-window and baseline-polynomial grid fails to identify a
+    single preferred model on predictive grounds.  A 24-branch discrete
+    (11~raw-valid + 13~reference-included) handoff carries the full window,
+    baseline, and cadence-mask sensitivity downstream.
+  \item A 576-fold leave-one-sector-out GP kernel screening finds that
+    correlated-noise models (OU, Mat\'ern-3/2, SHO) improve predictive
+    performance by $\sim$19~ELPD over white noise, but all three fail
+    boundary-stability and mask-interaction gates.  Zero complex kernels are
+    eligible for adoption.
+  \item A K0 white-plus-jitter joint fit passes stationarity in 24/24
+    branches after numerical remediation, but the maximum weighted residual
+    beta is $\beta=1.294$~at~80~min, exceeding the frozen 1.2~threshold.
+    The K0 model does not fully account for temporal correlation at the
+    transit time scale.
   \item All six 120~s sectors independently show a deep transit-like signal,
     demonstrating persistence, but their formal depths are heterogeneous
-    ($\chi^2=29.85$ for 5 degrees of freedom).
+    ($\chi^2=29.85$ for 5 degrees of freedom, $p=1.58\times10^{-5}$).  The
+    cause is not assigned as astrophysical.
   \item Odd/even and fixed phase-0.5 secondary checks are inconclusive
     screening tests.  SPOC~DV, Gaia~DR3, source-specific aperture, and
     first-pass difference-image checks do not provide calibrated source
     localization.  An all-phase regression is systematics-limited.
   \item No calibrated population FPP is reported; the available checks do
-    not statistically validate or confirm the candidate.
-  \item Native-cadence fits fail the required convergence/noise-model gates;
-    their parameter intervals are omitted.  No stellar-density discrepancy or
-    eccentricity measurement is claimed.
+    not statistically validate or confirm the candidate.  TRICERATOPS and a
+    simple scenario-based FPP calculation are not adopted because they lack
+    calibrated population simulations and TESS-band PRF source-localization
+    likelihoods.
   \item A converged fit-window sensitivity comparison shifts $R_p/R_\star$ by
     1.95 reference-posterior half-widths.  The descriptive reference intervals
     do not include this window-choice systematic.

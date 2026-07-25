@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0",
   "work_package": "S3-03_MODEL_ARCHITECTURE_DECISION",
-  "generated_utc": "2026-07-23T20:51:22.730590+00:00",
+  "generated_utc": "2026-07-24T23:35:20.573860+00:00",
   "status": "PASS",
   "scope": {
     "analysis_mode": "POST_RESULT_PROTOCOL_FROZEN_BEFORE_SYNTHETIC_AND_REAL_DATA",
@@ -41,12 +41,12 @@
       "data/stage3_input_manifest.json": {
         "relative_path": "data/stage3_input_manifest.json",
         "size_bytes": 17604,
-        "sha256": "85526a306f89712cdcf6f7f638521e8f048042704a4bad3dc674dfd620b3e45d"
+        "sha256": "17ce8838506b33228d633ab77f0a6b4171a7253d6c95097b2518ca3ce35f9c48"
       },
       "outputs/stage3_phase6_postmortem.json": {
         "relative_path": "outputs/stage3_phase6_postmortem.json",
         "size_bytes": 59837,
-        "sha256": "ec4c60d7c17ecadef1d683199b0e79fab0b04ecf94a9e2a3888d4bf4d321a4e3"
+        "sha256": "6510d8802c9ad3eb6c624ed7ce740e2408cb839066752122969fae150539a1b1"
       },
       "outputs/faz5b_remediation.json": {
         "relative_path": "outputs/faz5b_remediation.json",

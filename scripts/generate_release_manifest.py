@@ -2,6 +2,7 @@
 
 import hashlib
 import json
+import fnmatch
 import platform
 import subprocess
 import sys
@@ -141,6 +142,44 @@ REQUIRED.extend(
         for path in directory.glob("*.py")
     )
 )
+
+
+def recursive_policy_paths():
+    """Add policy-controlled nested source and evidence files to the manifest."""
+    policy_path = ROOT / "data" / "release_manifest_policy.json"
+    if not policy_path.is_file():
+        return []
+    policy = json.loads(policy_path.read_text(encoding="utf-8"))
+    excluded = set(policy.get("exclude_globs", []))
+    paths = []
+    for path in ROOT.rglob("*"):
+        if not path.is_file():
+            continue
+        relative = path.relative_to(ROOT).as_posix()
+        included = any(
+            relative == item or relative.startswith(item.rstrip("/") + "/")
+            for item in policy.get("include", [])
+        )
+        if not included:
+            continue
+        if any(
+            fnmatch.fnmatch(relative, pattern)
+            or fnmatch.fnmatch(relative, pattern.lstrip("./"))
+            for pattern in excluded
+        ):
+            continue
+        if relative in {
+            "provenance/SHA256SUMS.json",
+            "provenance/run.json",
+            "provenance/RECURSIVE_RELEASE_MANIFEST.json",
+        }:
+            continue
+        paths.append(relative)
+    return paths
+
+
+REQUIRED.extend(recursive_policy_paths())
+REQUIRED = sorted(set(REQUIRED))
 
 
 def sha256(path):

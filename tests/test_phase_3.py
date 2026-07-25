@@ -10,6 +10,8 @@ from astropy.io import fits
 
 
 ROOT = Path(__file__).resolve().parents[1]
+
+pytestmark = pytest.mark.integration
 SECTORS = {37, 63, 64, 90, 99, 100}
 MASKS = {
     "strict_zero": 0,

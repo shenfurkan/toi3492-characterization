@@ -1,0 +1,37 @@
+{
+  "approximate_word_count": 1168,
+  "bibliography_word_count": 195,
+  "checks": {
+    "abstract_present": true,
+    "citation_keys_resolve": true,
+    "corresponding_author_email": true,
+    "no_forbidden_strong_claim": true,
+    "no_tables": true,
+    "one_or_fewer_figures": true,
+    "rnaas_documentclass": true,
+    "word_limit": true
+  },
+  "cited_keys": [
+    "Jenkins2016",
+    "Kreidberg2015",
+    "Lightkurve2018",
+    "Stassun2019",
+    "Vallenari2023"
+  ],
+  "compile_note": "This audit does not replace compilation with the official aastex701.cls or PDF visual inspection.",
+  "corresponding_author_email_present": true,
+  "figure_count": 1,
+  "forbidden_phrase_flags": {
+    "claims_confirmed": false,
+    "claims_measured_eccentricity": false,
+    "claims_measured_mass": false,
+    "claims_on_target": false,
+    "claims_validated": false
+  },
+  "missing_citation_keys": [],
+  "schema_version": "1.0",
+  "source": "toi3492_rnaas.tex",
+  "source_word_count": 973,
+  "status": "PASS",
+  "table_count": 0
+}

@@ -1,17 +1,26 @@
-# Python
+# ==============================================================================
+# Git Ignore Configuration for TOI-3492 Exoplanet Characterization Project
+# ==============================================================================
+
+# ------------------------------------------------------------------------------
+# 1. Python & Environment Caches
+# ------------------------------------------------------------------------------
 __pycache__/
 *.py[cod]
+*$py.class
 *.egg-info/
+.eggs/
 dist/
 build/
-.eggs/
-
-# Virtual environments
+.venv/
 venv/
 .env/
-.venv/
+.pytest_cache/
+.ipynb_checkpoints/
 
-# LaTeX build artifacts
+# ------------------------------------------------------------------------------
+# 2. LaTeX & Article Build Artifacts ("Makale" derleme ve çıktı dosyaları)
+# ------------------------------------------------------------------------------
 *.aux
 *.bbl
 *.blg
@@ -26,71 +35,85 @@ venv/
 *.vrb
 *.run.xml
 *.bcf
-
-# LaTeX backup files
 *.bak
 *.sav
 *~
 
-# OS
-.DS_Store
-Thumbs.db
-desktop.ini
-
-# IDE / Editor
-.idea/
-.vscode/
-*.swp
-*.swo
-
-# Backup / temp
-outputs/fresh_backup_*/
-outputs/night_runs/
-archive/
-
-# PDFs (compiled and reference copies)
+# Compiled PDF documents and paper packages
 *.pdf
 papers/
-
-# Literature (reading PDFs)
 literature/
-
-# Canonical TeX source and release package are versioned.
+arxiv_submission/
 arxiv_submission.zip
-data/*.tex
+provenance/
+toi3492_reproducible_release_v*/
+*.zip
+*.sha256
 
-# Miscellaneous
-handover.md
-81077799_TRILEGAL.csv
-AstrophysicsResources/
-*.pk
-
-# Large binary data (re-downloadable from MAST)
-data/spoc_dv/
-data/asteroseismology/raw/
-data/asteroseismology/pysyd/
-outputs/pysyd/
-
-# Jupyter
-.ipynb_checkpoints/
-
-# Working notes and local orchestration scripts
-docs/*.md
-docs/*.txt
-!docs/publication_process_howto.md
-!docs/potansiyel.md
-*.ps1
-scripts/*.ps1
-
-# Duplicate references.bib (use root copy only)
+# Duplicate BibTeX file in data directory (keep root references.bib)
 data/references.bib
 
-# Generated outputs, caches, and intermediate data
+# LaTeX Source file rules
+*.tex
+!toi3492_characterization.tex
+!toi3492_rnaas.tex
+
+# ------------------------------------------------------------------------------
+# 3. Internal Analysis, Stage Notes & Unnecessary Markdown Files ("Gereksiz .md'ler")
+# ------------------------------------------------------------------------------
+# Root-level stage, analysis, roadmap and working markdown notes
+analiz.md
+currentproblem.md
+currentproblemstage2.md
+stage3.md
+stage4.md
+stage5.md
+EXOPLANET_RELEASE_ROADMAP.md
+LEGACY_ARCHIVE.md
+RNAAS.md
+REVIEW_NOTES.md
+handover.md
+
+# Internal documentation notes, checklists and drafts in docs/
+docs/*.md
+!docs/README.md
+docs/archive/
+docs/lab/
+docs/review/
+docs/templates/
+
+# Markdown output logs
+outputs/*.md
+
+# ------------------------------------------------------------------------------
+# 4. Data Files, Backups & Model Outputs
+# ------------------------------------------------------------------------------
+*.backup
+
+# Heavy raw datasets & binary data
+data/spoc_dv/
+data/asteroseismology/
+*.pk
+
+# Binary chains, MCMC posterior draws and arrays
+*.npy
+*.npz
+outputs/pysyd/
+
+# Unversioned JSON and CSV data files
+data/*.json
+data/*.csv
+!data/wp09a_formal_sector_protocol.json
+!data/stage3_input_manifest.json
+!data/stage3_model_architecture_decision.json
+!data/stage3_synthetic_calibration_protocol.json
+!data/stage4_claim_charter.json
+!data/stage4_fast_calibration_protocol.json
+
 outputs/*.json
 outputs/*.csv
-outputs/*.npy
-outputs/*.md
 outputs/*.txt
+outputs/*.log
 !outputs/release_status.json
 !outputs/wp09a_formal_sector_audit.json
 !outputs/wp09a_sector_descriptors.csv
@@ -107,62 +130,39 @@ outputs/*.txt
 !outputs/stage3_synthetic_joint_recovery_metadata.json
 !outputs/stage3_numerical_validation.json
 !outputs/stage3_threshold_calibration.json
+!outputs/stage4_fast_calibration_gate.json
+!outputs/stage4_rnaas_audit.json
+!outputs/stage4_rnaas_release_audit.json
 
-# Generated data and figures (untracked)
-data/*.json
-data/*.csv
-data/*.npy
-!data/wp09a_formal_sector_protocol.json
-!data/stage3_input_manifest.json
-!data/stage3_model_architecture_decision.json
-!data/stage3_synthetic_calibration_protocol.json
+# Temporary output folders and quarantine
+outputs/fresh_backup_*/
+outputs/night_runs/
+outputs/stage4_fast_calibration/
+outputs/stage4_fast_calibration_preflight/
+outputs/stage4_rnaas_submission/
+outputs/quarantine/
+
+# Generated figures
 figures/*.png
+figures/*.pdf
 *.png
 
-# Archives and build artifacts
-arxiv_submission/
-provenance/
-toi3492_reproducible_release_v*/
-*.zip
+# ------------------------------------------------------------------------------
+# 5. OS & IDE System Files
+# ------------------------------------------------------------------------------
+.DS_Store
+Thumbs.db
+desktop.ini
+.idea/
+.vscode/
+*.swp
+*.swo
 
-# Root files the user wants to ignore
-*.tex
-!toi3492_characterization.tex
-requirements-lock.txt
-CITATION.cff
-LICENSE
-REVIEW_NOTES.md
-pyproject.toml
-
-# Miscellaneous
+# ------------------------------------------------------------------------------
+# 6. Miscellaneous & Local Runner Scripts
+# ------------------------------------------------------------------------------
+81077799_TRILEGAL.csv
+AstrophysicsResources/
 human.txt
-references.bib
-toi3492_reproducible_release_v1.0.0.zip.sha256
-docs/publication_process_howto.md
-docs/potansiyel.md
-LICENSES.md
-LICENSES.md
-LICENSES.md
-LICENSES.md
-
-# Keep project documentation in the repository, but outside the release ZIP.
-!docs/
-!docs/**
-currentproblem.md
-LEGACY_ARCHIVE.md
-README.md
-docs/todo.md
-docs/reproducibility_order.md
-docs/publication_process_howto.md
-docs/publication_process_howto.md
-docs/literature_matrix.md
-docs/arxiv_checklist.md
-docs/arxiv_checklist.md
-docs/literature_matrix.md
-data/toi3492_faz6_k0_geometry_draws.npz
-data/toi3492_faz6_k0_geometry_draws_v2.npz
-currentproblemstage2.md
-.gitignore
-currentproblemstage2.md
-RNAAS.md
-toi3492_characterization.tex
+*.ps1
+scripts/*.ps1

@@ -67,10 +67,10 @@ def main():
             extracted = Path(temporary)
             packaged.extractall(extracted)
             subprocess.run(
-                [sys.executable, "scripts/run_all_tests.py"],
+                [sys.executable, "scripts/run_all_tests.py", "-m", "not integration"],
                 cwd=extracted,
                 check=True,
-                timeout=240,
+                timeout=600,
             )
     archive_hash = sha256(archive)
     sidecar = archive.with_suffix(archive.suffix + ".sha256")

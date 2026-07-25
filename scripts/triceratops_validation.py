@@ -37,8 +37,15 @@ warnings.filterwarnings(
 )
 
 
-def install_compatibility_shims() -> None:
-    """Patch old dependency expectations at runtime only."""
+def install_compatibility_shims(allow_insecure_network: bool = False) -> None:
+    """Patch old dependency expectations at runtime only.
+
+    The *allow_insecure_network* flag exists only for method-development
+    environments where the TRILEGAL server certificate cannot be validated
+    through the locally installed CA bundle.  It must be passed explicitly;
+    the flag is not a substitute for a secure retrieval or a hash-verified
+    offline input.
+    """
     if not hasattr(np, "int"):
         np.int = int  # type: ignore[attr-defined]
 
@@ -57,6 +64,22 @@ def install_compatibility_shims() -> None:
 
         module.resource_filename = resource_filename  # type: ignore[attr-defined]
         sys.modules["pkg_resources"] = module
+
+    if allow_insecure_network:
+        import requests
+        from urllib3.exceptions import InsecureRequestWarning
+        requests.packages.urllib3.disable_warnings(category=InsecureRequestWarning)
+        old_send = requests.Session.send
+        def _unsafe_send(self, request, **kwargs):
+            kwargs['verify'] = False
+            return old_send(self, request, **kwargs)
+        requests.Session.send = _unsafe_send
+
+    import scipy.signal
+    import scipy.signal.windows
+    scipy.signal.gaussian = scipy.signal.windows.gaussian
+
+
 
 
 def load_config() -> dict:
@@ -118,10 +141,22 @@ def main() -> None:
     parser.add_argument("--bins", type=int, default=240, help="Number of folded light-curve bins")
     parser.add_argument("--window-days", type=float, default=0.70, help="Folded time window around transit midpoint")
     parser.add_argument("--parallel", action="store_true", help="Use TRICERATOPS parallel mode")
+    parser.add_argument("--sectors", type=int, nargs="+", default=[37, 63, 64, 90, 99, 100], help="TESS sectors to include")
     parser.add_argument(
         "--allow-nonadopted-screening",
         action="store_true",
         help="Acknowledge that this run is quarantined and cannot support release claims",
+    )
+    parser.add_argument(
+        "--allow-insecure-network",
+        action="store_true",
+        help=(
+            "Allow TLS verification to be disabled for the TRILEGAL server. "
+            "Without this flag the script will attempt a secure connection "
+            "and fail with a clear error if the certificate chain is not trusted. "
+            "Use only in isolated method-development environments; output cannot "
+            "support any release claim."
+        ),
     )
     args = parser.parse_args()
     if not args.allow_nonadopted_screening:
@@ -138,35 +173,41 @@ def main() -> None:
     binned_path = ROOT / "outputs" / "triceratops_120s_folded_binned.csv"
     binned.to_csv(binned_path, index=False)
 
-    install_compatibility_shims()
+    install_compatibility_shims(allow_insecure_network=args.allow_insecure_network)
     import triceratops.funcs as triceratops_funcs
     import triceratops.triceratops as triceratops_module
 
-    original_query_trilegal = triceratops_funcs.query_TRILEGAL
-
-    def query_trilegal_no_ssl(ra, dec, verbose=1, verify_ssl=True):
-        return original_query_trilegal(ra, dec, verbose=verbose, verify_ssl=False)
-
-    # The installed TRICERATOPS target initializer hard-codes verify_ssl=True
-    # when calling TRILEGAL. Override the imported function in this process
-    # only so the run can proceed on systems with incomplete CA bundles.
-    triceratops_module.query_TRILEGAL = query_trilegal_no_ssl
+    if args.allow_insecure_network:
+        original_query_trilegal = triceratops_funcs.query_TRILEGAL
+        def query_trilegal_no_ssl(ra, dec, verbose=1, verify_ssl=True):
+            return original_query_trilegal(ra, dec, verbose=verbose, verify_ssl=False)
+        triceratops_module.query_TRILEGAL = query_trilegal_no_ssl
+    else:
+        import warnings
+        warnings.warn(
+            "TRICERATOPS will attempt a secure TRILEGAL connection. "
+            "If the local CA bundle does not trust the TRILEGAL server, "
+            "the call will fail. Pass --allow-insecure-network only in "
+            "isolated method-development contexts after accepting the risk. "
+            "No output from this script may support any release claim."
+        )
     target = triceratops_module.target
 
-    print("Initializing TRICERATOPS target...")
-    targ = target(ID=TIC_ID, sectors=SECTORS, search_radius=args.search_radius, mission="TESS")
+    sectors_to_use = np.array(args.sectors, dtype=int)
+    print(f"Initializing TRICERATOPS target for sectors {sectors_to_use}...", flush=True)
+    targ = target(ID=TIC_ID, sectors=sectors_to_use, search_radius=args.search_radius, mission="TESS")
 
     depth_ppm = float(config["transit"]["depth_ppm"])
     period = float(config["transit"]["period"])
     exptime_days = 120.0 / 86400.0
 
-    print("Calculating per-star required depths...")
+    print("Calculating per-star required depths...", flush=True)
     # This TRICERATOPS version documents tdepth as ppm, but the implementation
     # treats it as a fractional depth when computing per-star depths.
     depth_fraction = depth_ppm * 1e-6
     targ.calc_depths(depth_fraction)
 
-    print(f"Running TRICERATOPS calc_probs with N={args.n}...")
+    print(f"Running TRICERATOPS calc_probs with N={args.n}...", flush=True)
     targ.calc_probs(
         time=binned["time"].to_numpy(dtype=float),
         flux_0=binned["flux"].to_numpy(dtype=float),
@@ -231,7 +272,7 @@ def main() -> None:
             "scenario_probabilities_csv": probs_path.name,
         },
         "note": "Runtime compatibility shims applied for numpy.int and pkg_resources.resource_filename; site-packages not modified.",
-        "trilegal_ssl_verification": "disabled inside this process because the installed TRICERATOPS target initializer hard-codes verify_ssl=True and the local CA bundle rejects the TRILEGAL certificate.",
+        "trilegal_ssl_verification": "disabled" if args.allow_insecure_network else "secure",
     }
     out_path = ROOT / "outputs" / "triceratops_validation_120s.json"
     out_path.write_text(json.dumps(result, indent=2))
