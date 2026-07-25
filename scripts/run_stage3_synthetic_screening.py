@@ -119,8 +119,14 @@ def _run_realization(task):
         )
         branches = _CONTEXT.branches[:branch_limit] if branch_limit else _CONTEXT.branches
         detail = []
-        for branch in branches:
-            detail.extend(_score_branch(latent, metadata, branch))
+        for b_idx, branch in enumerate(branches):
+            b_start = time.time()
+            res = _score_branch(latent, metadata, branch)
+            detail.extend(res)
+            print("  [C{} r{}] Branch {}/{} ({}) done in {:.1f}s".format(
+                class_index, realization_index, b_idx + 1, len(branches),
+                branch["model_id"], time.time() - b_start,
+            ), flush=True)
         return {
             "ok": True,
             "class_index": class_index,
