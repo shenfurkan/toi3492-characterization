@@ -50,13 +50,9 @@ toi3492_reproducible_release_v*/
 *.zip
 *.sha256
 
-# Duplicate BibTeX file in data directory (keep root references.bib)
-data/references.bib
-
-# LaTeX Source file rules
+# LaTeX and BibTeX paper source files (do not include in git repository)
 *.tex
-!toi3492_characterization.tex
-!toi3492_rnaas.tex
+*.bib
 
 # ------------------------------------------------------------------------------
 # 3. Internal Analysis, Stage Notes & Unnecessary Markdown Files ("Gereksiz .md'ler")
