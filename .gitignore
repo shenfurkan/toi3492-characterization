@@ -208,3 +208,10 @@ docs/lab/decisions/*
 *.csv
 outputs/
 CITATION.cff
+
+# Binary data and compressed outputs
+*.fits
+*.fits.gz
+*.csv.gz
+*.gz
+data/faz3/
