@@ -22,6 +22,8 @@ from pathlib import Path
 import numpy as np
 from scipy.optimize import minimize
 
+from stage3_quarantine import refuse_legacy_execution
+
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
@@ -313,6 +315,7 @@ def _determinism_check(context, class_name, branch):
 
 
 def run(args=None):
+    refuse_legacy_execution("scripts/run_stage3_numerical_validation.py:run")
     if args is None:
         args = parse_args()
     context = core.load_context()
@@ -480,4 +483,5 @@ def parse_args():
 
 
 if __name__ == "__main__":
+    refuse_legacy_execution("scripts/run_stage3_numerical_validation.py")
     run(parse_args())

@@ -1,9 +1,9 @@
 import json
 
 
-def test_stage3_scope_audit_is_a_valid_pass_snapshot(root):
+def test_stage3_registry_audit_is_a_valid_current_snapshot(root):
     stored = json.loads(
-        (root / "outputs" / "stage3_scope_audit.json").read_text(encoding="utf-8")
+        (root / "outputs" / "stage3_registry_audit.json").read_text(encoding="utf-8")
     )
     assert stored["status"] == "PASS"
     assert all(stored["checks"].values())
@@ -21,10 +21,16 @@ def test_stage3_does_not_authorize_real_data_or_phase7(root):
     )
     stage3 = release["stage3_scope_amendment"]
     assert stage3["approved"] is True
-    assert stage3["status"] == "PROTOCOL_ONLY"
+    assert stage3["status"] == "BLOCKED_REFACTOR_FREEZE_REQUIRED"
+    assert stage3["active_execution_revision"] is None
+    assert stage3["next_revision"] == 4
     assert stage3["real_data_fit_authorized"] is False
     assert stage3["phase_7_may_begin"] is False
-    assert stage3["second_protocol_approval_required_before_real_data"] is True
+    registry = json.loads(
+        (root / "protocols" / "stage3" / "index.json").read_text(encoding="utf-8")
+    )
+    assert registry["active_execution_revision"] is None
+    assert all(item["scientific_use"] == "NONE" for item in registry["revisions"].values())
 
 
 def test_stage3_preserves_phase6_and_phase6r_failures(root):

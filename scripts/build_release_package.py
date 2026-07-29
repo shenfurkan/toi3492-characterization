@@ -1,6 +1,7 @@
 """Create the full reproducible Zenodo-ready release archive."""
 
 import hashlib
+import fnmatch
 import json
 import subprocess
 import sys
@@ -10,6 +11,7 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parent.parent
+POLICY_PATH = ROOT / "data" / "release_manifest_policy.json"
 
 
 def sha256(path):
@@ -20,6 +22,21 @@ def sha256(path):
     return digest.hexdigest()
 
 
+def historical_manifest_paths(paths):
+    if not POLICY_PATH.is_file():
+        return []
+    policy = json.loads(POLICY_PATH.read_text(encoding="utf-8"))
+    patterns = policy.get("historical_only", [])
+    return sorted(
+        relative for relative in paths
+        if any(
+            fnmatch.fnmatch(relative, pattern)
+            or fnmatch.fnmatch(relative, pattern.lstrip("./"))
+            for pattern in patterns
+        )
+    )
+
+
 def main():
     manifest_path = ROOT / "provenance" / "SHA256SUMS.json"
     run_path = ROOT / "provenance" / "run.json"
@@ -28,6 +45,13 @@ def main():
             "Run scripts/generate_release_manifest.py before packaging"
         )
     files = json.loads(manifest_path.read_text())
+    historical = historical_manifest_paths(files)
+    if historical:
+        raise RuntimeError(
+            "Release manifest contains quarantined or historical paths: {}".format(
+                historical
+            )
+        )
     archive = ROOT / "toi3492_reproducible_release_v1.0.1.zip"
     with zipfile.ZipFile(archive, "w", compression=zipfile.ZIP_DEFLATED) as output:
         for relative, expected_hash in files.items():

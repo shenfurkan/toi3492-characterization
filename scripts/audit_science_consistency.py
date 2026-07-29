@@ -81,6 +81,8 @@ def main():
         "descriptive_candidate_preprint",
         "working_draft_under_scientific_remediation",
         "rnaas_candidate_paper_source_ready",
+        "methodology_pipeline_under_protocol_remediation",
+        "stage3_blocked_refactor_freeze_required",
     ]
     assert not release_status["gates"]["statistical_validation_ready"]
     assert not release_status["gates"]["planet_confirmation_ready"]
@@ -114,7 +116,7 @@ def main():
     )
     print("Native-cadence chains: diagnostic and unconverged")
     print("Secondary eclipse coverage: phase 0.5 only; no eccentric-phase scan")
-    print("Strongest supported gate: descriptive candidate preprint")
+    print(f"Strongest supported gate: {release_status['strongest_supported_gate']}")
     print(
         "Total-width 13h window shift in Rp/Rs: "
         f"{window['alternative_minus_adopted']['rp_rs']['in_adopted_max_68pct_half_widths']:.2f} adopted posterior half-widths"

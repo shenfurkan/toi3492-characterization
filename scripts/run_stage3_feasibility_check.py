@@ -15,6 +15,8 @@ import os
 from pathlib import Path
 from multiprocessing import Pool, cpu_count
 
+from stage3_quarantine import refuse_legacy_execution
+
 import numpy as np
 import pandas as pd
 
@@ -156,6 +158,7 @@ def _log(msg, f=None):
 
 
 def run():
+    refuse_legacy_execution("scripts/run_stage3_feasibility_check.py:run")
     classes = [
         ("C01_white", "K0_white", -1.0, -1.0, 0),
         ("C02_M1_160", "M1_matern32", -1.0, -1.0, 10000),
@@ -244,6 +247,7 @@ def run():
 
 
 if __name__ == "__main__":
+    refuse_legacy_execution("scripts/run_stage3_feasibility_check.py")
     df = run()
     csv_path = "outputs/stage3_feasibility_check.csv"
     df.to_csv(csv_path, index=False)

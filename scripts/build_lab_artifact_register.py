@@ -51,6 +51,8 @@ def classification(relative: str) -> tuple[str, str, bool]:
             return "external_raw_input", "external_archive", False
         return "compact_scientific_input", "release_required", True
     if parts and parts[0] == "outputs":
+        if len(parts) > 1 and parts[1] == "quarantine":
+            return "quarantined_execution_evidence", "provenance_only", False
         return "derived_result_or_gate", "release_required", True
     if parts and parts[0] in {"scripts", "tests", "docs", ".github"}:
         return "source_or_operational_record", "release_required", True

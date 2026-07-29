@@ -29,9 +29,10 @@ class JointSector:
 
 
 class Stage3JointModel:
-    def __init__(self, branch, event_frames, decision):
+    def __init__(self, branch, event_frames, decision, expected_event_count=16):
         transit = decision["candidate"]["transit_model"]
         self.branch = branch
+        self.expected_event_count = int(expected_event_count)
         self.period_days = float(transit["period_days_fixed"])
         self.ld = list(transit["limb_darkening_quadratic_fixed"])
         self.exposure_seconds = float(transit["exposure_seconds"])
@@ -105,8 +106,13 @@ class Stage3JointModel:
                     np.any(item.flux_err <= 0.0) or np.any(np.diff(item.time) <= 0.0)):
                 raise RuntimeError("joint sector arrays are invalid")
             result.append(item)
-        if len(event_frames) != 16 or sum(len(item.time) for item in result) != len(combined):
-            raise RuntimeError("joint model does not contain exactly 16 complete events")
+        if (len(event_frames) != self.expected_event_count or
+                sum(len(item.time) for item in result) != len(combined)):
+            raise RuntimeError(
+                "joint model does not contain exactly {} registered events".format(
+                    self.expected_event_count
+                )
+            )
         return tuple(result)
 
     @staticmethod
@@ -164,15 +170,27 @@ class Stage3JointModel:
         }
 
 
-def build_joint_model(branch, mask, events, decision):
+def build_joint_model(branch, mask, events, decision, expected_event_count=16):
     half_width = float(branch["window_hours"]) / 48.0
     frames = [phase5.event_rows(mask, event, half_width) for event in events]
-    if any(frame.empty for frame in frames):
+    for event, frame in zip(events, frames):
+        if frame.empty and event.get("used", True):
+            raise RuntimeError(
+                "complete registered event window is empty: {}".format(
+                    event["physical_event_id"]
+                )
+            )
+    if expected_event_count == 16 and any(frame.empty for frame in frames):
         raise RuntimeError("registered event window is empty")
-    return Stage3JointModel(branch, frames, decision)
+    model = Stage3JointModel(branch, frames, decision, expected_event_count)
+    model.event_coverage = {
+        str(event["physical_event_id"]): int(len(frame))
+        for event, frame in zip(events, frames)
+    }
+    return model
 
 
-def _oot_data(branch, mask, events, phase2):
+def _oot_data(branch, mask, events, phase2, allow_empty_events=False):
     inner_days = 0.75 * float(
         phase2["ephemeris_and_windows"]["t14_hours"]
     ) / 24.0
@@ -181,8 +199,12 @@ def _oot_data(branch, mask, events, phase2):
         frame = phase5.event_rows(mask, event, float(branch["window_hours"]) / 48.0)
         frame = frame.loc[np.abs(frame["x_days"]) >= inner_days].copy()
         if frame.empty:
+            if allow_empty_events:
+                continue
             raise RuntimeError("registered event has no OOT cadence")
         parts.append(frame)
+    if not parts:
+        raise RuntimeError("no event cadence remains for OOT training")
     combined = pd.concat(parts, ignore_index=True)
     result = []
     degree = int(branch["polynomial_degree"])
@@ -217,16 +239,77 @@ def _geometry_starts(bounds):
             for value in (center, center - perturbation, center + perturbation)]
 
 
+def _residual_diagnostics(model, parameters):
+    """Compute the frozen v3 residual diagnostics from the fitted noise MAP."""
+    geometry = np.asarray(parameters[:3], dtype=np.float64)
+    noise_parameters = np.asarray(parameters[3:], dtype=np.float64)
+    transits = model.transit(geometry)
+    if transits is None:
+        raise noise.NoiseModelError("cannot diagnose an invalid fitted geometry")
+    n_sector = len(model.sectors)
+    if len(noise_parameters) != 3 * (n_sector + 1):
+        raise noise.NoiseModelError("unexpected K3 noise parameter layout")
+    mu_jitter, mu_amplitude, mu_timescale = noise_parameters[:3]
+    jitter_offsets = noise_parameters[3:3 + n_sector]
+    amplitude_offsets = noise_parameters[3 + n_sector:3 + 2 * n_sector]
+    tau_offsets = noise_parameters[3 + 2 * n_sector:]
+    ingress_days = 0.5593209107436028 / 24.0
+    t14_hours = float(phase5.duration_hours([geometry], model.period_days)[0])
+    inner_days = 0.75 * t14_hours / 24.0
+    edge_residuals = []
+    weighted_max = 0.0
+    no_op_count = 0
+    local_mode_count = 0
+    for index, (item, transit) in enumerate(zip(model.sectors, transits)):
+        jitter = item.flux_err.mean() * math.exp(mu_jitter + jitter_offsets[index])
+        amplitude = item.flux_err.mean() * math.exp(mu_amplitude + amplitude_offsets[index])
+        timescale = math.exp(mu_timescale + tau_offsets[index])
+        data = base_noise.SectorData(
+            item.sector, item.time, item.flux - transit, item.flux_err,
+            transit[:, None] * item.base_design,
+        )
+        components = noise.conditional_components(
+            data, "K2_matern32", jitter, amplitude, timescale,
+        )
+        weighted = components.corrected_residual / np.sqrt(item.flux_err ** 2 + jitter ** 2)
+        weighted_max = max(weighted_max, float(np.max(np.abs(weighted))))
+        selected = (
+            (np.abs(item.x_days) <= inner_days)
+            & (np.abs(item.x_days) >= max(0.0, inner_days - ingress_days))
+        )
+        if np.any(selected):
+            edge_residuals.extend(components.corrected_residual[selected].tolist())
+    if not edge_residuals:
+        raise noise.NoiseModelError("no ingress/egress residual cadences available")
+    return {
+        "ingress_egress_rms_residual_mm_s": float(
+            np.sqrt(np.mean(np.square(edge_residuals))) * 1e3
+        ),
+        "weighted_residual_beta_max": float(weighted_max),
+        "optimizer_no_op_count": int(no_op_count),
+        "optimizer_local_mode_count": int(local_mode_count),
+    }
+
+
 def fit_joint_map(branch, mask, events, phase2, decision, laplace_seed,
-                   require_stationarity=True):
+                   require_stationarity=True, expected_event_count=16,
+                   use_v2_starts=False):
     """Fit geometry MAP conditional on six-sector K3 OOT noise MAP."""
-    model = build_joint_model(branch, mask, events, decision)
-    oot = _oot_data(branch, mask, events, phase2)
+    model = build_joint_model(
+        branch, mask, events, decision, expected_event_count=expected_event_count,
+    )
+    oot = _oot_data(
+        branch, mask, events, phase2,
+        allow_empty_events=expected_event_count != 16,
+    )
     noise_map = noise.fit_pooled_map(
         oot, "K3_MATERN32_SECTOR", required_sector_count=6,
+        use_warm_start=use_v2_starts,
     )
     noise_obj = float(noise_map.objective) if noise_map.success else None
     if not noise_map.success:
+        if use_v2_starts:
+            raise noise.NoiseModelError("v2 correlated-noise MAP failed")
         k0_map = noise.fit_pooled_map(oot, "K0_white", required_sector_count=6)
         if not k0_map.success:
             raise noise.NoiseModelError("both K3 and K0 OOT noise init failed")
@@ -324,6 +407,10 @@ def fit_joint_map(branch, mask, events, phase2, decision, laplace_seed,
             "multistart_unit_parameter_spread": unit_spread,
             "noise_start_objective": float(noise_obj),
             "noise_start_parameters": noise_params.tolist() if isinstance(noise_params, np.ndarray) else noise_params,
+            "boundary_diagnostics": noise_map.boundary_diagnostics,
+            "noise_parameters": noise_params.tolist(),
+            "noise_parameter_names": list(model.noise_layout.names),
+            "event_coverage": model.event_coverage,
         }
 
     def geo_objective(geo_params):
@@ -333,6 +420,7 @@ def fit_joint_map(branch, mask, events, phase2, decision, laplace_seed,
     hessian_attempts = []
     draw_diagnostics = {}
     intervals = {}
+    residual_diagnostics = {}
     try:
         hessian, covariance, hessian_attempts = phase5.finite_difference_hessian(
             geo_objective, geometry,
@@ -345,8 +433,18 @@ def fit_joint_map(branch, mask, events, phase2, decision, laplace_seed,
             name: [float(v) for v in np.quantile(draws[:, i], [0.025, 0.16, 0.84, 0.975])]
             for i, name in enumerate(("rp_rs", "a_rs", "impact_parameter", "t14_hours"))
         }
-    except Exception:
-        pass
+        residual_diagnostics = _residual_diagnostics(model, parameters)
+        residual_diagnostics["optimizer_no_op_count"] = int(
+            sum(item["movement_norm"] <= 1e-10 for item in attempts)
+        )
+        residual_diagnostics["optimizer_local_mode_count"] = int(
+            objective_spread >= 1e-3 or unit_spread >= 1e-3
+        )
+    except Exception as exc:
+        if use_v2_starts:
+            raise noise.NoiseModelError(
+                "v2 Hessian/Laplace calculation failed: {}".format(exc)
+            ) from exc
     return {
         "parameters": parameters,
         "parameter_names": model.parameter_names,
@@ -362,5 +460,50 @@ def fit_joint_map(branch, mask, events, phase2, decision, laplace_seed,
         "multistart_unit_parameter_spread": unit_spread,
         "noise_start_objective": float(noise_obj),
         "noise_start_parameters": noise_params.tolist() if isinstance(noise_params, np.ndarray) else noise_params,
+        "boundary_diagnostics": noise_map.boundary_diagnostics,
+        "noise_parameters": noise_params.tolist(),
+        "noise_parameter_names": list(model.noise_layout.names),
+        "event_coverage": model.event_coverage,
+        "residual_diagnostics": residual_diagnostics,
         "attempts": attempts,
+    }
+
+
+def fit_joint_null_map(branch, mask, events, decision, expected_event_count=16,
+                       noise_parameters=None):
+    """Fit H0 with a unity transit and the same marginal baseline hierarchy."""
+    model = build_joint_model(
+        branch, mask, events, decision, expected_event_count=expected_event_count,
+    )
+    full_data = tuple(
+        base_noise.SectorData(
+            item.sector, item.time, item.flux - 1.0, item.flux_err,
+            item.base_design,
+        )
+        for item in model.sectors
+    )
+    if noise_parameters is None:
+        noise_map = noise.fit_pooled_map(
+            full_data, "K3_MATERN32_SECTOR", required_sector_count=len(model.sectors),
+            use_warm_start=True,
+        )
+        if not noise_map.success:
+            raise noise.NoiseModelError("H0 correlated-noise MAP failed")
+        parameters = noise_map.parameters
+        boundary_diagnostics = noise_map.boundary_diagnostics
+    else:
+        parameters = np.asarray(noise_parameters, dtype=np.float64)
+        boundary_diagnostics = ()
+    objective = noise.pooled_map_objective(
+        parameters, full_data, model.noise_layout,
+    )
+    if not np.isfinite(objective) or objective >= 1e99:
+        raise noise.NoiseModelError("H0 objective is non-finite")
+    return {
+        "objective": float(objective),
+        "parameters": parameters,
+        "parameter_names": model.noise_layout.names,
+        "boundary_diagnostics": boundary_diagnostics,
+        "event_coverage": model.event_coverage,
+        "success": True,
     }

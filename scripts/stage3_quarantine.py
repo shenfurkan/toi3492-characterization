@@ -120,6 +120,18 @@ def refuse_legacy_execution(entrypoint):
     ))
 
 
+def refuse_superseded_execution(entrypoint, revision, disposition):
+    """Permanently disable a versioned runner retained only as evidence."""
+    raise LegacyStage3QuarantineError(
+        "Stage-3 revision {} is permanently superseded with disposition {}. "
+        "Its versioned launcher is retained only for provenance and cannot be "
+        "reactivated by editing an authorization file. Use scripts/run_stage3.py "
+        "for registry status. Entry point: {}".format(
+            revision, disposition, entrypoint,
+        )
+    )
+
+
 def _sha256_bytes(data):
     return hashlib.sha256(data).hexdigest()
 
@@ -152,17 +164,17 @@ def _tracked_paths():
 
 
 def _ignored_paths(relative_paths):
-    process = subprocess.run(
-        ["git", "check-ignore", "--no-index", "--stdin"],
-        cwd=str(ROOT),
-        input="\n".join(relative_paths) + "\n",
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    if process.returncode not in (0, 1):
-        raise RuntimeError(process.stderr.strip() or "git check-ignore failed")
-    return {line.strip().replace("\\", "/") for line in process.stdout.splitlines()}
+    ignored = set()
+    for relative in relative_paths:
+        process = subprocess.run(
+            ["git", "check-ignore", "--no-index", "--quiet", "--", relative],
+            cwd=str(ROOT), capture_output=True, text=True, check=False,
+        )
+        if process.returncode == 0:
+            ignored.add(relative)
+        elif process.returncode != 1:
+            raise RuntimeError(process.stderr.strip() or "git check-ignore failed")
+    return ignored
 
 
 def _inventory_evidence():

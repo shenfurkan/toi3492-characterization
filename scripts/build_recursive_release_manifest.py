@@ -48,13 +48,15 @@ def main() -> None:
         relative = path.relative_to(ROOT).as_posix()
         if not is_included(relative, policy["include"]):
             continue
-        if any(matches(relative, pattern) for pattern in policy["exclude_globs"]):
+        status = status_for(relative, policy)
+        if status != "historical" and any(
+                matches(relative, pattern) for pattern in policy["exclude_globs"]):
             excluded.append(relative)
             continue
         records.append(
             {
                 "path": relative,
-                "status": status_for(relative, policy),
+                "status": status,
                 "size_bytes": path.stat().st_size,
                 "sha256": sha256(path),
             }

@@ -197,6 +197,8 @@ def _fit_pooled_map(
     training_sectors: Sequence[SectorData],
     kernel_id: str,
     required_sector_count: int = 5,
+    use_warm_start: bool = False,
+    warm_start_fit: Optional[PooledMapFit] = None,
 ) -> PooledMapFit:
     sectors = tuple(training_sectors)
     if len(sectors) != required_sector_count:
@@ -204,6 +206,25 @@ def _fit_pooled_map(
     layout = parameter_layout(kernel_id, sectors)
 
     starts = _registered_starts(layout)
+    if use_warm_start and kernel_id == "K3_MATERN32_SECTOR":
+        # S3-03 v2 registers the white-noise MAP as the fourth correlated-noise
+        # start.  The v1 three-start API remains unchanged for its tests and
+        # historical callers.
+        white = warm_start_fit or _original_fit_pooled_map(
+            sectors, "K0_white", required_sector_count,
+        )
+        if not white.success:
+            raise NoiseModelError("registered K0 warm start failed")
+        if (white.kernel_id != "K0_white" or
+                white.layout.sector_ids != layout.sector_ids):
+            raise NoiseModelError("registered K0 warm start belongs to different sectors")
+        n_sector = len(sectors)
+        warm = np.concatenate((
+            [white.parameters[0], -1.0, math.log(160.0)],
+            white.parameters[1:],
+            np.zeros(2 * n_sector),
+        )).astype(np.float64)
+        starts = starts + [warm]
 
     options = {"maxiter": 300, "ftol": 1e-8, "disp": False}
 
@@ -278,12 +299,18 @@ def fit_pooled_map(
     training_sectors: Sequence[SectorData],
     kernel_id: str,
     required_sector_count: int = 5,
+    use_warm_start: bool = False,
+    warm_start_fit: Optional[PooledMapFit] = None,
 ) -> PooledMapFit:
     if kernel_id in ("K0_white", "K1_ou", "K2_matern32", "K3_sho"):
         return _original_fit_pooled_map(
             training_sectors, kernel_id, required_sector_count,
         )
-    return _fit_pooled_map(training_sectors, kernel_id, required_sector_count)
+    return _fit_pooled_map(
+        training_sectors, kernel_id, required_sector_count,
+        use_warm_start=use_warm_start,
+        warm_start_fit=warm_start_fit,
+    )
 
 
 def _accumulate(max_val, weight, log_val):

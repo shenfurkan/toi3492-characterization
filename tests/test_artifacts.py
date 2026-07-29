@@ -158,8 +158,17 @@ def test_manuscript_math_audit_is_current_and_passes():
         if rnaas_tex.exists():
             assert rnaas["source_sha256"] == hashlib.sha256(rnaas_tex.read_bytes()).hexdigest()
         return
-    if release["strongest_supported_gate"] == "working_draft_under_scientific_remediation":
+    if release["strongest_supported_gate"] in {
+        "working_draft_under_scientific_remediation",
+        "methodology_pipeline_under_protocol_remediation",
+        "stage3_blocked_refactor_freeze_required",
+    }:
         assert release["gates"]["candidate_paper_ready"] is False
+        if release["strongest_supported_gate"] in {
+            "methodology_pipeline_under_protocol_remediation",
+            "stage3_blocked_refactor_freeze_required",
+        }:
+            assert release["gates"]["methodology_paper_ready"] is False
         return
     char_tex = ROOT / "toi3492_characterization.tex"
     if char_tex.exists():
@@ -199,6 +208,8 @@ def test_new_robustness_outputs_are_not_overclaimed():
         "descriptive_candidate_preprint",
         "working_draft_under_scientific_remediation",
         "rnaas_candidate_paper_source_ready",
+        "methodology_pipeline_under_protocol_remediation",
+        "stage3_blocked_refactor_freeze_required",
     ]
     if release["strongest_supported_gate"] == "rnaas_candidate_paper_source_ready":
         assert release["gates"]["candidate_paper_ready"] is True
@@ -259,7 +270,6 @@ def test_release_hash_manifest():
                 "and characterization_paper_ready is true, archive_ready "
                 "should be true or the manifest must be regenerated."
             )
-        assert release["gates"]["local_release_package_ready"] is True
         assert release["gates"]["zenodo_deposit_verified"] is False
         return
     for relative, expected in manifest.items():

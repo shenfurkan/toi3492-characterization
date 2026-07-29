@@ -344,7 +344,9 @@ def _verify_stage4(checks):
 
 
 def _verify_rnaas(checks):
-    source = (ROOT / "toi3492_rnaas.tex").read_text(encoding="utf-8")
+    """Historical RNAAS source; deprecated as the primary publication object."""
+    source = (ROOT / "outputs" / "stage4_rnaas_submission"
+              / "toi3492_rnaas.tex").read_text(encoding="utf-8")
     pdf = ROOT / "toi3492_rnaas.pdf"
     zip_path = ROOT / "outputs" / "toi3492_rnaas_submission.zip"
 
@@ -358,10 +360,13 @@ def _verify_rnaas(checks):
             "\\begin{table" not in source, "")
     _record(checks, "rnaas", "email_present",
             "\\email{" in source, "")
-    _record(checks, "rnaas", "pdf_exists",
-            pdf.exists(), f"size={pdf.stat().st_size}")
-    _record(checks, "rnaas", "bundle_exists",
-            zip_path.exists(), f"size={zip_path.stat().st_size}")
+    _record(checks, "rnaas", "deprecated_not_built",
+            not pdf.exists() and not zip_path.exists(),
+            "primary target superseded by methodology paper")
+    release = _load_json("outputs/release_status.json")
+    _record(checks, "rnaas", "deprecated_status",
+            release["stage4_candidate_publication"]["publication_status"]
+            == "DEPRECATED_NOT_SUBMITTED", "")
 
     # Word count
     text = re.sub(r"%.*", "", source)
@@ -481,8 +486,10 @@ def _verify_stellar(checks):
 
 def _verify_release_status(checks):
     release = _load_json("outputs/release_status.json")
-    _record(checks, "release", "candidate_paper_ready",
-            release["gates"]["candidate_paper_ready"] is True, "")
+    _record(checks, "release", "candidate_paper_deprecated",
+            release["gates"]["candidate_paper_ready"] is False, "")
+    _record(checks, "release", "methodology_paper_not_ready",
+            release["gates"]["methodology_paper_ready"] is False, "")
     _record(checks, "release", "not_published",
             release["gates"]["archive_ready"] is False, "")
     _record(checks, "release", "not_zenodo",
@@ -492,8 +499,25 @@ def _verify_release_status(checks):
     _record(checks, "release", "stage3_real_data_closed",
             release["stage3_scope_amendment"].get("real_data_fit_authorized") is False,
             "")
-    _record(checks, "release", "stage4_pass",
-            release["stage4_candidate_publication"]["status"] == "PASS", "")
+    registry = _load_json("protocols/stage3/index.json")
+    _record(checks, "release", "stage3_execution_closed",
+            registry["active_execution_revision"] is None
+            and registry["next_revision"] == 4
+            and release["stage3_scope_amendment"]["status"]
+            == "BLOCKED_REFACTOR_FREEZE_REQUIRED", "")
+    _record(checks, "release", "stage3_revisions_non_scientific",
+            all(record["scientific_use"] == "NONE"
+                for record in registry["revisions"].values()), "")
+    _record(checks, "release", "stage3_interrupted_quarantined",
+            release["stage3_scope_amendment"]["s3_04b_status"]
+            == "INTERRUPTED_INVALID_QUARANTINED", "")
+    _record(checks, "release", "stage4_historical_superseded",
+            release["stage4_candidate_publication"]["status"]
+            == "HISTORICAL_SUPERSEDED_AS_PRIMARY_PUBLICATION", "")
+    manifest = (ROOT / "outputs" / "quarantine"
+                / "stage3_s3-04b_20260725T222451Z_invalid" / "manifest.json")
+    _record(checks, "release", "quarantine_manifest_present",
+            manifest.is_file(), "")
 
 
 # ── main ─────────────────────────────────────────────────────────────────────
@@ -528,7 +552,9 @@ def _verify_key_artifacts_exist(checks):
         "outputs/stage3_phase6_postmortem.json",
         "outputs/stage3_numerical_validation.json",
         "outputs/stage4_fast_calibration_gate.json",
-        "outputs/stage4_rnaas_release_audit.json",
+        "outputs/stage4_rnaas_submission/toi3492_rnaas.tex",
+        "outputs/quarantine/stage3_s3-04b_20260725T222451Z_invalid/manifest.json",
+        "data/methodology_publication_charter.json",
         "outputs/stage5_pixel_source_analysis.json",
         "outputs/stage6_free_ld_transit.json",
         "data/config_corrected_120s.json",
@@ -537,9 +563,6 @@ def _verify_key_artifacts_exist(checks):
         "data/stage3_model_architecture_decision.json",
         "data/stage3_synthetic_calibration_protocol.json",
         "data/toi3492_120s_reference.csv",
-        "toi3492_rnaas.tex",
-        "toi3492_rnaas.pdf",
-        "outputs/toi3492_rnaas_submission.zip",
     ]
     for path in artifacts:
         full = ROOT / path

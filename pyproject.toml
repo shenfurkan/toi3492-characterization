@@ -27,8 +27,12 @@ test = ["pytest==8.4.2", "Pillow==11.3.0", "jsonschema==4.25.1"]
 screening = ["triceratops==1.0.20"]
 asteroseismology = ["pysyd==6.10.5", "tess-atl==0.0.3.1"]
 
+[tool.setuptools.packages.find]
+where = ["src"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+pythonpath = ["src", "scripts"]
 addopts = "-ra -m 'not integration'"
 markers = [
   "integration: requires re-downloadable raw external data excluded from the release archive",

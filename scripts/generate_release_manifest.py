@@ -151,6 +151,7 @@ def recursive_policy_paths():
         return []
     policy = json.loads(policy_path.read_text(encoding="utf-8"))
     excluded = set(policy.get("exclude_globs", []))
+    historical = set(policy.get("historical_only", []))
     paths = []
     for path in ROOT.rglob("*"):
         if not path.is_file():
@@ -168,6 +169,12 @@ def recursive_policy_paths():
             for pattern in excluded
         ):
             continue
+        if any(
+            fnmatch.fnmatch(relative, pattern)
+            or fnmatch.fnmatch(relative, pattern.lstrip("./"))
+            for pattern in historical
+        ):
+            continue
         if relative in {
             "provenance/SHA256SUMS.json",
             "provenance/run.json",
@@ -179,7 +186,19 @@ def recursive_policy_paths():
 
 
 REQUIRED.extend(recursive_policy_paths())
-REQUIRED = sorted(set(REQUIRED))
+_policy_path = ROOT / "data" / "release_manifest_policy.json"
+_historical_patterns = (
+    json.loads(_policy_path.read_text(encoding="utf-8")).get("historical_only", [])
+    if _policy_path.is_file() else []
+)
+REQUIRED = sorted({
+    relative for relative in REQUIRED
+    if not any(
+        fnmatch.fnmatch(relative, pattern)
+        or fnmatch.fnmatch(relative, pattern.lstrip("./"))
+        for pattern in _historical_patterns
+    )
+})
 
 
 def sha256(path):

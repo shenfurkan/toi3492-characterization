@@ -1,8 +1,32 @@
-# TOI-3492.01: Photometric Characterization of an Unvalidated TESS Exoplanet Candidate
+# TOI-3492.01: TESS Photometric Pipeline and Methodology Development
 
-This repository contains the open-source analysis code, photometric reduction pipeline, transit modeling scripts, and verification suites for the independent characterization of **TOI-3492.01** (TIC 81077799).
+This repository contains the analysis code, photometric reduction pipeline, transit modeling scripts, and verification suites used to develop a reproducible TESS detrending and injection-recovery methodology, with **TOI-3492.01** (TIC 81077799) as the case study.
 
 The analysis processes 120-second and 20-second cadence data from TESS Sectors 37, 63, 64, 90, 99, and 100 to evaluate transit parameters, residual noise properties, and false-positive scenarios.
+
+## Current Status
+
+The primary publication target is a PASP or MNRAS methodology-pipeline paper.
+The legacy S3-04B synthetic run is interrupted, scientifically invalid, and
+permanently quarantined. Revision 2 failed implementation review and revision 3
+was superseded for implementation defects. The active execution revision is
+`null`; revision 4 is only prospective and is not frozen or authorized. No
+formal synthetic run, reduction, or real-data Stage-3 fit is authorized.
+
+The case-study object remains an unvalidated and unconfirmed candidate. Proposed
+null-transit and injection-recovery methods are not yet calibrated results.
+
+Verify the preserved interrupted run with:
+
+```bash
+python scripts/stage3_quarantine.py verify
+```
+
+Inspect the canonical revision ledger without loading the scientific stack:
+
+```bash
+python scripts/run_stage3.py status
+```
 
 ---
 
@@ -45,6 +69,8 @@ toi3492-characterization/
 | `scripts/triceratops_validation.py` | False Positive Probability (FPP) calculation using TRICERATOPS |
 | `scripts/gaia_contamination_check.py` | Gaia DR3 neighbor query and aperture dilution assessment |
 | `scripts/audit_science_consistency.py` | Automated offline science consistency and claim-boundary audit |
+| `scripts/stage3_quarantine.py` | Verifies the immutable forensic capture and blocks legacy Stage-3 execution |
+| `scripts/run_stage3.py` | Reports the canonical Stage-3 registry and fail-closed preflight state |
 
 ---
 
@@ -68,10 +94,13 @@ pip install -e ".[test]"
 
 ```bash
 # Run pytest test suite
-pytest
+python -m pytest
 
 # Run offline scientific consistency audit
 python scripts/audit_science_consistency.py
+
+# Verify the quarantined interrupted Stage-3 evidence
+python scripts/stage3_quarantine.py verify
 ```
 
 ---

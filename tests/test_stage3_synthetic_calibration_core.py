@@ -84,7 +84,12 @@ def test_masks_are_derived_from_one_latent_realization(context):
     )
 
 
-def test_branch_baselines_are_deterministic_and_branch_specific(context):
+def test_branch_baselines_are_shared_across_branches_per_s3v2(context):
+    """S3-03 v2 (S3V2-A02): one shared observed realization for all branches.
+
+    Branch likelihoods must be evaluated on the same synthetic flux; per-branch
+    baseline draws were the v1 defect corrected by the v2 amendment.
+    """
     spec = class_by_name(context, "C02_m1_160_transit")
     latent, metadata = core.generate_latent_realization(context, spec, 2)
     first_branch = context.branches[0]
@@ -95,13 +100,15 @@ def test_branch_baselines_are_deterministic_and_branch_specific(context):
     first_b, draws_b = core.apply_branch_baseline(
         latent, context.events, first_branch, metadata["realization_seed"],
     )
-    second, _ = core.apply_branch_baseline(
+    second, draws_second = core.apply_branch_baseline(
         latent, context.events, second_branch, metadata["realization_seed"],
     )
-    assert draws_a == draws_b
+    assert draws_a == draws_b == draws_second == {}
     np.testing.assert_array_equal(first_a["flux"].to_numpy(), first_b["flux"].to_numpy())
-    assert not np.array_equal(first_a["branch_baseline"].to_numpy(),
-                              second["branch_baseline"].to_numpy())
+    np.testing.assert_array_equal(first_a["flux"].to_numpy(), second["flux"].to_numpy())
+    assert "shared_baseline" in latent.columns
+    assert not np.allclose(latent["shared_baseline"].to_numpy(), 0.0)
+    assert metadata["shared_baseline_draws"]
 
 
 def test_c10_background_systematic_is_recorded(context):

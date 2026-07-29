@@ -18,6 +18,9 @@ def test_s3_04a_protocol_passes_without_seeing_data(root):
     assert protocol["scope"]["synthetic_results_observed"] is False
     assert protocol["scope"]["real_data_fit_executed"] is False
     assert protocol["scope"]["phase_7_may_begin"] is False
+    registry = load_json(root, "protocols/stage3/index.json")
+    assert registry["revisions"]["1"]["status"] == "QUARANTINED_INVALID"
+    assert registry["revisions"]["1"]["scientific_use"] == "NONE"
 
 
 def test_s3_04a_all_12_classes_defined(root):

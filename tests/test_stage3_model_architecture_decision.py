@@ -23,6 +23,9 @@ def test_s3_03_decision_passes_and_freezes_one_candidate(root):
     assert decision["failed_reference"]["role"] == "FAILED_REFERENCE_ONLY"
     assert decision["failed_reference"]["not_adopted"] is True
     assert decision["branch_universe"]["model_count"] == 24
+    registry = load_json(root, "protocols/stage3/index.json")
+    assert registry["revisions"]["1"]["status"] == "QUARANTINED_INVALID"
+    assert registry["revisions"]["1"]["scientific_use"] == "NONE"
 
 
 def test_s3_03_provenance_discloses_postmortem(root):

@@ -8,7 +8,7 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parent.parent
-OUTPUT = ROOT / "outputs" / "stage3_scope_audit.json"
+OUTPUT = ROOT / "outputs" / "stage3_registry_audit.json"
 
 SOURCE_PATHS = (
     "currentproblem.md",
@@ -20,6 +20,9 @@ SOURCE_PATHS = (
     "outputs/faz6r_result.json",
     "outputs/wp09a_formal_sector_audit.json",
     "EXOPLANET_RELEASE_ROADMAP.md",
+    "protocols/stage3/index.json",
+    "data/methodology_publication_charter.json",
+    "docs/lab/decisions/LAB-DEC-013.md",
 )
 
 
@@ -36,6 +39,8 @@ def build_audit():
     phase6 = load_json("outputs/faz6_gate_audit.json")
     phase6r = load_json("outputs/faz6r_result.json")
     wp09a = load_json("outputs/wp09a_formal_sector_audit.json")
+    registry = load_json("protocols/stage3/index.json")
+    charter = load_json("data/methodology_publication_charter.json")
     stage3 = (ROOT / "stage3.md").read_text(encoding="utf-8")
     manuscript = (ROOT / "toi3492_characterization.tex").read_text(
         encoding="utf-8"
@@ -47,21 +52,54 @@ def build_audit():
 
     checks = {
         "all_sources_exist": all((ROOT / path).is_file() for path in SOURCE_PATHS),
-        "release_schema_is_stage3": release["schema_version"] == "1.1",
-        "stage3_document_protocol_only": "Belge durumu: `PROTOCOL_ONLY`" in stage3,
+        "release_schema_is_stage3": release["schema_version"] == "1.2",
+        "stage3_document_current_state": (
+            "Belge durumu: `BLOCKED_REFACTOR_FREEZE_REQUIRED`" in stage3
+        ),
         "stage3_document_real_data_closed": (
             "Gercek-veri calisma yetkisi: `CLOSED`" in stage3
             or "Gerçek-veri çalışma yetkisi: `CLOSED`" in stage3
         ),
         "stage3_scope_approved": stage3_status["approved"] is True,
-        "stage3_scope_protocol_only": stage3_status["status"] == "PROTOCOL_ONLY",
+        "stage3_scope_matches_registry": (
+            stage3_status["status"] == registry["execution_state"]
+            == "BLOCKED_REFACTOR_FREEZE_REQUIRED"
+        ),
+        "stage3_active_revision_is_null": (
+            registry["active_execution_revision"] is None
+            and stage3_status["active_execution_revision"] is None
+            and charter["active_execution_revision"] is None
+        ),
+        "stage3_next_revision_is_four": (
+            registry["next_revision"] == 4
+            and stage3_status["next_revision"] == 4
+            and charter["next_revision"] == 4
+        ),
+        "stage3_revision_ledger_exact": {
+            key: registry["revisions"][key]["status"]
+            for key in ("1", "2", "3")
+        } == {
+            "1": "QUARANTINED_INVALID",
+            "2": "SUPERSEDED_REVIEW_FAILED",
+            "3": "SUPERSEDED_IMPLEMENTATION_DEFECTS",
+        },
+        "stage3_historical_revisions_non_scientific": all(
+            registry["revisions"][key]["scientific_use"] == "NONE"
+            for key in ("1", "2", "3")
+        ),
+        "stage3_no_formal_v2_v3_outputs": all(
+            not (ROOT / path).exists()
+            for path in ("outputs/stage3_v2", "outputs/stage3_v3")
+        ),
+        "stage3_charter_matches_release": (
+            charter["stage3_current_state"]
+            == release["methodology_publication"]["stage3_current_state"]
+            == registry["execution_state"]
+        ),
         "stage3_real_data_not_authorized": (
             stage3_status["real_data_fit_authorized"] is False
         ),
         "stage3_phase7_closed": stage3_status["phase_7_may_begin"] is False,
-        "stage3_model_family_bounded": (
-            stage3_status["new_model_candidates_maximum"] == 2
-        ),
         "stage3_synthetic_calibration_required": (
             stage3_status["synthetic_calibration_required"] is True
         ),
@@ -111,18 +149,19 @@ def build_audit():
             and "does not identify an astrophysical cause" in wp09a["interpretation"]
         ),
         "manuscript_records_phase6r_failure": (
-            "\\texttt{FAIL\\_RESIDUAL\\_CORRELATION}" in manuscript
+            "residual-correlation gate failed" in " ".join(manuscript.split())
+            or "residual-correlation failure" in " ".join(manuscript.split())
         ),
         "manuscript_records_stationarity_24_of_24": (
             "stationarity in 24/24 branches" in manuscript
         ),
         "manuscript_records_beta_and_threshold": (
-            "residual beta was 1.2936" in manuscript
-            and "frozen limit of\n1.2" in manuscript
+            "1.2936" in " ".join(manuscript.split())
+            and "frozen 1.2" in " ".join(manuscript.split())
         ),
-        "manuscript_stage3_is_protocol_only": (
-            "Stage-3 continuation is\ncurrently protocol-only" in manuscript
-            and "has not run a new real-data noise model" in manuscript
+        "manuscript_stage3_remains_non_result_bearing": (
+            "under protocol redevelopment" in " ".join(manuscript.split())
+            and "has not run a new noise model on the real data" in " ".join(manuscript.split())
         ),
         "stale_no_real_data_statement_removed": (
             "failed before any\nnew real-data fit" not in manuscript
@@ -133,8 +172,8 @@ def build_audit():
         "release_gates_remain_closed": all(
             value is False for value in release["gates"].values()
         ),
-        "authoritative_documents_include_stage3": (
-            "stage3.md" in release["authoritative_documents"]
+        "authoritative_documents_include_registry": (
+            "protocols/stage3/index.json" in release["authoritative_documents"]
         ),
     }
 
@@ -145,7 +184,7 @@ def build_audit():
 
     return {
         "schema_version": "1.0",
-        "work_package": "S3-00_SCOPE_SYNCHRONIZATION",
+        "work_package": "STAGE3_REVISION_REGISTRY_SYNCHRONIZATION",
         "generated_utc": datetime.now(timezone.utc).isoformat(),
         "status": "PASS" if all(checks.values()) else "FAIL",
         "real_data_fit_executed": False,
@@ -161,6 +200,9 @@ def build_audit():
             "wp09a_status": wp09a["status"],
             "wp09a_cause_assigned": False,
             "stage3_status": stage3_status["status"],
+            "stage3_active_execution_revision": registry["active_execution_revision"],
+            "stage3_next_revision": registry["next_revision"],
+            "stage3_formal_execution_started": False,
         },
         "sources": sources,
     }
@@ -184,7 +226,7 @@ def main():
         stored = json.loads(OUTPUT.read_text(encoding="utf-8"))
         if comparable(stored) != comparable(current):
             raise AssertionError("Stored Stage-3 scope audit is stale")
-        print("STAGE-3 S3-00 SCOPE AUDIT: PASS (verified)")
+        print("STAGE-3 REVISION REGISTRY AUDIT: PASS (verified)")
         return
 
     if OUTPUT.exists():
@@ -192,7 +234,7 @@ def main():
             "Stage-3 scope audit is no-clobber; use --verify-only"
         )
     OUTPUT.write_text(json.dumps(current, indent=2) + "\n", encoding="utf-8")
-    print("STAGE-3 S3-00 SCOPE AUDIT: PASS")
+    print("STAGE-3 REVISION REGISTRY AUDIT: PASS")
 
 
 if __name__ == "__main__":

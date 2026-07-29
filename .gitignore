@@ -69,10 +69,15 @@ LEGACY_ARCHIVE.md
 RNAAS.md
 REVIEW_NOTES.md
 handover.md
+!stage3.md
+!plan.md
 
 # Internal documentation notes, checklists and drafts in docs/
 docs/*.md
 !docs/README.md
+!docs/todo.md
+!docs/stage3_automation_architecture.md
+!docs/reproducibility_order.md
 docs/archive/
 docs/lab/
 docs/review/
@@ -102,9 +107,18 @@ data/*.csv
 !data/wp09a_formal_sector_protocol.json
 !data/stage3_input_manifest.json
 !data/stage3_model_architecture_decision.json
+!data/stage3_model_architecture_decision_v2.json
+!data/stage3_model_architecture_decision_v3.json
 !data/stage3_synthetic_calibration_protocol.json
+!data/stage3_synthetic_calibration_protocol_v2.json
+!data/stage3_synthetic_calibration_protocol_v3.json
+!data/stage3_input_manifest_v3.json
+!data/stage3_v2_execution_authorization.json
+!data/stage3_v3_execution_authorization.json
 !data/stage4_claim_charter.json
 !data/stage4_fast_calibration_protocol.json
+!data/methodology_publication_charter.json
+!data/release_manifest_policy.json
 
 outputs/*.json
 outputs/*.csv
@@ -160,19 +174,36 @@ human.txt
 *.ps1
 scripts/*.ps1
 outputs/stage3_synthetic_screening_metadata.json
-plan.md
+!plan.md
 paywalled_papers.txt
 
 # Immutable forensic capture of the interrupted S3-04B execution.
-!outputs/quarantine/
-outputs/quarantine/*
-!outputs/quarantine/stage3_s3-04b_20260725T222451Z_invalid/
-!outputs/quarantine/stage3_s3-04b_20260725T222451Z_invalid/**
+# !outputs/quarantine/
+# outputs/quarantine/*
+# !outputs/quarantine/stage3_s3-04b_20260725T222451Z_invalid/
+# !outputs/quarantine/stage3_s3-04b_20260725T222451Z_invalid/**
 
 # Phase-0 governance records required in a clean clone.
 !docs/lab/
 docs/lab/*
 !docs/lab/DECISION_LOG.md
+!docs/lab/CLAIM_EVIDENCE_MAP.md
+!docs/lab/COMPLIANCE_MATRIX.md
+!docs/lab/ROADMAP.md
+!docs/lab/lab_status.json
+!docs/lab/lab_status.schema.json
 !docs/lab/decisions/
 docs/lab/decisions/*
 !docs/lab/decisions/LAB-DEC-010.md
+!docs/lab/decisions/LAB-DEC-011.md
+!docs/lab/decisions/LAB-DEC-012.md
+!docs/lab/decisions/LAB-DEC-013.md
+
+# Current no-run Stage-3 registry audit; the older scope audit is historical.
+!outputs/stage3_registry_audit.json
+
+# --- Tümüyle Yoksayılanlar ---
+*.md
+*.json
+*.csv
+outputs/
