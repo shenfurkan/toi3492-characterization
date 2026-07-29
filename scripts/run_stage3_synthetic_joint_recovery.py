@@ -2,10 +2,17 @@
 
 import argparse
 import json
+import os
 import sys
 import time
 from multiprocessing import Pool, cpu_count
 from pathlib import Path
+
+# Each realization is already a separate process; avoid BLAS oversubscription.
+for _thread_var in (
+    "OMP_NUM_THREADS", "MKL_NUM_THREADS", "OPENBLAS_NUM_THREADS", "NUMEXPR_NUM_THREADS",
+):
+    os.environ.setdefault(_thread_var, "1")
 
 import pandas as pd
 
@@ -210,7 +217,10 @@ def parse_args():
     parser.add_argument("--class-index", type=int, action="append")
     parser.add_argument("--start", type=int, default=0)
     parser.add_argument("--count", type=int)
-    parser.add_argument("--workers", type=int, default=4)
+    parser.add_argument(
+        "--workers", type=int, default=cpu_count(),
+        help="Realization processes (default: all logical CPU cores).",
+    )
     parser.add_argument("--verify-only", action="store_true")
     return parser.parse_args()
 

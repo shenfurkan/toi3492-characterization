@@ -119,11 +119,7 @@ outputs/*.log
 !outputs/stage3_phase6_mask_influence.csv
 !outputs/stage3_phase6_beta_by_sector.csv
 !outputs/stage3_phase6_residual_summary.csv
-!outputs/stage3_synthetic_screening_detail.csv
-!outputs/stage3_synthetic_calibration.csv
-!outputs/stage3_synthetic_screening_metadata.json
-!outputs/stage3_synthetic_joint_recovery.csv
-!outputs/stage3_synthetic_joint_recovery_metadata.json
+
 !outputs/stage3_numerical_validation.json
 !outputs/stage3_threshold_calibration.json
 !outputs/stage4_fast_calibration_gate.json
@@ -133,6 +129,7 @@ outputs/*.log
 # Temporary output folders and quarantine
 outputs/fresh_backup_*/
 outputs/night_runs/
+outputs/stage3_synthetic_screening_checkpoints/
 outputs/stage4_fast_calibration/
 outputs/stage4_fast_calibration_preflight/
 outputs/stage4_rnaas_submission/
@@ -162,3 +159,4 @@ AstrophysicsResources/
 human.txt
 *.ps1
 scripts/*.ps1
+outputs/stage3_synthetic_screening_metadata.json

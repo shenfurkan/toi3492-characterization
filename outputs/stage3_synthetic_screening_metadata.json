@@ -4,9 +4,13 @@
     "path": "data/stage3_synthetic_calibration_protocol.json",
     "sha256": "7d10902ffef58099fc8fa869ffe1c6c36f7fb786c4b6a5597f42b4dbe02b9416"
   },
+  "checkpoint_dir": "outputs\\stage3_synthetic_screening_checkpoints",
+  "completed_realizations": 13,
   "expected_folds_per_realization": 144,
-  "fold_workers": 4,
+  "fold_workers": 1,
   "formal_gate_emitted": false,
+  "last_completed": "C0 r13",
+  "progress_percent": 6.22,
   "raw_template_rows": 102562,
   "reference_template_rows": 102502,
   "runner": "scripts/run_stage3_synthetic_screening.py",
@@ -19,5 +23,6 @@
     99,
     100
   ],
-  "workers": 1
+  "total_selected_realizations": 209,
+  "workers": 8
 }

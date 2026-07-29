@@ -15,6 +15,13 @@ from multiprocessing import Pool, cpu_count
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
+# Each realization is already a separate process. Keep numerical libraries
+# single-threaded so --workers scales across realizations instead of oversubscribing.
+for _thread_var in (
+    "OMP_NUM_THREADS", "MKL_NUM_THREADS", "OPENBLAS_NUM_THREADS", "NUMEXPR_NUM_THREADS",
+):
+    os.environ.setdefault(_thread_var, "1")
+
 import numpy as np
 import pandas as pd
 
@@ -29,6 +36,7 @@ import stage3_synthetic_calibration_core as core
 DETAIL_PATH = ROOT / "outputs" / "stage3_synthetic_screening_detail.csv"
 REALIZATION_PATH = ROOT / "outputs" / "stage3_synthetic_calibration.csv"
 METADATA_PATH = ROOT / "outputs" / "stage3_synthetic_screening_metadata.json"
+CHECKPOINT_DIR = ROOT / "outputs" / "stage3_synthetic_screening_checkpoints"
 SECTORS = core.SECTORS
 
 _CONTEXT = None
@@ -109,6 +117,33 @@ def _score_branch(latent, metadata, branch):
         return list(executor.map(score_fold, SECTORS))
 
 
+def _branch_checkpoint_path(class_index, realization_index, branch_index):
+    return CHECKPOINT_DIR / "c{:03d}_r{:03d}_b{:03d}.json".format(
+        class_index, realization_index, branch_index,
+    )
+
+
+def _load_branch_checkpoint(path):
+    if not path.exists():
+        return None
+    with path.open("r", encoding="utf-8") as stream:
+        payload = json.load(stream)
+    if payload.get("protocol_sha256") != _CONTEXT.protocol_sha256:
+        raise RuntimeError("branch checkpoint belongs to a different frozen protocol")
+    return payload["detail"]
+
+
+def _write_branch_checkpoint(path, detail):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = path.with_suffix(path.suffix + ".tmp-{}".format(os.getpid()))
+    payload = {
+        "protocol_sha256": _CONTEXT.protocol_sha256,
+        "detail": detail,
+    }
+    temporary.write_text(json.dumps(payload, sort_keys=True) + "\n", encoding="utf-8")
+    os.replace(str(temporary), str(path))
+
+
 def _run_realization(task):
     class_index, realization_index, branch_limit = task
     started = time.time()
@@ -119,13 +154,24 @@ def _run_realization(task):
         )
         branches = _CONTEXT.branches[:branch_limit] if branch_limit else _CONTEXT.branches
         detail = []
+        resumed = 0
         for b_idx, branch in enumerate(branches):
             b_start = time.time()
-            res = _score_branch(latent, metadata, branch)
+            checkpoint_path = _branch_checkpoint_path(
+                class_index, realization_index, b_idx,
+            )
+            res = _load_branch_checkpoint(checkpoint_path)
+            branch_resumed = res is not None
+            if branch_resumed:
+                resumed += 1
+            else:
+                res = _score_branch(latent, metadata, branch)
+                _write_branch_checkpoint(checkpoint_path, res)
             detail.extend(res)
-            print("  [C{} r{}] Branch {}/{} ({}) done in {:.1f}s".format(
+            print("  [C{} r{}] Branch {}/{} ({}) {} in {:.1f}s".format(
                 class_index, realization_index, b_idx + 1, len(branches),
-                branch["model_id"], time.time() - b_start,
+                branch["model_id"], "resumed" if branch_resumed
+                else "done", time.time() - b_start,
             ), flush=True)
         return {
             "ok": True,
@@ -134,6 +180,7 @@ def _run_realization(task):
             "metadata": metadata,
             "detail": detail,
             "elapsed_seconds": time.time() - started,
+            "resumed_branches": resumed,
         }
     except Exception as exc:
         return {
@@ -168,7 +215,21 @@ def _append_csv(path, rows):
     frame.to_csv(path, mode="a", header=not path.exists(), index=False)
 
 
-def _realization_summary(result):
+def _write_metadata(metadata):
+    temporary = METADATA_PATH.with_suffix(METADATA_PATH.suffix + ".tmp")
+    temporary.write_text(json.dumps(metadata, indent=2, sort_keys=True) + "\n",
+                         encoding="utf-8")
+    os.replace(str(temporary), str(METADATA_PATH))
+
+
+def _remove_branch_checkpoints(class_index, realization_index, branch_count):
+    for branch_index in range(branch_count):
+        _branch_checkpoint_path(
+            class_index, realization_index, branch_index,
+        ).unlink(missing_ok=True)
+
+
+def _realization_summary(result, context):
     detail = pd.DataFrame(result["detail"])
     branch = detail.groupby(
         ["mask_id", "model_id", "joint_model_weight"], as_index=False,
@@ -178,14 +239,14 @@ def _realization_summary(result):
     m1 = float(np.logaddexp.reduce(log_weights + branch["m1_score"].to_numpy(np.float64)))
     metadata = result["metadata"]
     return {
-        "protocol_sha256": _CONTEXT.protocol_sha256,
+        "protocol_sha256": context.protocol_sha256,
         "class_index": metadata["class_index"],
         "class_name": metadata["class_name"],
         "realization_index": metadata["realization_index"],
         "realization_seed": metadata["realization_seed"],
         "screening_complete": bool(
-            detail["model_id"].nunique() == len(_CONTEXT.branches) and
-            len(detail) == len(_CONTEXT.branches) * len(SECTORS)
+            detail["model_id"].nunique() == len(context.branches) and
+            len(detail) == len(context.branches) * len(SECTORS)
         ),
         "screening_branch_count": int(detail["model_id"].nunique()),
         "screening_fold_count": int(len(detail)),
@@ -231,12 +292,16 @@ def run(args):
         "expected_folds_per_realization": expected_folds,
         "workers": min(args.workers, cpu_count()),
         "fold_workers": args.fold_workers,
+        "checkpoint_dir": str(CHECKPOINT_DIR.relative_to(ROOT)),
+        "total_selected_realizations": len(tasks),
+        "completed_realizations": 0,
+        "progress_percent": 0.0,
     }
     if args.verify_only:
         print("S3-04B synthetic-screening checkpoint is structurally valid")
         return 0
-    METADATA_PATH.write_text(json.dumps(metadata, indent=2, sort_keys=True) + "\n",
-                             encoding="utf-8")
+    CHECKPOINT_DIR.mkdir(parents=True, exist_ok=True)
+    _write_metadata(metadata)
     if not tasks:
         print("No incomplete realizations selected.")
         return 0
@@ -246,6 +311,7 @@ def run(args):
         len(tasks), workers, args.branch_limit or len(context.branches),
     ), flush=True)
     with Pool(workers, initializer=_init_worker, initargs=(args.fold_workers,)) as pool:
+        finished = 0
         for result in pool.imap_unordered(
                 _run_realization,
                 [(index, realization, args.branch_limit) for index, realization in tasks]):
@@ -255,7 +321,18 @@ def run(args):
                 ), flush=True)
                 continue
             _append_csv(DETAIL_PATH, result["detail"])
-            _append_csv(REALIZATION_PATH, [_realization_summary(result)])
+            _append_csv(REALIZATION_PATH, [_realization_summary(result, context)])
+            _remove_branch_checkpoints(
+                result["class_index"], result["realization_index"],
+                args.branch_limit or len(context.branches),
+            )
+            finished += 1
+            metadata["completed_realizations"] = finished
+            metadata["progress_percent"] = round(100.0 * finished / len(tasks), 2)
+            metadata["last_completed"] = "C{} r{}".format(
+                result["class_index"], result["realization_index"],
+            )
+            _write_metadata(metadata)
             print("DONE C{} r{} ({:.0f}s)".format(
                 result["class_index"], result["realization_index"],
                 result["elapsed_seconds"],
@@ -268,7 +345,10 @@ def parse_args():
     parser.add_argument("--class-index", type=int, action="append")
     parser.add_argument("--start", type=int, default=0)
     parser.add_argument("--count", type=int)
-    parser.add_argument("--workers", type=int, default=4)
+    parser.add_argument(
+        "--workers", type=int, default=cpu_count(),
+        help="Realization processes (default: all logical CPU cores).",
+    )
     parser.add_argument(
         "--fold-workers", type=int, default=1,
         help="Parallel held-sector fits per realization branch; use with care on small hosts.",
