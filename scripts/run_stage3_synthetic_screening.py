@@ -39,6 +39,15 @@ METADATA_PATH = ROOT / "outputs" / "stage3_synthetic_screening_metadata.json"
 CHECKPOINT_DIR = ROOT / "outputs" / "stage3_synthetic_screening_checkpoints"
 SECTORS = core.SECTORS
 
+DETAIL_COLUMNS = [
+    "class_index", "class_name", "realization_index", "realization_seed",
+    "protocol_sha256", "model_id", "mask_id", "cell_id", "window_hours",
+    "polynomial_degree", "joint_model_weight", "held_sector",
+    "k0_score", "m1_score", "delta_elpd", "k0_objective", "m1_objective",
+    "k0_boundary_count", "m1_boundary_count", "m1_success",
+    "baseline_draws_json", "injected_geometry_json", "sector_noise_json",
+]
+
 _CONTEXT = None
 _FOLD_WORKERS = 1
 
@@ -82,8 +91,8 @@ def _score_branch(latent, metadata, branch):
 
         k0_ok = fit_k0.success and np.isfinite(score_k0)
         m1_ok = fit_m1.success and np.isfinite(score_m1)
-        if not k0_ok and not m1_ok:
-            raise RuntimeError("both K0 and M1 held-sector fit failed")
+        if not k0_ok or not m1_ok:
+            raise RuntimeError("K0 or M1 held-sector fit failed")
 
         return {
             "class_index": metadata["class_index"],
@@ -211,7 +220,7 @@ def _load_completed(path, protocol_sha256):
 def _append_csv(path, rows):
     if not rows:
         return
-    frame = pd.DataFrame(rows)
+    frame = pd.DataFrame(rows, columns=DETAIL_COLUMNS)
     frame.to_csv(path, mode="a", header=not path.exists(), index=False)
 
 
@@ -298,6 +307,16 @@ def run(args):
         "progress_percent": 0.0,
     }
     if args.verify_only:
+        if not DETAIL_PATH.exists():
+            print("S3-04B synthetic-screening missing detail CSV")
+            return 1
+        frame = pd.read_csv(DETAIL_PATH)
+        if frame["m1_score"].isna().any():
+            print("S3-04B verification failed: Found NaN m1_scores in detail CSV")
+            return 1
+        if list(frame.columns) != DETAIL_COLUMNS:
+            print("S3-04B verification failed: Schema mismatch in detail CSV")
+            return 1
         print("S3-04B synthetic-screening checkpoint is structurally valid")
         return 0
     CHECKPOINT_DIR.mkdir(parents=True, exist_ok=True)

@@ -198,6 +198,26 @@ def _inject_background_systematic(frame, class_spec, seed):
     return {"telemetry": systematic["telemetry"], "slope": slope}
 
 
+def _inject_shared_event_baseline(frame, events, seed):
+    rng = _seed_stream(seed, 500)
+    baseline = np.zeros(len(frame), dtype=np.float64)
+    time = frame["time_btjd"].to_numpy(np.float64)
+    sectors = frame["sector"].to_numpy(np.int64)
+    half_width = 10.0 / 48.0
+    degree = 2
+    draws = {}
+    for event in events:
+        selected = ((sectors == int(event["sector"])) &
+                    (np.abs(time - float(event["midpoint_btjd"])) <= half_width))
+        if np.any(selected):
+            x_days = time[selected] - float(event["midpoint_btjd"])
+            coefficients = rng.normal(0.0, BASELINE_SIGMA, degree + 1)
+            baseline[selected] = np.polynomial.polynomial.polyval(x_days, coefficients)
+            draws[event["physical_event_id"]] = coefficients.tolist()
+    frame["shared_baseline"] = baseline
+    return draws
+
+
 def generate_latent_realization(context, class_spec, realization_index):
     """Generate exactly one deterministic raw-valid latent realization."""
     seed = realization_seed(context.protocol, class_spec, realization_index)
@@ -210,13 +230,20 @@ def generate_latent_realization(context, class_spec, realization_index):
         float(context.phase2["ephemeris_and_windows"]["t14_hours"]),
         noise_seed,
         inject_transit=bool(class_spec["inject_transit"]),
-        rp_rs=geometry["rp_rs"] if geometry else 0.055,
+        rp_rs=geometry["rp_rs"] if geometry else 0.0,
         a_rs=geometry["a_rs"] if geometry else 10.2,
         impact_parameter=geometry["impact_parameter"] if geometry else 0.73,
         return_metadata=True,
         **kwargs
     )
     telemetry = _inject_background_systematic(frame, class_spec, seed)
+    shared_draws = _inject_shared_event_baseline(frame, context.events, seed)
+    
+    frame["flux"] = (
+        frame["transit_flux"] * (1.0 + frame.get("shared_baseline", 0.0))
+        + frame["noise_flux"] + frame["measurement_noise"]
+    )
+    
     metadata.update({
         "class_name": class_spec["name"],
         "class_index": int(class_spec["class_index"]),
@@ -225,35 +252,18 @@ def generate_latent_realization(context, class_spec, realization_index):
         "noise_seed": int(noise_seed),
         "drawn_geometry": geometry,
         "telemetry_systematic": telemetry,
+        "shared_baseline_draws": shared_draws,
     })
     return frame, metadata
 
 
 def apply_branch_baseline(latent, events, branch, realization_seed_value):
-    """Apply the registered per-event polynomial baseline to one branch."""
+    """Apply the registered per-event polynomial baseline to one branch.
+    (Refactored for Phase 4: Now returns the shared latent baseline directly
+    to ensure all branches evaluate against the same observed realization).
+    """
     frame = latent.copy()
-    rng = _seed_stream(realization_seed_value, 1000 + int(branch["model_index"]))
-    baseline = np.zeros(len(frame), dtype=np.float64)
-    time = frame["time_btjd"].to_numpy(np.float64)
-    sectors = frame["sector"].to_numpy(np.int64)
-    half_width = float(branch["window_hours"]) / 48.0
-    degree = int(branch["polynomial_degree"])
-    draws = {}
-    for event in events:
-        selected = ((sectors == int(event["sector"])) &
-                    (np.abs(time - float(event["midpoint_btjd"])) <= half_width))
-        if not np.any(selected):
-            raise RuntimeError("branch has an empty registered event window")
-        x_days = time[selected] - float(event["midpoint_btjd"])
-        coefficients = rng.normal(0.0, BASELINE_SIGMA, degree + 1)
-        baseline[selected] = np.polynomial.polynomial.polyval(x_days, coefficients)
-        draws[event["physical_event_id"]] = coefficients.tolist()
-    frame["branch_baseline"] = baseline
-    frame["flux"] = (
-        frame["transit_flux"] * (1.0 + baseline)
-        + frame["noise_flux"] + frame["measurement_noise"]
-    )
-    return frame, draws
+    return frame, {}
 
 
 def derive_mask(frame, context, mask_id):

@@ -160,3 +160,4 @@ human.txt
 *.ps1
 scripts/*.ps1
 outputs/stage3_synthetic_screening_metadata.json
+plan.md
