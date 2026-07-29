@@ -1,8 +1,6 @@
 # TOI-3492.01 Photometric Characterization
 
-This repository is the codebase for a photometric characterization of the TESS transit candidate **TOI-3492.01** (TIC 81077799). It is also the repository for a methodology paper about doing this kind of analysis reproducibly. TOI-3492.01 is the case study, and the pipeline is the contribution.
-
-The primary publication target is PASP or MNRAS.
+Photometric characterization pipeline for the TESS transit candidate **TOI-3492.01** (TIC 81077799). The pipeline covers data quality auditing, multi-approach detrending, grid-based model selection, Gaussian process noise screening, MCMC transit fitting, and false-positive vetting. The methodology is reproducible and preregistered.
 
 ## The target
 
