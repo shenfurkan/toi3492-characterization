@@ -8,6 +8,11 @@ import time
 from multiprocessing import Pool, cpu_count
 from pathlib import Path
 
+from stage3_quarantine import refuse_legacy_execution
+
+if __name__ == "__main__":
+    refuse_legacy_execution("scripts/run_stage3_synthetic_joint_recovery.py")
+
 # Each realization is already a separate process; avoid BLAS oversubscription.
 for _thread_var in (
     "OMP_NUM_THREADS", "MKL_NUM_THREADS", "OPENBLAS_NUM_THREADS", "NUMEXPR_NUM_THREADS",
@@ -173,6 +178,7 @@ def _tasks(context, selected, start, count, completed):
 
 
 def run(args):
+    refuse_legacy_execution("scripts/run_stage3_synthetic_joint_recovery.py:run")
     context = core.load_context()
     if args.verify_only:
         _completed(context)

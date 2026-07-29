@@ -161,3 +161,18 @@ human.txt
 scripts/*.ps1
 outputs/stage3_synthetic_screening_metadata.json
 plan.md
+paywalled_papers.txt
+
+# Immutable forensic capture of the interrupted S3-04B execution.
+!outputs/quarantine/
+outputs/quarantine/*
+!outputs/quarantine/stage3_s3-04b_20260725T222451Z_invalid/
+!outputs/quarantine/stage3_s3-04b_20260725T222451Z_invalid/**
+
+# Phase-0 governance records required in a clean clone.
+!docs/lab/
+docs/lab/*
+!docs/lab/DECISION_LOG.md
+!docs/lab/decisions/
+docs/lab/decisions/*
+!docs/lab/decisions/LAB-DEC-010.md

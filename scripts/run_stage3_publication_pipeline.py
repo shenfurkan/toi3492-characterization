@@ -14,6 +14,11 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
+from stage3_quarantine import refuse_legacy_execution
+
+if __name__ == "__main__":
+    refuse_legacy_execution("scripts/run_stage3_publication_pipeline.py")
+
 
 ROOT = Path(__file__).resolve().parent.parent
 SCRIPTS = ROOT / "scripts"
@@ -79,6 +84,7 @@ def _verify_synthetic_artifacts(expected):
 
 
 def main(args):
+    refuse_legacy_execution("scripts/run_stage3_publication_pipeline.py:main")
     expected = _expected_counts()
     _verify_upstream()
     status = {

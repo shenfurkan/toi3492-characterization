@@ -15,6 +15,11 @@ from multiprocessing import Pool, cpu_count
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
+from stage3_quarantine import refuse_legacy_execution
+
+if __name__ == "__main__":
+    refuse_legacy_execution("scripts/run_stage3_synthetic_screening.py")
+
 # Each realization is already a separate process. Keep numerical libraries
 # single-threaded so --workers scales across realizations instead of oversubscribing.
 for _thread_var in (
@@ -286,6 +291,7 @@ def _tasks(context, class_indices, start, count, completed):
 
 
 def run(args):
+    refuse_legacy_execution("scripts/run_stage3_synthetic_screening.py:run")
     context = core.load_context()
     if args.branch_limit is not None:
         raise ValueError("branch-limited execution cannot write formal calibration artifacts")

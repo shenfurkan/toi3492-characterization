@@ -9,3 +9,6 @@
 # Generated data (small diffs are meaningless)
 outputs/*.json -diff
 outputs/*.csv  -diff
+
+# Preserve forensic snapshot bytes across platforms.
+outputs/quarantine/stage3_s3-04b_20260725T222451Z_invalid/snapshot/** -text -diff

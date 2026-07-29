@@ -11,6 +11,11 @@ import sys
 import time
 from pathlib import Path
 
+from stage3_quarantine import refuse_legacy_execution
+
+if __name__ == "__main__":
+    refuse_legacy_execution("scripts/launch_stage3_batch.py")
+
 ROOT = Path(__file__).resolve().parent.parent
 
 SCREEN_CMD = [
@@ -38,6 +43,7 @@ def launch(class_index, count, cmd, out_dir):
 
 
 def main():
+    refuse_legacy_execution("scripts/launch_stage3_batch.py:main")
     out_dir = ROOT / "outputs"
     out_dir.mkdir(exist_ok=True)
     mode = "full"
