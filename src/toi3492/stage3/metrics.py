@@ -127,7 +127,9 @@ def _require_columns(frame: pd.DataFrame, columns: Sequence[str], name: str):
         raise ContractError("{} is empty".format(name))
 
 
-def realization_selection_scores(screening: pd.DataFrame) -> pd.DataFrame:
+def realization_selection_scores(
+    screening: pd.DataFrame, selection_kind: str = "log_evidence",
+) -> pd.DataFrame:
     required = (
         "class_ordinal", "realization_index", "model_id", "held_sector",
         "joint_model_weight", "k0_score", "m1_score",
@@ -149,9 +151,12 @@ def realization_selection_scores(screening: pd.DataFrame) -> pd.DataFrame:
         weights = group["joint_model_weight"].to_numpy(np.float64)
         if len(group) != 24 or np.any(weights <= 0.0) or not np.isclose(weights.sum(), 1.0):
             raise ContractError("realization does not contain the exact weighted 24-branch universe")
-        log_weights = np.log(weights)
-        k0 = float(logsumexp(log_weights + group["k0_score"].to_numpy(np.float64)))
-        m1 = float(logsumexp(log_weights + group["m1_score"].to_numpy(np.float64)))
+        k0 = combine_branches(
+            selection_kind, group["k0_score"].to_numpy(np.float64), weights,
+        )
+        m1 = combine_branches(
+            selection_kind, group["m1_score"].to_numpy(np.float64), weights,
+        )
         rows.append({
             "class_ordinal": int(class_ordinal),
             "realization_index": int(realization_index),
@@ -181,7 +186,9 @@ def selection_metrics(realizations: pd.DataFrame, white_class=0, nominal_class=1
     }
 
 
-def nominal_geometry_metrics(recovery: pd.DataFrame, nominal_class=1):
+def nominal_geometry_metrics(
+    recovery: pd.DataFrame, nominal_class=1, geometry_kind: str = "weighted_quantile",
+):
     required = (
         "class_ordinal", "realization_index", "model_id", "joint_model_weight",
         "injected_rp_rs", "injected_a_rs", "injected_impact_parameter",
@@ -214,20 +221,33 @@ def nominal_geometry_metrics(recovery: pd.DataFrame, nominal_class=1):
             if not np.allclose(injected_values, injected_values[0], rtol=0.0, atol=0.0):
                 raise ContractError("injected geometry differs across branches")
             injected = float(injected_values[0])
-            recovered = float(np.sum(weights * group[recovered_column].to_numpy(np.float64)))
+            recovered = combine_branches(
+                "weighted_mean", group[recovered_column].to_numpy(np.float64), weights,
+            )
             row["{}_bias".format(parameter)] = recovered - injected
-            row["{}_covered_68".format(parameter)] = bool(np.sum(
-                weights * (
-                    (group["{}_q16".format(parameter)] <= injected)
-                    & (group["{}_q84".format(parameter)] >= injected)
-                ).to_numpy(float)
-            ) >= 0.5)
-            row["{}_covered_95".format(parameter)] = bool(np.sum(
-                weights * (
-                    (group["{}_q025".format(parameter)] <= injected)
-                    & (group["{}_q975".format(parameter)] >= injected)
-                ).to_numpy(float)
-            ) >= 0.5)
+            anchors = group[[
+                "{}_q025".format(parameter), "{}_q16".format(parameter),
+                "{}_q84".format(parameter), "{}_q975".format(parameter),
+            ]].to_numpy(np.float64)
+            if geometry_kind == "weighted_quantile":
+                mixture = mixture_quantiles(anchors, weights)
+            elif geometry_kind == "weighted_mean":
+                mixture = {
+                    0.025: float(np.sum(weights * anchors[:, 0])),
+                    0.16: float(np.sum(weights * anchors[:, 1])),
+                    0.84: float(np.sum(weights * anchors[:, 2])),
+                    0.975: float(np.sum(weights * anchors[:, 3])),
+                }
+            else:
+                raise ContractError("unknown geometry mixture kind: {}".format(geometry_kind))
+            for level, suffix in ((0.025, "q025"), (0.16, "q16"), (0.84, "q84"), (0.975, "q975")):
+                row["{}_mix_{}".format(parameter, suffix)] = mixture[level]
+            row["{}_covered_68".format(parameter)] = bool(
+                mixture[0.16] <= injected <= mixture[0.84]
+            )
+            row["{}_covered_95".format(parameter)] = bool(
+                mixture[0.025] <= injected <= mixture[0.975]
+            )
         injected_depth = float(group["injected_rp_rs"].iloc[0]) ** 2
         recovered_depth = float(np.sum(
             weights * np.square(group["recovered_rp_rs"].to_numpy(np.float64))
