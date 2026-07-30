@@ -1,10 +1,11 @@
 # ==============================================================================
-# Git Ignore Configuration for TOI-3492 Exoplanet Characterization Project
+# TOI-3492 — GitHub tracks CODE ONLY.
+# Data, documents, outputs, protocols, and forensic evidence stay local.
+# Tracked: *.py (scripts/, src/, tests/), pyproject.toml, requirements-lock.txt,
+# LICENSE, README.md, and this file.
 # ==============================================================================
 
-# ------------------------------------------------------------------------------
-# 1. Python & Environment Caches
-# ------------------------------------------------------------------------------
+# Python caches & build artifacts
 __pycache__/
 *.py[cod]
 *$py.class
@@ -18,13 +19,57 @@ venv/
 .pytest_cache/
 .ipynb_checkpoints/
 
-# ------------------------------------------------------------------------------
-# 2. LaTeX & Article Build Artifacts ("Makale" derleme ve çıktı dosyaları)
-# ------------------------------------------------------------------------------
+# OS & IDE
+.DS_Store
+Thumbs.db
+desktop.ini
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# ---- Everything that is not code stays local ----
+data/
+outputs/
+protocols/
+docs/
+papers/
+literature/
+figures/
+provenance/
+arxiv_submission/
+AstrophysicsResources/
+toi3492_reproducible_release_v*/
+
+# Documents and notes
+*.md
+*.tex
+*.bib
+*.pdf
+
+# Data, results, and archives
+*.json
+*.csv
+*.fits
+*.gz
+*.npy
+*.npz
+*.pk
+*.zip
+*.sha256
+*.log
+*.backup
+*.png
+*.ps1
+CITATION.cff
+81077799_TRILEGAL.csv
+human.txt
+paywalled_papers.txt
+
+# LaTeX build byproducts
 *.aux
 *.bbl
 *.blg
-*.log
 *.out
 *.toc
 *.fls
@@ -38,180 +83,3 @@ venv/
 *.bak
 *.sav
 *~
-
-# Compiled PDF documents and paper packages
-*.pdf
-papers/
-literature/
-arxiv_submission/
-arxiv_submission.zip
-provenance/
-toi3492_reproducible_release_v*/
-*.zip
-*.sha256
-
-# LaTeX and BibTeX paper source files (do not include in git repository)
-*.tex
-*.bib
-
-# ------------------------------------------------------------------------------
-# 3. Internal Analysis, Stage Notes & Unnecessary Markdown Files ("Gereksiz .md'ler")
-# ------------------------------------------------------------------------------
-# Root-level stage, analysis, roadmap and working markdown notes
-analiz.md
-currentproblem.md
-currentproblemstage2.md
-stage3.md
-stage4.md
-stage5.md
-EXOPLANET_RELEASE_ROADMAP.md
-LEGACY_ARCHIVE.md
-RNAAS.md
-REVIEW_NOTES.md
-handover.md
-!stage3.md
-!plan.md
-
-# Internal documentation notes, checklists and drafts in docs/
-docs/*.md
-!docs/README.md
-!docs/todo.md
-!docs/stage3_automation_architecture.md
-!docs/reproducibility_order.md
-docs/archive/
-docs/lab/
-docs/review/
-docs/templates/
-
-# Markdown output logs
-outputs/*.md
-
-# ------------------------------------------------------------------------------
-# 4. Data Files, Backups & Model Outputs
-# ------------------------------------------------------------------------------
-*.backup
-
-# Heavy raw datasets & binary data
-data/spoc_dv/
-data/asteroseismology/
-*.pk
-
-# Binary chains, MCMC posterior draws and arrays
-*.npy
-*.npz
-outputs/pysyd/
-
-# Unversioned JSON and CSV data files
-data/*.json
-data/*.csv
-!data/wp09a_formal_sector_protocol.json
-!data/stage3_input_manifest.json
-!data/stage3_model_architecture_decision.json
-!data/stage3_model_architecture_decision_v2.json
-!data/stage3_model_architecture_decision_v3.json
-!data/stage3_synthetic_calibration_protocol.json
-!data/stage3_synthetic_calibration_protocol_v2.json
-!data/stage3_synthetic_calibration_protocol_v3.json
-!data/stage3_input_manifest_v3.json
-!data/stage3_v2_execution_authorization.json
-!data/stage3_v3_execution_authorization.json
-!data/stage4_claim_charter.json
-!data/stage4_fast_calibration_protocol.json
-!data/methodology_publication_charter.json
-!data/release_manifest_policy.json
-
-outputs/*.json
-outputs/*.csv
-outputs/*.txt
-outputs/*.log
-!outputs/release_status.json
-!outputs/wp09a_formal_sector_audit.json
-!outputs/wp09a_sector_descriptors.csv
-!outputs/stage3_scope_audit.json
-!outputs/stage3_phase6_postmortem.json
-!outputs/stage3_phase6_boundary_map.csv
-!outputs/stage3_phase6_mask_influence.csv
-!outputs/stage3_phase6_beta_by_sector.csv
-!outputs/stage3_phase6_residual_summary.csv
-
-!outputs/stage3_numerical_validation.json
-!outputs/stage3_threshold_calibration.json
-!outputs/stage4_fast_calibration_gate.json
-!outputs/stage4_rnaas_audit.json
-!outputs/stage4_rnaas_release_audit.json
-
-# Temporary output folders and quarantine
-outputs/fresh_backup_*/
-outputs/night_runs/
-outputs/stage3_synthetic_screening_checkpoints/
-outputs/stage4_fast_calibration/
-outputs/stage4_fast_calibration_preflight/
-outputs/stage4_rnaas_submission/
-outputs/quarantine/
-
-# Generated figures
-figures/*.png
-figures/*.pdf
-*.png
-
-# ------------------------------------------------------------------------------
-# 5. OS & IDE System Files
-# ------------------------------------------------------------------------------
-.DS_Store
-Thumbs.db
-desktop.ini
-.idea/
-.vscode/
-*.swp
-*.swo
-
-# ------------------------------------------------------------------------------
-# 6. Miscellaneous & Local Runner Scripts
-# ------------------------------------------------------------------------------
-81077799_TRILEGAL.csv
-AstrophysicsResources/
-human.txt
-*.ps1
-scripts/*.ps1
-outputs/stage3_synthetic_screening_metadata.json
-!plan.md
-paywalled_papers.txt
-
-# Immutable forensic capture of the interrupted S3-04B execution.
-# !outputs/quarantine/
-# outputs/quarantine/*
-# !outputs/quarantine/stage3_s3-04b_20260725T222451Z_invalid/
-# !outputs/quarantine/stage3_s3-04b_20260725T222451Z_invalid/**
-
-# Phase-0 governance records required in a clean clone.
-!docs/lab/
-docs/lab/*
-!docs/lab/DECISION_LOG.md
-!docs/lab/CLAIM_EVIDENCE_MAP.md
-!docs/lab/COMPLIANCE_MATRIX.md
-!docs/lab/ROADMAP.md
-!docs/lab/lab_status.json
-!docs/lab/lab_status.schema.json
-!docs/lab/decisions/
-docs/lab/decisions/*
-!docs/lab/decisions/LAB-DEC-010.md
-!docs/lab/decisions/LAB-DEC-011.md
-!docs/lab/decisions/LAB-DEC-012.md
-!docs/lab/decisions/LAB-DEC-013.md
-
-# Current no-run Stage-3 registry audit; the older scope audit is historical.
-!outputs/stage3_registry_audit.json
-
-# --- Tümüyle Yoksayılanlar ---
-*.md
-*.json
-*.csv
-outputs/
-CITATION.cff
-
-# Binary data and compressed outputs
-*.fits
-*.fits.gz
-*.csv.gz
-*.gz
-data/faz3/

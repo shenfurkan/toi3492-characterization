@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import os
 import platform
 from dataclasses import dataclass
 from importlib import metadata as importlib_metadata
@@ -68,7 +69,26 @@ def _package_version(name: str):
         return None
 
 
+_THREAD_LIMIT_VARIABLES = (
+    "OMP_NUM_THREADS",
+    "MKL_NUM_THREADS",
+    "OPENBLAS_NUM_THREADS",
+    "NUMEXPR_NUM_THREADS",
+)
+
+
+def normalize_thread_limits() -> None:
+    """Ensure thread-limit variables are set to '1' if not already present.
+
+    Call this before computing environment_identity() and at executor startup
+    so the identity value is stable regardless of import order.
+    """
+    for name in _THREAD_LIMIT_VARIABLES:
+        os.environ.setdefault(name, "1")
+
+
 def environment_identity() -> Mapping:
+    normalize_thread_limits()
     details = {
         "python": platform.python_version(),
         "implementation": platform.python_implementation(),
@@ -78,8 +98,8 @@ def environment_identity() -> Mapping:
             for name in ("numpy", "pandas", "scipy", "celerite", "batman-package")
         },
         "thread_limits": {
-            name: __import__("os").environ.get(name)
-            for name in ("OMP_NUM_THREADS", "MKL_NUM_THREADS", "OPENBLAS_NUM_THREADS", "NUMEXPR_NUM_THREADS")
+            name: os.environ.get(name)
+            for name in _THREAD_LIMIT_VARIABLES
         },
     }
     return {"sha256": hashlib.sha256(canonical_json_bytes(details)).hexdigest(), **details}

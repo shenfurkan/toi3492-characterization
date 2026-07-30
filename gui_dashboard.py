@@ -263,13 +263,40 @@ class ScientificExoplanetSuite:
         self.canvas_real.draw()
 
     def build_tab_synthetic_injection(self):
-        """Stage 3 Synthetic Data Injection & Recovery Controls."""
+        """Stage 3 Synthetic Data Injection & Recovery Controls.
+
+        QUARANTINE NOTICE: All Stage-3 data visible in this tab originates
+        from the interrupted revision-1 run (stage3_s3-04b_20260725T222451Z_invalid),
+        which is quarantined and scientifically invalid. No calibration summary,
+        threshold, or result from this tab may be used for analysis or publication.
+        The active execution revision is null. Revision 4 is the prospective next run.
+        """
         frame = tk.Frame(self.tab_synth, bg=self.colors["bg"], padx=10, pady=10)
         frame.pack(fill="both", expand=True)
+
+        # ── QUARANTINE WARNING BANNER ─────────────────────────────────────────
+        banner = tk.Frame(frame, bg="#f38ba8", padx=12, pady=10)
+        banner.pack(fill="x", pady=(0, 10))
+        tk.Label(
+            banner,
+            text=(
+                "⛔  QUARANTINE — Stage-3 data in this tab is from the interrupted "
+                "revision-1 run (s3-04b_20260725T222451Z_invalid) and is SCIENTIFICALLY INVALID.\n"
+                "Active execution revision: null.  Prospective next revision: 4.  "
+                "Do NOT use any value from this tab for analysis or publication."
+            ),
+            font=("Segoe UI", 9, "bold"),
+            bg="#f38ba8",
+            fg="#11111b",
+            justify="left",
+            wraplength=1100,
+        ).pack(anchor="w")
+        # ─────────────────────────────────────────────────────────────────────
 
         # Control Panel for Synthetic Parameters
         ctrl = tk.Frame(frame, bg=self.colors["card"], padx=15, pady=12)
         ctrl.pack(fill="x", pady=(0, 10))
+
 
         tk.Label(
             ctrl,

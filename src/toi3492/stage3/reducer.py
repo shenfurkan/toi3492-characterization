@@ -12,7 +12,7 @@ from .identity import component_identity
 from .jsonio import create_immutable_json, load_strict_json
 from .metrics import (
     derive_null_threshold,
-    evaluate_development_gates,
+    evaluate_frozen_gates,
     nominal_geometry_metrics,
     realization_selection_scores,
     selection_metrics,
@@ -85,7 +85,7 @@ def reduce_completed_run(spec: RunSpec):
     geometry_rows, geometry_summary = nominal_geometry_metrics(recovery)
     null_summary = derive_null_threshold(recovery)
     protocol = spec.load_protocol()
-    gate = evaluate_development_gates(
+    gate = evaluate_frozen_gates(
         selection_summary,
         geometry_summary,
         null_summary,

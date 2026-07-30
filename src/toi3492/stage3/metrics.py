@@ -183,7 +183,7 @@ def derive_null_threshold(recovery: pd.DataFrame, null_class=10):
     }
 
 
-def evaluate_development_gates(selection, geometry, null, thresholds: Mapping) -> GateResult:
+def evaluate_frozen_gates(selection, geometry, null, thresholds: Mapping) -> GateResult:
     model = thresholds["model_selection"]
     transit = thresholds["transit"]
     checks = {
@@ -210,3 +210,7 @@ def evaluate_development_gates(selection, geometry, null, thresholds: Mapping) -
         checks=checks,
         metrics={"selection": selection, "geometry": geometry, "null": null},
     )
+
+
+# Backward-compatible alias kept for any external references; prefer evaluate_frozen_gates.
+evaluate_development_gates = evaluate_frozen_gates

@@ -17,6 +17,7 @@ from typing import Optional, Sequence, Tuple
 import pandas as pd
 
 from .contracts import ContractError, RunSpec, SECTORS, TaskKey
+from .identity import normalize_thread_limits
 from .inputs import Stage3Inputs, load_inputs
 from .recovery import conditional_geometry_recovery
 from .runtime import (
@@ -30,10 +31,7 @@ from .screening import prepare_branch, score_fold
 from .simulation import generate_realization
 
 
-for _thread_variable in (
-    "OMP_NUM_THREADS", "MKL_NUM_THREADS", "OPENBLAS_NUM_THREADS", "NUMEXPR_NUM_THREADS",
-):
-    os.environ.setdefault(_thread_variable, "1")
+normalize_thread_limits()
 
 
 @dataclass(frozen=True)

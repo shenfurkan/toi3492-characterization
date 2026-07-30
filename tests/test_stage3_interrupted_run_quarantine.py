@@ -139,25 +139,18 @@ def test_legacy_stage3_entrypoints_fail_before_touching_outputs(root):
     assert after == before
 
 
-def test_quarantine_is_visible_to_git_and_bytes_are_not_normalized(root):
+def test_quarantine_is_local_only_and_never_tracked(root):
+    """GitHub tracks code only; quarantine evidence must stay local."""
     relative = quarantine.MANIFEST_PATH.relative_to(root).as_posix()
     ignored = subprocess.run(
         ["git", "check-ignore", "--quiet", "--", relative], cwd=root, check=False,
     )
-    assert ignored.returncode == 1
-    snapshot = next(
-        record["snapshot_path"] for record in load_manifest()["artifacts"]
-        if record["category"] == "run_evidence"
+    assert ignored.returncode == 0
+    tracked = subprocess.run(
+        ["git", "ls-files", "--error-unmatch", "--", relative],
+        cwd=root, check=False, capture_output=True,
     )
-    snapshot_relative = (
-        quarantine.QUARANTINE_DIR.relative_to(root) / snapshot
-    ).as_posix()
-    attributes = subprocess.check_output(
-        ["git", "check-attr", "text", "diff", "--", snapshot_relative],
-        cwd=root, text=True,
-    )
-    assert "text: unset" in attributes
-    assert "diff: unset" in attributes
+    assert tracked.returncode != 0
 
 
 def test_release_tooling_isolates_quarantined_and_legacy_paths():
