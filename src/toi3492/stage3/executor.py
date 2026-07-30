@@ -137,6 +137,7 @@ def _run_job(job: RealizationJob):
                 result = score_fold(prepared, key.held_sector)
                 write_task(
                     spec, manifest, "screening", key, realization_record, result,
+                    expected_branch=branch,
                 )
                 created += 1
         recovery_key = TaskKey(job.class_ordinal, job.realization_index, branch_index, -1)
@@ -151,6 +152,7 @@ def _run_job(job: RealizationJob):
             )
             write_task(
                 spec, manifest, "recovery", recovery_key, realization_record, result,
+                expected_branch=branch,
             )
             created += 1
     return {
@@ -197,7 +199,12 @@ def build_jobs(
     return tuple(jobs)
 
 
-def execute_jobs(spec: RunSpec, jobs: Sequence[RealizationJob], workers: int):
+def execute_jobs(
+    spec: RunSpec,
+    jobs: Sequence[RealizationJob],
+    workers: int,
+    executor_factory=ProcessPoolExecutor,
+):
     if not jobs:
         return {"jobs": 0, "created": 0, "resumed": 0}
     if int(workers) <= 0:
@@ -205,7 +212,7 @@ def execute_jobs(spec: RunSpec, jobs: Sequence[RealizationJob], workers: int):
     manifest = initialize_namespace(spec)
     worker_count = min(int(workers), cpu_count(), len(jobs))
     totals = {"jobs": len(jobs), "created": 0, "resumed": 0}
-    with ProcessPoolExecutor(
+    with executor_factory(
         max_workers=worker_count,
         initializer=_initialize_worker,
         initargs=(spec, manifest),

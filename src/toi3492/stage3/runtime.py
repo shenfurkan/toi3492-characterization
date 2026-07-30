@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import math
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Mapping
@@ -11,6 +12,7 @@ from .contracts import (
     CANONICAL_TASK_SCHEMA_VERSION,
     EXECUTABLE_REGISTRY_STATUS,
     FORMAL_SCIENTIFIC_USE,
+    GEOMETRY_PARAMETERS,
     ContractError,
     RunSpec,
     TaskKey,
@@ -38,7 +40,8 @@ RESULT_FIELDS = {
     "recovery": {
         "model_id", "mask_id", "cell_id", "joint_model_weight", "objective_h0",
         "objective_h1", "delta_map", "recovery_mode", "recovered_geometry",
-        "injected_geometry", "intervals", "noise_boundary_count", "gap_edge_coverage",
+        "injected_geometry", "intervals", "noise_boundary_count",
+        "geometry_boundary_count", "gap_edge_coverage",
         "optimizer_no_op_count", "optimizer_local_mode_count",
         "max_abs_standardized_residual", "ingress_egress_rms_relative_flux",
     },
@@ -64,13 +67,115 @@ def _valid_review_timestamp(value) -> bool:
     return parsed.tzinfo is not None and parsed.utcoffset() == timezone.utc.utcoffset(parsed)
 
 
-def _validate_result_payload(component: str, key: TaskKey, result: Mapping, path) -> None:
+def review_approved(authorization: Mapping) -> bool:
+    """Pure check: the authorization records a complete independent approval."""
+    review = authorization.get("review")
+    if not isinstance(review, Mapping):
+        return False
+    return (
+        authorization.get("status") == "APPROVED"
+        and review.get("independent_second_party") is True
+        and review.get("decision") == "APPROVED"
+        and isinstance(review.get("reviewer_id"), str)
+        and bool(review.get("reviewer_id", "").strip())
+        and _valid_review_timestamp(review.get("reviewed_utc"))
+        and authorization.get("real_data_fit_authorized") is False
+        and authorization.get("phase_7_authorized") is False
+    )
+
+
+def authorization_schema_valid(authorization: Mapping, spec: RunSpec) -> bool:
+    """Pure check: the authorization matches the canonical record schema."""
+    review = authorization.get("review")
+    return (
+        set(authorization) == AUTHORIZATION_FIELDS
+        and isinstance(review, Mapping)
+        and set(review) == REVIEW_FIELDS
+        and authorization.get("schema_version") == "1.0"
+        and authorization.get("record_type") == "STAGE3_EXECUTION_AUTHORIZATION"
+        and authorization.get("protocol_revision") == spec.protocol_revision
+        and authorization.get("scope") == "SYNTHETIC_CALIBRATION_ONLY"
+    )
+
+
+def hash_bindings_match(authorization: Mapping, identity) -> bool:
+    """Pure check: the authorization binds the exact current frozen identity."""
+    return (
+        identity is not None
+        and authorization.get("protocol_sha256") == identity["protocol_sha256"]
+        and authorization.get("architecture_sha256") == identity["architecture_sha256"]
+        and authorization.get("input_manifest_sha256") == identity["input_manifest_sha256"]
+        and authorization.get("code_identity_sha256") == identity["code_identity_sha256"]
+    )
+
+
+def _require_number(value, label, path):
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        raise ContractError("{} is not a JSON number: {}".format(label, path))
+    return float(value)
+
+
+def _validate_gap_coverage(value, path) -> None:
+    if not isinstance(value, Mapping) or any(
+        not isinstance(key, str) or not isinstance(item, bool)
+        for key, item in value.items()
+    ):
+        raise ContractError("gap_edge_coverage must map event ids to booleans: {}".format(path))
+
+
+def _validate_geometry_mapping(spec: RunSpec, value, path, label) -> None:
+    expected = {"rp_rs", "a_rs", "impact_parameter", "t14_hours"}
+    if not isinstance(value, Mapping) or set(value) != expected:
+        raise ContractError("{} geometry schema mismatch: {}".format(label, path))
+    bounds = spec.load_architecture()["candidate"]["transit_model"]["geometry_uniform_bounds"]
+    for name in ("rp_rs", "a_rs", "impact_parameter"):
+        number = _require_number(value[name], name, path)
+        lower, upper = (float(bound) for bound in bounds[name])
+        if not lower <= number <= upper:
+            raise ContractError(
+                "{} is outside the frozen uniform bounds: {}".format(name, path)
+            )
+    if _require_number(value["t14_hours"], "t14_hours", path) <= 0.0:
+        raise ContractError("t14_hours must be positive: {}".format(path))
+
+
+def _validate_intervals(value, path) -> None:
+    if not isinstance(value, Mapping) or set(value) != set(GEOMETRY_PARAMETERS):
+        raise ContractError("intervals schema mismatch: {}".format(path))
+    for name in GEOMETRY_PARAMETERS:
+        points = value[name]
+        if not isinstance(points, (list, tuple)) or len(points) != 4:
+            raise ContractError("interval {} does not have four quantiles: {}".format(name, path))
+        values = [_require_number(point, name, path) for point in points]
+        if any(b < a for a, b in zip(values, values[1:])):
+            raise ContractError("interval {} quantiles are not ordered: {}".format(name, path))
+
+
+def _validate_result_payload(
+    spec: RunSpec, component: str, key: TaskKey, result: Mapping, path,
+) -> None:
     if not isinstance(result, Mapping) or set(result) != RESULT_FIELDS[component]:
         raise ContractError("task result schema mismatch: {}".format(path))
     if component == "screening" and result["held_sector"] != key.held_sector:
         raise ContractError("screening result held sector mismatch: {}".format(path))
     if float(result["joint_model_weight"]) <= 0.0:
         raise ContractError("task branch weight is not positive: {}".format(path))
+    _validate_gap_coverage(result["gap_edge_coverage"], path)
+    if component == "recovery":
+        _validate_geometry_mapping(
+            spec, result["recovered_geometry"], path, "recovered",
+        )
+        injected = result["injected_geometry"]
+        if injected is not None:
+            _validate_geometry_mapping(spec, injected, path, "injected")
+        _validate_intervals(result["intervals"], path)
+        for field in (
+            "noise_boundary_count", "geometry_boundary_count",
+            "optimizer_no_op_count", "optimizer_local_mode_count",
+        ):
+            count = result[field]
+            if isinstance(count, bool) or not isinstance(count, int) or count < 0:
+                raise ContractError("{} must be a non-negative integer: {}".format(field, path))
 
 
 def _validate_realization_record(
@@ -112,33 +217,9 @@ def readiness(spec: RunSpec) -> Mapping:
     authorization = load_strict_json(spec.authorization_path)
     if not isinstance(authorization, Mapping):
         raise ContractError("Stage-3 authorization record must be a JSON object")
-    review = authorization.get("review", {})
-    authorization_schema_valid = (
-        set(authorization) == AUTHORIZATION_FIELDS
-        and isinstance(review, Mapping)
-        and set(review) == REVIEW_FIELDS
-        and authorization.get("schema_version") == "1.0"
-        and authorization.get("record_type") == "STAGE3_EXECUTION_AUTHORIZATION"
-        and authorization.get("protocol_revision") == spec.protocol_revision
-        and authorization.get("scope") == "SYNTHETIC_CALIBRATION_ONLY"
-    )
-    approved_review = (
-        authorization.get("status") == "APPROVED"
-        and review.get("independent_second_party") is True
-        and review.get("decision") == "APPROVED"
-        and isinstance(review.get("reviewer_id"), str)
-        and bool(review.get("reviewer_id", "").strip())
-        and _valid_review_timestamp(review.get("reviewed_utc"))
-        and authorization.get("real_data_fit_authorized") is False
-        and authorization.get("phase_7_authorized") is False
-    )
-    hash_bindings_match = (
-        identity is not None
-        and authorization.get("protocol_sha256") == identity["protocol_sha256"]
-        and authorization.get("architecture_sha256") == identity["architecture_sha256"]
-        and authorization.get("input_manifest_sha256") == identity["input_manifest_sha256"]
-        and authorization.get("code_identity_sha256") == identity["code_identity_sha256"]
-    )
+    schema_valid = authorization_schema_valid(authorization, spec)
+    approved_review = review_approved(authorization)
+    bindings_match = hash_bindings_match(authorization, identity)
     registry = load_registry(spec.root)
     active_revision_matches = registry["active_execution_revision"] == spec.protocol_revision
     executable_registry = (
@@ -152,9 +233,9 @@ def readiness(spec: RunSpec) -> Mapping:
         executable_registry,
         implementation_compatible,
         identity is not None,
-        authorization_schema_valid,
+        schema_valid,
         approved_review,
-        hash_bindings_match,
+        bindings_match,
     ))
     return {
         "protocol_revision": spec.protocol_revision,
@@ -167,9 +248,9 @@ def readiness(spec: RunSpec) -> Mapping:
         "identity_valid": identity is not None,
         "identity_error": identity_error,
         "authorization_status": authorization.get("status"),
-        "authorization_schema_valid": authorization_schema_valid,
+        "authorization_schema_valid": schema_valid,
         "independent_review_complete": bool(approved_review),
-        "authorization_hash_bindings_match": bool(hash_bindings_match),
+        "authorization_hash_bindings_match": bool(bindings_match),
         "authorization_sha256": sha256_file(spec.authorization_path),
         "execution_ready": execution_ready,
         "real_data_fit_authorized": False,
@@ -284,13 +365,28 @@ def write_task(
     key: TaskKey,
     realization_metadata: Mapping,
     result: Mapping,
+    expected_branch=None,
 ):
     if component not in ("screening", "recovery"):
         raise ContractError("invalid task component: {}".format(component))
     _require_initialized_namespace(spec, run_manifest)
     path = task_path(spec, component, key)
     _validate_realization_record(spec, run_manifest, key, realization_metadata, path)
-    _validate_result_payload(component, key, result, path)
+    _validate_result_payload(spec, component, key, result, path)
+    if expected_branch is not None:
+        if (
+            result["model_id"] != expected_branch.model_id
+            or result["mask_id"] != expected_branch.mask_id
+            or result["cell_id"] != expected_branch.cell_id
+        ):
+            raise ContractError("task result does not match its branch: {}".format(path))
+        if not math.isclose(
+            float(result["joint_model_weight"]),
+            float(expected_branch.joint_model_weight),
+            rel_tol=0.0,
+            abs_tol=1e-12,
+        ):
+            raise ContractError("task branch weight mismatch: {}".format(path))
     payload = {
         "schema_version": spec.task_schema_version,
         "component": component,
@@ -301,6 +397,7 @@ def write_task(
         "task_key": key.as_dict(),
         "status": "COMPLETED",
         "result": dict(result),
+        "result_sha256": hashlib.sha256(canonical_json_bytes(result)).hexdigest(),
     }
     create_immutable_json(path, payload)
     return payload
@@ -318,6 +415,7 @@ def validate_task(
         "schema_version", "component", "component_identity_sha256",
         "common_identity_sha256", "run_identity_sha256",
         "realization_metadata_sha256", "task_key", "status", "result",
+        "result_sha256",
     }
     if set(record) != expected_fields:
         raise ContractError("task record envelope schema mismatch: {}".format(path))
@@ -339,7 +437,10 @@ def validate_task(
     if record["realization_metadata_sha256"] != metadata.get("sha256"):
         raise ContractError("realization metadata identity mismatch: {}".format(path))
     result = record["result"]
-    _validate_result_payload(component, key, result, path)
+    expected_result_hash = hashlib.sha256(canonical_json_bytes(result)).hexdigest()
+    if record["result_sha256"] != expected_result_hash:
+        raise ContractError("task result hash mismatch: {}".format(path))
+    _validate_result_payload(spec, component, key, result, path)
     return record
 
 

@@ -13,10 +13,7 @@ import numpy as np
 import pandas as pd
 from scipy.special import logsumexp
 
-from .contracts import ContractError
-
-
-GEOMETRY_PARAMETERS = ("rp_rs", "a_rs", "impact_parameter", "t14_hours")
+from .contracts import ContractError, GEOMETRY_PARAMETERS
 
 
 @dataclass(frozen=True)
@@ -24,6 +21,102 @@ class GateResult:
     status: str
     checks: Mapping[str, bool]
     metrics: Mapping
+
+
+BRANCH_MIXTURE_KINDS = ("log_evidence", "weighted_mean", "max")
+DEFAULT_BRANCH_MIXTURE_RULE = {
+    "selection": "log_evidence",
+    "geometry": "weighted_quantile",
+    "null": "max",
+}
+NULL_THRESHOLD_RULES = ("in_sample_max", "order_statistic_loo", "held_out_split")
+
+
+def branch_mixture_rule(protocol: Mapping) -> Mapping:
+    """Resolve the single rule that drives every branch combination.
+
+    Frozen protocols carry ``branch_mixture_rule``; development protocols get
+    the provisional default, explicitly flagged so summaries cannot hide it.
+    """
+    rule = protocol.get("branch_mixture_rule")
+    if rule is None:
+        return {**DEFAULT_BRANCH_MIXTURE_RULE, "status": "PROVISIONAL_DEFAULT"}
+    if not isinstance(rule, Mapping) or set(rule) != {"selection", "geometry", "null"}:
+        raise ContractError("branch_mixture_rule must map selection/geometry/null")
+    allowed = {
+        "selection": {"log_evidence"},
+        "geometry": {"weighted_quantile", "weighted_mean"},
+        "null": set(BRANCH_MIXTURE_KINDS),
+    }
+    for name, kinds in allowed.items():
+        if rule[name] not in kinds:
+            raise ContractError(
+                "branch_mixture_rule.{} must be one of {}".format(name, sorted(kinds))
+            )
+    return {**rule, "status": "FROZEN"}
+
+
+def combine_branches(kind: str, values, weights=None) -> float:
+    """The single scalar branch-combination kernel used by all metrics."""
+    values = np.asarray(values, dtype=np.float64)
+    if values.size == 0 or not np.isfinite(values).all():
+        raise ContractError("branch values are empty or non-finite")
+    if kind == "max":
+        return float(values.max())
+    if weights is None:
+        raise ContractError("branch weights are required for kind {}".format(kind))
+    weights = np.asarray(weights, dtype=np.float64)
+    if (
+        weights.shape != values.shape
+        or (weights <= 0.0).any()
+        or not np.isclose(weights.sum(), 1.0)
+    ):
+        raise ContractError("branch weights are not a normalized positive vector")
+    if kind == "log_evidence":
+        return float(logsumexp(np.log(weights) + values))
+    if kind == "weighted_mean":
+        return float(np.sum(weights * values))
+    raise ContractError("unknown branch mixture kind: {}".format(kind))
+
+
+def _piecewise_cdf(anchors, x) -> float:
+    q025, q16, q84, q975 = (float(point) for point in anchors)
+    if x <= q025:
+        return 0.0
+    if x >= q975:
+        return 1.0
+    for (x0, p0), (x1, p1) in zip(
+        ((q025, 0.025), (q16, 0.16), (q84, 0.84)), ((q16, 0.16), (q84, 0.84), (q975, 0.975))
+    ):
+        if x0 <= x <= x1:
+            if x1 == x0:
+                return p1
+            return p0 + (p1 - p0) * (x - x0) / (x1 - x0)
+    return 1.0
+
+
+def mixture_quantiles(anchor_rows, weights, levels=(0.025, 0.16, 0.84, 0.975)) -> Mapping:
+    """Deterministic branch-mixture posterior quantiles (quantile_mixture_v1).
+
+    Each branch contributes its four anchor quantiles; its CDF is approximated
+    piecewise-linearly between them and clamped outside. The mixture CDF is
+    the weight average; levels are read off by interpolation.
+    """
+    anchors = np.asarray(anchor_rows, dtype=np.float64)
+    weights = np.asarray(weights, dtype=np.float64)
+    if anchors.ndim != 2 or anchors.shape[1] != 4 or not np.isfinite(anchors).all():
+        raise ContractError("branch quantile anchors are malformed")
+    if len(weights) != len(anchors) or (weights <= 0.0).any() or not np.isclose(weights.sum(), 1.0):
+        raise ContractError("branch weights are not a normalized positive vector")
+    grid = np.sort(np.unique(anchors))
+    cdf = np.array([
+        float(np.sum(weights * np.array([_piecewise_cdf(row, x) for row in anchors])))
+        for x in grid
+    ])
+    result = {}
+    for level in levels:
+        result[float(level)] = float(np.interp(float(level), cdf, grid))
+    return result
 
 
 def _require_columns(frame: pd.DataFrame, columns: Sequence[str], name: str):

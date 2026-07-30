@@ -9,10 +9,13 @@ from typing import Mapping, Tuple
 import numpy as np
 import pandas as pd
 
-import run_faz5b_remediation as phase5b
-
+from .compat import ensure_legacy_imports
 from .contracts import BranchSpec, ContractError, RunSpec, SECTORS
 from .jsonio import load_strict_json
+
+ensure_legacy_imports()
+
+import run_faz5b_remediation as phase5b
 
 
 @dataclass(frozen=True)

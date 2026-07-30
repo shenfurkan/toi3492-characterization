@@ -12,6 +12,7 @@ from .jsonio import load_strict_json
 
 SECTORS = (37, 63, 64, 90, 99, 100)
 JOINT_HELD_SECTOR = -1
+GEOMETRY_PARAMETERS = ("rp_rs", "a_rs", "impact_parameter", "t14_hours")
 CANONICAL_TASK_SCHEMA_VERSION = "stage3-task-record/2.0"
 CANONICAL_IMPLEMENTATION_CONTRACT = {
     "runner": "toi3492-stage3/2.0",

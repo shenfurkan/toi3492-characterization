@@ -16,6 +16,7 @@ from .jsonio import canonical_json_bytes, load_strict_json
 
 COMPONENT_PATHS = {
     "common": (
+        "src/toi3492/stage3/compat.py",
         "src/toi3492/stage3/contracts.py",
         "src/toi3492/stage3/errors.py",
         "src/toi3492/stage3/jsonio.py",

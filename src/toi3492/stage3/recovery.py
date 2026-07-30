@@ -6,11 +6,14 @@ from typing import Mapping
 
 import numpy as np
 
-import run_faz5_window_grid as phase5
-import stage3_joint_model as joint
-
+from .compat import ensure_legacy_imports
 from .contracts import BranchSpec, ContractError
 from .inputs import Stage3Inputs
+
+ensure_legacy_imports()
+
+import run_faz5_window_grid as phase5
+import stage3_joint_model as joint
 
 
 def _legacy_branch(branch: BranchSpec):
@@ -25,8 +28,24 @@ def _legacy_branch(branch: BranchSpec):
     }
 
 
+GEOMETRY_BOUNDARY_FRACTION = 0.01
+
+
 def boundary_count(diagnostics) -> int:
     return int(sum(diagnostic.at_boundary for diagnostic in diagnostics))
+
+
+def geometry_boundary_count(architecture: Mapping, recovered: Mapping) -> int:
+    """Count recovered geometry values sitting at the frozen uniform bounds."""
+    bounds = architecture["candidate"]["transit_model"]["geometry_uniform_bounds"]
+    count = 0
+    for name in ("rp_rs", "a_rs", "impact_parameter"):
+        lower, upper = (float(bound) for bound in bounds[name])
+        margin = GEOMETRY_BOUNDARY_FRACTION * (upper - lower)
+        value = float(recovered[name])
+        if value - lower <= margin or upper - value <= margin:
+            count += 1
+    return count
 
 
 def conditional_geometry_recovery(
@@ -111,6 +130,9 @@ def conditional_geometry_recovery(
         ),
         "intervals": h1["intervals"],
         "noise_boundary_count": boundary_count(h1["boundary_diagnostics"]),
+        "geometry_boundary_count": geometry_boundary_count(
+            inputs.architecture, recovered,
+        ),
         "gap_edge_coverage": gap_coverage,
         "optimizer_no_op_count": int(diagnostics["optimizer_no_op_count"]),
         "optimizer_local_mode_count": int(diagnostics["optimizer_local_mode_count"]),

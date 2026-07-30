@@ -7,12 +7,15 @@ from typing import Mapping
 
 import numpy as np
 
+from .compat import ensure_legacy_imports
+from .contracts import BranchSpec, ContractError, SECTORS
+from .inputs import Stage3Inputs
+
+ensure_legacy_imports()
+
 import run_faz5_window_grid as phase5
 import run_faz6_noise_models as phase6
 import stage3_noise_core as noise
-
-from .contracts import BranchSpec, ContractError, SECTORS
-from .inputs import Stage3Inputs
 
 
 @dataclass(frozen=True)

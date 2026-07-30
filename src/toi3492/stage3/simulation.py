@@ -9,8 +9,11 @@ from typing import Mapping, Optional, Tuple
 import numpy as np
 import pandas as pd
 
+from .compat import ensure_legacy_imports
 from .contracts import ContractError, SECTORS
 from .inputs import EventSpec, Stage3Inputs
+
+ensure_legacy_imports()
 
 
 BASELINE_SIGMA = 0.01
