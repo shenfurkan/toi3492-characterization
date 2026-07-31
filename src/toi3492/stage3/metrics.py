@@ -18,8 +18,16 @@ from .contracts import ContractError, GEOMETRY_PARAMETERS
 
 @dataclass(frozen=True)
 class GateResult:
+    """Overall gate outcome.
+
+    ``checks`` maps each gate to ``PASS``, ``FAIL``, or ``NOT_EVALUATED``.
+    The overall status is ``FAIL`` if any gate fails, ``INCOMPLETE`` if any
+    gate cannot be evaluated (missing data or unfrozen tolerance), and
+    ``PASS`` only when every declared gate passes.
+    """
+
     status: str
-    checks: Mapping[str, bool]
+    checks: Mapping[str, str]
     metrics: Mapping
 
 
@@ -276,7 +284,23 @@ def nominal_geometry_metrics(
     return per_realization, summary
 
 
-def derive_null_threshold(recovery: pd.DataFrame, null_class=10):
+def derive_null_threshold(
+    recovery: pd.DataFrame,
+    rule=None,
+    null_class=10,
+    branch_kind: str = "max",
+):
+    """Calibrate the null-transit detection threshold from C11 realizations.
+
+    ``rule`` selects the calibration strategy and is frozen in the protocol:
+
+    - ``in_sample_max``: threshold is the in-sample maximum; false detections
+      are zero by construction. PROVISIONAL development default only.
+    - ``order_statistic_loo``: each realization is tested against the maximum
+      of all *other* realizations, so a false detection is possible.
+    - ``held_out_split``: even realization indices calibrate the threshold,
+      odd indices are evaluated against it (deterministic split).
+    """
     _require_columns(
         recovery,
         ("class_ordinal", "realization_index", "model_id", "delta_map"),
@@ -285,43 +309,177 @@ def derive_null_threshold(recovery: pd.DataFrame, null_class=10):
     selected = recovery.loc[recovery["class_ordinal"] == null_class]
     if selected.empty or not np.isfinite(selected["delta_map"]).all():
         raise ContractError("C11 null distribution is incomplete or non-finite")
-    per_realization = selected.groupby("realization_index", sort=True)["delta_map"].max()
-    threshold = float(per_realization.max())
-    detections = int(np.sum(per_realization.to_numpy(np.float64) > threshold))
+    rows = {}
+    for realization_index, group in selected.groupby("realization_index", sort=True):
+        weights = (
+            group["joint_model_weight"].to_numpy(np.float64)
+            if "joint_model_weight" in group.columns
+            else None
+        )
+        rows[int(realization_index)] = combine_branches(
+            branch_kind, group["delta_map"].to_numpy(np.float64), weights,
+        )
+    per_realization = pd.Series(rows, dtype=np.float64).sort_index()
+    rule = dict(rule or {"type": "in_sample_max", "status": "PROVISIONAL_DEFAULT"})
+    rule_type = rule.get("type")
+    if rule_type == "in_sample_max":
+        threshold = float(per_realization.max())
+        detections = int(np.sum(per_realization.to_numpy(np.float64) > threshold))
+    elif rule_type == "order_statistic_loo":
+        if len(per_realization) < 2:
+            raise ContractError("order_statistic_loo requires at least two null realizations")
+        threshold = float(per_realization.max())
+        detections = int(sum(
+            value > float(per_realization.drop(index=index).max())
+            for index, value in per_realization.items()
+        ))
+    elif rule_type == "held_out_split":
+        calibration = per_realization[per_realization.index % 2 == 0]
+        evaluation = per_realization[per_realization.index % 2 == 1]
+        if calibration.empty or evaluation.empty:
+            raise ContractError("held_out_split requires realizations in both splits")
+        threshold = float(calibration.max())
+        detections = int(np.sum(evaluation.to_numpy(np.float64) > threshold))
+    else:
+        raise ContractError("unknown null threshold rule: {}".format(rule_type))
     return {
         "delta_detect": threshold,
         "detection_rule": "delta_map > delta_detect",
         "null_realization_count": int(len(per_realization)),
         "false_detection_count": detections,
+        "threshold_rule": rule_type,
+        "threshold_rule_status": str(rule.get("status", "FROZEN")),
+        "branch_statistic": branch_kind,
     }
 
 
-def evaluate_frozen_gates(selection, geometry, null, thresholds: Mapping) -> GateResult:
+def evaluate_frozen_gates(
+    selection,
+    geometry,
+    null,
+    thresholds: Mapping,
+    supplementary=None,
+) -> GateResult:
+    """Evaluate every declared gate; unevaluable gates never pass silently."""
+    supplementary = dict(supplementary or {})
     model = thresholds["model_selection"]
     transit = thresholds["transit"]
-    checks = {
-        "false_m1_rate": selection["false_m1_rate_on_white"]
-        <= float(model["false_m1_rate_on_white_max"]),
-        "true_m1_rate": selection["true_m1_rate_on_nominal"]
-        >= float(model["true_m1_rate_on_m1_minimum"]),
-        "null_false_detection": null["false_detection_count"] == 0,
-        "coverage_68": all(
-            geometry["{}_coverage_68".format(parameter)]
-            >= float(transit["coverage_68_minimum"])
+    numerical = thresholds.get("numerical", {})
+    checks = {}
+
+    def _limit_gate(name, value, limit, mode):
+        if limit is None or value is None:
+            checks[name] = "NOT_EVALUATED"
+        elif mode == "max":
+            checks[name] = "PASS" if value <= float(limit) else "FAIL"
+        else:
+            checks[name] = "PASS" if value >= float(limit) else "FAIL"
+
+    _limit_gate(
+        "false_m1_rate",
+        selection.get("false_m1_rate_on_white"),
+        model.get("false_m1_rate_on_white_max"),
+        "max",
+    )
+    _limit_gate(
+        "true_m1_rate",
+        selection.get("true_m1_rate_on_nominal"),
+        model.get("true_m1_rate_on_m1_minimum"),
+        "min",
+    )
+    checks["null_false_detection"] = (
+        "PASS" if null.get("false_detection_count") == 0 else "FAIL"
+    )
+    for level in ("68", "95"):
+        key = "coverage_{}".format(level)
+        limit = transit.get("coverage_{}_minimum".format(level))
+        values = [
+            geometry.get("{}_coverage_{}".format(parameter, level))
             for parameter in GEOMETRY_PARAMETERS
-        ),
-        "coverage_95": all(
-            geometry["{}_coverage_95".format(parameter)]
-            >= float(transit["coverage_95_minimum"])
-            for parameter in GEOMETRY_PARAMETERS
-        ),
-        "transit_attenuation": geometry["transit_depth_attenuation_median"]
-        <= float(transit["transit_depth_attenuation_max"]),
-    }
+        ]
+        if limit is None or any(value is None for value in values):
+            checks[key] = "NOT_EVALUATED"
+        else:
+            checks[key] = (
+                "PASS" if all(value >= float(limit) for value in values) else "FAIL"
+            )
+    attenuation = geometry.get("transit_depth_attenuation_median")
+    _limit_gate(
+        "transit_attenuation",
+        None if attenuation is None else abs(attenuation),
+        transit.get("transit_depth_attenuation_max"),
+        "max",
+    )
+    for parameter in GEOMETRY_PARAMETERS:
+        tolerance = transit.get(parameter, {}).get("bias_tolerance")
+        median = geometry.get("{}_bias_median".format(parameter))
+        _limit_gate(
+            "bias_median_{}".format(parameter),
+            None if median is None else abs(median),
+            tolerance,
+            "max",
+        )
+    _limit_gate(
+        "optimizer_no_op_rate",
+        supplementary.get("optimizer_no_op_rate"),
+        numerical.get("optimizer_no_op_max_rate"),
+        "max",
+    )
+    _limit_gate(
+        "optimizer_local_mode_rate",
+        supplementary.get("optimizer_local_mode_rate"),
+        numerical.get("optimizer_local_mode_max_rate"),
+        "max",
+    )
+    _limit_gate(
+        "boundary_concentration",
+        supplementary.get("boundary_concentration_rate"),
+        numerical.get("boundary_concentration_warning_threshold"),
+        "max",
+    )
+    _limit_gate(
+        "ingress_egress_rms",
+        supplementary.get("ingress_egress_rms_max_mm_s"),
+        transit.get("ingress_egress_rms_excess_max_mm_s"),
+        "max",
+    )
+    # The protocol declares no numeric residual threshold; the statistic is
+    # reported in supplementary metrics but cannot gate yet.
+    checks["residual_max"] = "NOT_EVALUATED"
+    # Telemetry-slope recovery is not part of the fitted model; never fake it.
+    checks["c13_telemetry_recovery"] = "NOT_EVALUATED"
+    c14 = supplementary.get("c14_gap_edge_events_present")
+    checks["c14_gap_edge_events_present"] = (
+        "NOT_EVALUATED" if c14 is None else "PASS" if c14 else "FAIL"
+    )
+    completion = supplementary.get("class_completion")
+    if not completion:
+        checks["class_completeness"] = "NOT_EVALUATED"
+    else:
+        checks["class_completeness"] = (
+            "PASS"
+            if all(
+                record["completed"] == record["requested"]
+                for record in completion.values()
+            )
+            else "FAIL"
+        )
+    statuses = set(checks.values())
+    if "FAIL" in statuses:
+        status = "FAIL"
+    elif "NOT_EVALUATED" in statuses:
+        status = "INCOMPLETE"
+    else:
+        status = "PASS"
     return GateResult(
-        status="PASS" if all(checks.values()) else "FAIL",
+        status=status,
         checks=checks,
-        metrics={"selection": selection, "geometry": geometry, "null": null},
+        metrics={
+            "selection": selection,
+            "geometry": geometry,
+            "null": null,
+            "supplementary": supplementary,
+        },
     )
 
 

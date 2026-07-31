@@ -5,12 +5,15 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
 
 from .contracts import ContractError, RunSpec
 from .identity import component_identity
+from .inputs import load_inputs
 from .jsonio import create_immutable_json, load_strict_json
 from .metrics import (
+    branch_mixture_rule,
     derive_null_threshold,
     evaluate_frozen_gates,
     nominal_geometry_metrics,
@@ -70,6 +73,56 @@ def _immutable_csv(path: Path, frame: pd.DataFrame):
     return True
 
 
+def _supplementary(inputs, protocol, screening, recovery):
+    classes = protocol["simulation_classes"]
+    completion = {}
+    for class_spec in classes:
+        class_ordinal = int(class_spec["class_index"])
+        completed = int(
+            screening.loc[
+                screening["class_ordinal"] == class_ordinal, "realization_index",
+            ].nunique()
+        )
+        completion[str(class_spec["name"])] = {
+            "completed": completed,
+            "requested": int(class_spec["requested_count"]),
+        }
+    c14_ordinals = [
+        int(class_spec["class_index"])
+        for class_spec in classes
+        if str(class_spec["name"]).startswith("C14")
+    ]
+    gap_ids = {event.event_id for event in inputs.gap_edge_events}
+    c14_present = None
+    if c14_ordinals:
+        c14_rows = recovery.loc[recovery["class_ordinal"] == c14_ordinals[0]]
+        c14_present = bool(len(c14_rows)) and all(
+            gap_ids.issubset(set(flags)) for flags in c14_rows["gap_edge_coverage"]
+        )
+    return {
+        "class_completion": completion,
+        "optimizer_no_op_rate": float(np.mean(
+            recovery["optimizer_no_op_count"].to_numpy(np.float64) > 0
+        )),
+        "optimizer_local_mode_rate": float(np.mean(
+            recovery["optimizer_local_mode_count"].to_numpy(np.float64) > 0
+        )),
+        "boundary_concentration_rate": float(np.mean(
+            (
+                recovery["noise_boundary_count"].to_numpy(np.float64)
+                + recovery["geometry_boundary_count"].to_numpy(np.float64)
+            ) > 0
+        )),
+        "c14_gap_edge_events_present": c14_present,
+        "max_abs_standardized_residual": float(
+            recovery["max_abs_standardized_residual"].max()
+        ),
+        "ingress_egress_rms_max_mm_s": float(
+            recovery["ingress_egress_rms_relative_flux"].max()
+        ) * 1e3,
+    }
+
+
 def reduce_completed_run(spec: RunSpec):
     readiness = require_execution_ready(spec)
     screening_status = verify_component(spec, "screening", require_complete=True)
@@ -80,16 +133,27 @@ def reduce_completed_run(spec: RunSpec):
     recovery = _normalize_recovery(_load_task_rows(spec, "recovery")).sort_values(
         ["class_ordinal", "realization_index", "branch_index"]
     )
-    selection_rows = realization_selection_scores(screening)
-    selection_summary = selection_metrics(selection_rows)
-    geometry_rows, geometry_summary = nominal_geometry_metrics(recovery)
-    null_summary = derive_null_threshold(recovery)
+    inputs = load_inputs(spec)
     protocol = spec.load_protocol()
+    mixture_rule = branch_mixture_rule(protocol)
+    null_rule = protocol.get("threshold_derivation_rules", {}).get("null_transit_rule")
+    selection_rows = realization_selection_scores(
+        screening, selection_kind=mixture_rule["selection"],
+    )
+    selection_summary = selection_metrics(selection_rows)
+    geometry_rows, geometry_summary = nominal_geometry_metrics(
+        recovery, geometry_kind=mixture_rule["geometry"],
+    )
+    null_summary = derive_null_threshold(
+        recovery, rule=null_rule, branch_kind=mixture_rule["null"],
+    )
+    supplementary = _supplementary(inputs, protocol, screening, recovery)
     gate = evaluate_frozen_gates(
         selection_summary,
         geometry_summary,
         null_summary,
         protocol["provisional_gate_thresholds"],
+        supplementary=supplementary,
     )
     reducer_identity = component_identity(spec, "reducer")
     summary = {
@@ -102,6 +166,12 @@ def reduce_completed_run(spec: RunSpec):
         "reducer_identity": reducer_identity,
         "screening_status": screening_status,
         "recovery_status": recovery_status,
+        "branch_mixture_rule": dict(mixture_rule),
+        "null_threshold_rule": null_summary["threshold_rule"],
+        "recovery_model_intent": protocol.get(
+            "recovery_model_intent",
+            "conditional_geometry_with_fixed_oot_noise (PROVISIONAL_UNCONFIRMED)",
+        ),
         "gate_status": gate.status,
         "gate_checks": dict(gate.checks),
         "metrics": dict(gate.metrics),
