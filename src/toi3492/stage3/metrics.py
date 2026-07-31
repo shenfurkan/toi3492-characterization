@@ -12,6 +12,7 @@ from typing import Mapping, Sequence, Tuple
 import numpy as np
 import pandas as pd
 from scipy.special import logsumexp
+from scipy.stats import beta
 
 from .contracts import ContractError, GEOMETRY_PARAMETERS
 
@@ -284,6 +285,15 @@ def nominal_geometry_metrics(
     return per_realization, summary
 
 
+def _clopper_pearson_upper(detections: int, evaluations: int) -> float:
+    """One-sided 95% Clopper-Pearson upper bound on the false-positive rate."""
+    if evaluations <= 0:
+        raise ContractError("independent evaluation set is empty")
+    if detections >= evaluations:
+        return 1.0
+    return float(beta.ppf(0.95, detections + 1, evaluations - detections))
+
+
 def derive_null_threshold(
     recovery: pd.DataFrame,
     rule=None,
@@ -300,6 +310,14 @@ def derive_null_threshold(
       of all *other* realizations, so a false detection is possible.
     - ``held_out_split``: even realization indices calibrate the threshold,
       odd indices are evaluated against it (deterministic split).
+
+    Reporting fields (decision-independent, see the null-threshold decision
+    memo): ``evaluation_realization_count`` is the number of realizations on
+    which false detections are counted; ``evaluation_independence`` is True
+    only for ``held_out_split`` (disjoint calibration/evaluation sets);
+    ``false_detection_rate_upper_bound_95`` is the one-sided 95%
+    Clopper-Pearson upper bound on the false-positive rate and is reported
+    only when ``evaluation_independence`` is True.
     """
     _require_columns(
         recovery,
@@ -325,6 +343,8 @@ def derive_null_threshold(
     if rule_type == "in_sample_max":
         threshold = float(per_realization.max())
         detections = int(np.sum(per_realization.to_numpy(np.float64) > threshold))
+        evaluation_count = len(per_realization)
+        independent = False
     elif rule_type == "order_statistic_loo":
         if len(per_realization) < 2:
             raise ContractError("order_statistic_loo requires at least two null realizations")
@@ -333,6 +353,8 @@ def derive_null_threshold(
             value > float(per_realization.drop(index=index).max())
             for index, value in per_realization.items()
         ))
+        evaluation_count = len(per_realization)
+        independent = False
     elif rule_type == "held_out_split":
         calibration = per_realization[per_realization.index % 2 == 0]
         evaluation = per_realization[per_realization.index % 2 == 1]
@@ -340,6 +362,8 @@ def derive_null_threshold(
             raise ContractError("held_out_split requires realizations in both splits")
         threshold = float(calibration.max())
         detections = int(np.sum(evaluation.to_numpy(np.float64) > threshold))
+        evaluation_count = len(evaluation)
+        independent = True
     else:
         raise ContractError("unknown null threshold rule: {}".format(rule_type))
     return {
@@ -347,6 +371,13 @@ def derive_null_threshold(
         "detection_rule": "delta_map > delta_detect",
         "null_realization_count": int(len(per_realization)),
         "false_detection_count": detections,
+        "evaluation_realization_count": int(evaluation_count),
+        "evaluation_independence": independent,
+        "false_detection_rate_upper_bound_95": (
+            _clopper_pearson_upper(detections, evaluation_count)
+            if independent
+            else None
+        ),
         "threshold_rule": rule_type,
         "threshold_rule_status": str(rule.get("status", "FROZEN")),
         "branch_statistic": branch_kind,
@@ -387,8 +418,12 @@ def evaluate_frozen_gates(
         model.get("true_m1_rate_on_m1_minimum"),
         "min",
     )
-    checks["null_false_detection"] = (
-        "PASS" if null.get("false_detection_count") == 0 else "FAIL"
+    # The protocol field is a maximum number of C11 false-detection events.
+    _limit_gate(
+        "null_false_detection",
+        null.get("false_detection_count"),
+        model.get("false_transit_on_null_max"),
+        "max",
     )
     for level in ("68", "95"):
         key = "coverage_{}".format(level)
