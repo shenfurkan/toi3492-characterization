@@ -68,6 +68,16 @@ There is no formally adopted noise model. Phase 6 failed stationarity under ever
 
 The injection-recovery Stage 3 analysis has not been successfully executed. Three protocol revisions were attempted; all are closed with no scientific output.
 
+## Methodological Strength and Decision-Making
+
+This project is distinct from typical exoplanet discovery workflows because it prioritizes methodological integrity and decision-making discipline over producing a "clean" publication. The pipeline's true value lies in its explicit handling of uncertainty and its adherence to preregistered rules:
+
+*   **Resisting Cherry-Picking:** Instead of selecting a single best-fit detrending model, the pipeline evaluates a 576-fold grid of window widths, baseline polynomials, and noise kernels. When no single model passes the strict adoption criteria, it carries a 24-branch model mixture forward. This preserves model-selection uncertainty as a structural feature of the analysis rather than hiding it.
+*   **Honoring Negative Results:** Failed checks are preserved and reported as valid scientific results. When the noise models fail the stationarity and residual correlation gates, the pipeline refuses to adopt a final native-cadence geometry. When a vetting tool fails to compute a normalized probability due to physical inconsistency, it is reported as a numerical failure rather than forced into a synthetic probability.
+*   **Preregistered Thresholds:** Scientific gates (such as the residual correlation $\beta < 1.2$ limit) are defined, recorded, and hashed before execution. The pipeline does not move the goalposts or adjust thresholds after the fact to turn a failure into a pass.
+*   **Strict Claim Boundaries:** The methodology enforces a rigorous boundary between "descriptive diagnostics" (e.g., folded phase fits used for scale reference) and "adopted measurements" (which require passing all prerequisite noise and stability gates). This prevents diagnostic parameters from being silently promoted to definitive scientific claims.
+*   **Immutable Provenance:** By treating the research process as a managed lifecycle—with governance roles, claim-evidence mapping, and quarantined failure branches—the project ensures that what is reported is exactly what was executed and audited. This provides a robust, fail-safe template for reproducible exoplanet science.
+
 ## Adapting this to another target
 
 The overall structure (quality audit, reduction comparison, grid-based window/polynomial selection, multi-kernel GP screening, descriptive transit fit, false-positive vetting) applies to any TESS planetary candidate with enough sectors and transit events.

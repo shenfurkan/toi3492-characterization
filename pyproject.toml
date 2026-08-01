@@ -6,6 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "toi3492-photometric-characterization"
 version = "1.0.1"
 description = "Reproducible TESS photometric characterization of TOI-3492.01"
+license = { file = "LICENSE" }
 requires-python = "==3.9.*"
 dependencies = [
   "numpy==1.26.4",
