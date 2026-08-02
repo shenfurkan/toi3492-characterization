@@ -26,6 +26,7 @@ REQUIRED = [
     "requirements-lock.txt",
     "references.bib",
     "toi3492_characterization.tex",
+    "toi3492_rnaas.pdf",
     "arxiv_submission.zip",
     "arxiv_submission/toi3492_characterization.pdf",
 ]

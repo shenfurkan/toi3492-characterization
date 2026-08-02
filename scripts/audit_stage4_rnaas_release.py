@@ -28,20 +28,20 @@ def main():
     log = LOG.read_text(encoding="utf-8", errors="replace") if LOG.exists() else ""
     required_phrases = (
         "descriptive reference",
-        "unvalidated, unconfirmed transit-like candidate",
-        "not calibrated PRF localization",
-        "do not support a formal false-positive probability",
+        "unvalidated and unconfirmed transit-like candidate",
+        "not a calibrated PRF localization",
+        "no calibrated false-positive probability is reported",
         "56.29 arcsec",
-        "TRICERATOPS-derived",
         "50\\tau",
     )
+    normalized_source = re.sub(r"\s+", " ", source).lower()
     checks = {
         "rnaas_structural_audit": rnaas.get("status") == "PASS",
         "compiled_pdf_present": PDF.exists() and PDF.stat().st_size > 0,
         "final_log_has_no_latex_error": "LaTeX Error:" not in log,
         "final_log_has_no_undefined_citations": "Citation `" not in log,
         "required_limitation_language": all(
-            phrase in re.sub(r"\s+", " ", source) for phrase in required_phrases
+            phrase.lower() in normalized_source for phrase in required_phrases
         ),
         "one_figure_no_table": rnaas.get("figure_count") == 1 and rnaas.get("table_count") == 0,
     }

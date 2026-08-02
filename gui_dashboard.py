@@ -368,7 +368,7 @@ class ScientificExoplanetSuite:
             frame,
             bg="#090d16",
             fg="#a6e3a1",
-            font=("Consolas", 9.5),
+            font=("Consolas", 10),
             wrap="word",
             relief="flat",
             padx=10,

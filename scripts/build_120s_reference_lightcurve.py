@@ -14,9 +14,10 @@ outputs/toi3492_120s_sector_depths.csv
 figures/toi3492_120s_reference_fold.png
     Phase-folded diagnostic plot.
 
-Requires MAST network access.
+Requires MAST network access unless run with --figure-only.
 """
 
+import argparse
 import re
 from pathlib import Path
 
@@ -109,7 +110,65 @@ def bin_fold(time, flux, period, t0, limit_hr=14.0, bin_minutes=10.0):
 # Main
 # ---------------------------------------------------------------------------
 
+def write_reference_figure(frame):
+    """Render the publication figure from the recorded reference light curve."""
+    hours, med, err = bin_fold(
+        frame["time"].to_numpy(float),
+        frame["flux"].to_numpy(float),
+        OFFICIAL_PERIOD,
+        OFFICIAL_T0_BTJD,
+    )
+    valid = np.isfinite(med) & np.isfinite(err)
+    fig, ax = plt.subplots(figsize=(7.0, 2.7))
+    ax.axvspan(
+        -OFFICIAL_DURATION_HR / 2.0,
+        OFFICIAL_DURATION_HR / 2.0,
+        color="tab:red",
+        alpha=0.10,
+        label=r"Catalog $T_{14}$ interval",
+        zorder=0,
+    )
+    ax.errorbar(
+        hours[valid],
+        (med[valid] - 1.0) * 1e6,
+        yerr=err[valid] * 1e6,
+        fmt="o",
+        ms=2.8,
+        color="black",
+        ecolor="0.45",
+        elinewidth=0.8,
+        capsize=0,
+        zorder=2,
+    )
+    ax.axhline(0, color="0.45", linestyle=":", linewidth=1.0, zorder=1)
+    ax.set_xlim(-14, 14)
+    ax.set_xlabel("Hours from catalog mid-transit")
+    ax.set_ylabel("Relative flux (ppm)")
+    ax.legend(frameon=False, loc="lower right", fontsize=8)
+    ax.grid(alpha=0.20)
+    fig.tight_layout(pad=0.4)
+    fig.savefig(
+        ROOT / "figures" / "toi3492_120s_reference_fold.png",
+        dpi=300,
+        bbox_inches="tight",
+    )
+    plt.close(fig)
+    print("Wrote toi3492_120s_reference_fold.png")
+
+
 def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--figure-only",
+        action="store_true",
+        help="Regenerate only the publication figure from the recorded reference CSV.",
+    )
+    args = parser.parse_args()
+    if args.figure_only:
+        reference = pd.read_csv(ROOT / "data" / "toi3492_120s_reference.csv")
+        write_reference_figure(reference)
+        return
+
     # ---- Download SPOC products --------------------------------------------
     search = lk.search_lightcurve(TARGET, author="SPOC")
     rows = []
@@ -198,42 +257,7 @@ def main():
     )
 
     # ---- Plot ---------------------------------------------------------------
-    hours, med, err = bin_fold(
-        df["time"].to_numpy(float),
-        df["flux"].to_numpy(float),
-        OFFICIAL_PERIOD,
-        OFFICIAL_T0_BTJD,
-    )
-    fig, ax = plt.subplots(figsize=(10, 5))
-    ax.errorbar(
-        hours,
-        (med - 1.0) * 1e6,
-        yerr=err * 1e6,
-        fmt="o",
-        ms=3,
-        color="black",
-        ecolor="gray",
-    )
-    ax.axhline(0, color="tab:gray", linestyle=":")
-    ax.axvline(
-        -OFFICIAL_DURATION_HR / 2.0,
-        color="tab:red",
-        linestyle="--",
-        label="Official T14 window",
-    )
-    ax.axvline(OFFICIAL_DURATION_HR / 2.0, color="tab:red", linestyle="--")
-    ax.set_xlabel("Hours from official mid-transit")
-    ax.set_ylabel("Median normalized flux - 1 (ppm)")
-    ax.set_title(
-        f"TOI-3492.01 120s SPOC Reference Fold\n"
-        f"P={OFFICIAL_PERIOD:.7f} d, depth={d_all:.0f}+/-{de_all:.0f} ppm"
-    )
-    ax.legend()
-    ax.grid(alpha=0.25)
-    plt.tight_layout()
-    fig.savefig(ROOT / "figures" / "toi3492_120s_reference_fold.png", dpi=180)
-    plt.close(fig)
-    print("Wrote toi3492_120s_reference_fold.png")
+    write_reference_figure(df)
     print("Wrote toi3492_120s_sector_depths.csv")
 
 
