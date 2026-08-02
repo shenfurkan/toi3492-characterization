@@ -1,4 +1,4 @@
-"""Modular calculation verification package for the frozen project state."""
+"""Modular calculation verification package for the recorded project state."""
 
 from .runner import run_all_verifications
 

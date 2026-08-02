@@ -1,4 +1,4 @@
-"""Verification checks for stage4 selector, phase5, and phase6 pipeline stages."""
+"""Verification checks for the Phase-5 and Phase-6 pipeline stages."""
 
 from __future__ import annotations
 
@@ -12,84 +12,12 @@ from ..core import (
     SECTORS,
     Verification,
     _as_bool,
-    _clopper_pearson,
     _close,
     _duration_hours,
     _load,
     _sign_flip_pvalue,
     _weighted_quantile,
 )
-from ..snapshot import _sha256
-
-
-def verify_stage4_selector(audit: Verification) -> None:
-    protocol = _load("data/stage4_fast_calibration_protocol.json")
-    summary = _load("outputs/stage4_fast_calibration/stage4_fast_calibration_summary.json")
-    gate = _load("outputs/stage4_fast_calibration_gate.json")
-    records = []
-    for path in sorted((ROOT / "outputs" / "stage4_fast_calibration" / "records").glob("C*_r*.json")):
-        records.append(json_loads(path))
-    expected_protocol_hash = _sha256(ROOT / "data/stage4_fast_calibration_protocol.json")
-    audit.check("stage4_selector", "frozen_protocol_and_record_set", bool(
-        len(records) == 60
-        and all(record.get("protocol_sha256") == expected_protocol_hash for record in records)
-        and {(record["class_index"], record["realization_index"]) for record in records}
-        == {(class_index, realization) for class_index in (0, 1) for realization in range(30)}
-    ), f"records={len(records)}")
-    rule = protocol["screening"]["selection_rule"]
-    class_results = {}
-    records_ok = True
-    for class_index, class_name in ((0, "C01_white_jitter_transit"), (1, "C02_m1_160_transit")):
-        selected = [record for record in records if record["class_index"] == class_index]
-        eligible_count, selected_count = 0, 0
-        for record in selected:
-            folds = record["folds"]
-            eligible = len(folds) == 6 and all(fold["eligible"] for fold in folds)
-            decision = record["selection"]
-            if not eligible:
-                records_ok &= decision["status"] == "INELIGIBLE" and not decision["m1_selected"]
-                continue
-            eligible_count += 1
-            deltas = np.asarray([fold["delta_elpd"] for fold in folds], dtype=float)
-            total = float(np.sum(deltas))
-            standard_error = float(math.sqrt(len(deltas) * np.var(deltas, ddof=1)))
-            pvalue = _sign_flip_pvalue(deltas)
-            expected_selected = bool(total > max(float(rule["minimum_total_delta_elpd"]), 2.0 * standard_error)
-                                     and pvalue <= 0.05)
-            selected_count += expected_selected
-            records_ok &= (
-                decision["status"] == "ELIGIBLE"
-                and decision["m1_selected"] == expected_selected
-                and _close(decision["delta_elpd"], total)
-                and _close(decision["standard_error"], standard_error)
-                and _close(decision["sign_flip_p_value"], pvalue)
-            )
-        lower, upper = _clopper_pearson(selected_count, eligible_count)
-        class_results[class_name] = {
-            "eligible": eligible_count, "selected": selected_count,
-            "rate": selected_count / eligible_count, "lower": lower, "upper": upper,
-        }
-    audit.check("stage4_selector", "all_fold_decisions_recomputed", records_ok,
-                f"C01={class_results['C01_white_jitter_transit']}; C02={class_results['C02_m1_160_transit']}")
-    summaries_match = True
-    for name, values in class_results.items():
-        for stored in (summary["classes"][name], gate["class_results"][name]):
-            summaries_match &= (
-                stored["eligible_records"] == values["eligible"]
-                and stored["m1_selected_records"] == values["selected"]
-                and _close(stored["m1_selection_rate"], values["rate"])
-                and _close(stored["one_sided_95_clopper_pearson"]["lower"], values["lower"])
-                and _close(stored["one_sided_95_clopper_pearson"]["upper"], values["upper"])
-            )
-    audit.check("stage4_selector", "aggregate_and_expected_closure", bool(
-        summaries_match and gate["status"] == "FAIL_CLAIM_REMOVED"
-        and gate["checks"]["all_60_records_complete"]
-    ), gate["status"])
-
-
-def json_loads(path):
-    import json
-    return json.loads(path.read_text(encoding="utf-8"))
 
 
 def _phase5_retained(blocks):

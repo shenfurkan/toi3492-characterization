@@ -1,7 +1,7 @@
 """Overnight comprehensive verification of ALL project results.
 
 This script is intentionally independent of the existing analysis scripts.
-It recomputes key quantities from frozen inputs and compares them with
+It recomputes key quantities from recorded inputs and compares them with
 stored artifact values.  Any discrepancy is a FAIL.
 
 Run:  python scripts/audit_overnight_verification.py
@@ -23,6 +23,17 @@ import pandas as pd
 
 ROOT = Path(__file__).resolve().parent.parent
 OUTPUT = ROOT / "outputs" / "overnight_verification_report.json"
+RELEASE_BINDINGS = (
+    "toi3492_characterization.tex",
+    "toi3492_characterization.pdf",
+    "toi3492_rnaas.tex",
+    "outputs/manuscript_math_audit.json",
+    "outputs/release_status.json",
+    "outputs/stage4_rnaas_audit.json",
+    "outputs/stage4_rnaas_release_audit.json",
+    "outputs/faz6_gate_audit.json",
+    "outputs/faz6r_result.json",
+)
 
 
 # ── helpers ──────────────────────────────────────────────────────────────────
@@ -319,34 +330,12 @@ def _verify_stage5(checks):
             ), "")
 
 
-# ── Stage 4 K3 selector ──────────────────────────────────────────────────────
-
-
-def _verify_stage4(checks):
-    s4 = _load_json("outputs/stage4_fast_calibration_gate.json")
-    _record(checks, "stage4_selector", "all_records",
-            s4["checks"]["all_60_records_complete"] is True, "")
-    _record(checks, "stage4_selector", "k3_claim_removed",
-            s4["status"] == "FAIL_CLAIM_REMOVED", s4["status"])
-    c01 = s4["class_results"]["C01_white_jitter_transit"]
-    _record(checks, "stage4_selector", "c01_completed",
-            c01["completed_records"] == 30, f"{c01['completed_records']}")
-    c02 = s4["class_results"]["C02_m1_160_transit"]
-    _record(checks, "stage4_selector", "c02_completed",
-            c02["completed_records"] == 30, f"{c02['completed_records']}")
-    _record(checks, "stage4_selector", "c02_low_selection",
-            c02["m1_selection_rate"] is not None
-            and float(c02["m1_selection_rate"]) < 0.70,
-            f"rate={c02.get('m1_selection_rate')}")
-
-
 # ── RNAAS structural checks ──────────────────────────────────────────────────
 
 
 def _verify_rnaas(checks):
     """Current RNAAS candidate-note source and local submission artifacts."""
-    source = (ROOT / "outputs" / "stage4_rnaas_submission"
-              / "toi3492_rnaas.tex").read_text(encoding="utf-8")
+    source = (ROOT / "toi3492_rnaas.tex").read_text(encoding="utf-8")
     pdf = ROOT / "toi3492_rnaas.pdf"
     zip_path = ROOT / "outputs" / "toi3492_rnaas_submission.zip"
 
@@ -365,7 +354,7 @@ def _verify_rnaas(checks):
             "local PDF and submission bundle")
     release = _load_json("outputs/release_status.json")
     _record(checks, "rnaas", "conditional_submission_status",
-            release["stage4_candidate_publication"]["publication_status"]
+            release["publications"]["rnaas"]["status"]
             == "SUBMISSION_READY_PENDING_INDEPENDENT_REVIEW", "")
 
     # Word count
@@ -394,26 +383,18 @@ def _verify_rnaas(checks):
 
 
 def _verify_file_integrity(checks):
-    manifest = _load_json("data/stage3_input_manifest.json")
-    for group_name, entries in manifest.get("input_groups", {}).items():
-        if not isinstance(entries, list):
-            continue
-        for entry in entries:
-            if not isinstance(entry, dict):
-                continue
-            rel = entry.get("relative_path") or entry.get("path", "")
-            stored_hash = entry.get("sha256", "")
-            if not rel or not stored_hash:
-                continue
-            path = ROOT / rel
-            if path.exists():
-                actual = _sha256(path)
-                ok = actual == stored_hash
-                _record(checks, "file_hash", rel[:60],
-                        ok, f"hash={actual[:16]}..." if not ok else "")
-            else:
-                _record(checks, "file_hash", rel[:60],
-                        False, "FILE MISSING")
+    manifest = _load_json("provenance/SHA256SUMS.json")
+    for relative in RELEASE_BINDINGS:
+        path = ROOT / relative
+        expected = manifest.get(relative)
+        actual = _sha256(path) if path.is_file() else None
+        _record(
+            checks,
+            "file_hash",
+            relative,
+            expected is not None and actual == expected,
+            "hash={}".format(actual[:16] + "..." if actual else "missing"),
+        )
 
 
 # ── Phase 6R frozen result ──────────────────────────────────────────────────
@@ -486,38 +467,22 @@ def _verify_stellar(checks):
 
 def _verify_release_status(checks):
     release = _load_json("outputs/release_status.json")
-    _record(checks, "release", "candidate_paper_deprecated",
+    _record(checks, "release", "local_packages_ready",
+            release["gates"]["local_release_package_ready"] is True, "")
+    _record(checks, "release", "candidate_review_pending",
             release["gates"]["candidate_paper_ready"] is False, "")
-    _record(checks, "release", "methodology_paper_not_ready",
-            release["gates"]["methodology_paper_ready"] is False, "")
     _record(checks, "release", "not_published",
             release["gates"]["archive_ready"] is False, "")
     _record(checks, "release", "not_zenodo",
             release["gates"]["zenodo_deposit_verified"] is False, "")
     _record(checks, "release", "not_confirmed",
             release["gates"]["planet_confirmation_ready"] is False, "")
-    _record(checks, "release", "stage3_real_data_closed",
-            release["stage3_scope_amendment"].get("real_data_fit_authorized") is False,
+    _record(checks, "release", "stage3_pipeline_retired",
+            release["retired_components"]["stage3_experimental_pipeline"]["status"]
+            == "RETIRED_NO_EXECUTION", "")
+    _record(checks, "release", "rnaas_review_pending",
+            release["publications"]["rnaas"]["independent_review_complete"] is False,
             "")
-    registry = _load_json("protocols/stage3/index.json")
-    _record(checks, "release", "stage3_execution_closed",
-            registry["active_execution_revision"] is None
-            and registry["next_revision"] == 4
-            and release["stage3_scope_amendment"]["status"]
-            == "BLOCKED_REFACTOR_FREEZE_REQUIRED", "")
-    _record(checks, "release", "stage3_revisions_non_scientific",
-            all(record["scientific_use"] == "NONE"
-                for record in registry["revisions"].values()), "")
-    _record(checks, "release", "stage3_interrupted_quarantined",
-            release["stage3_scope_amendment"]["s3_04b_status"]
-            == "INTERRUPTED_INVALID_QUARANTINED", "")
-    _record(checks, "release", "stage4_candidate_reactivated",
-            release["stage4_candidate_publication"]["status"]
-            == "REACTIVATED_CONDITIONAL_SELF_REVIEW", "")
-    manifest = (ROOT / "outputs" / "quarantine"
-                / "stage3_s3-04b_20260725T222451Z_invalid" / "manifest.json")
-    _record(checks, "release", "quarantine_manifest_present",
-            manifest.is_file(), "")
 
 
 # ── main ─────────────────────────────────────────────────────────────────────
@@ -549,19 +514,13 @@ def _verify_key_artifacts_exist(checks):
         "outputs/tess_source_localization_120s.json",
         "outputs/source_specific_aperture_check.json",
         "outputs/release_status.json",
-        "outputs/stage3_phase6_postmortem.json",
-        "outputs/stage3_numerical_validation.json",
-        "outputs/stage4_fast_calibration_gate.json",
-        "outputs/stage4_rnaas_submission/toi3492_rnaas.tex",
-        "outputs/quarantine/stage3_s3-04b_20260725T222451Z_invalid/manifest.json",
-        "data/methodology_publication_charter.json",
         "outputs/stage5_pixel_source_analysis.json",
         "outputs/stage6_free_ld_transit.json",
         "data/config_corrected_120s.json",
-        "data/stage4_claim_charter.json",
-        "data/stage4_fast_calibration_protocol.json",
-        "data/stage3_model_architecture_decision.json",
-        "data/stage3_synthetic_calibration_protocol.json",
+        "outputs/stage4_rnaas_audit.json",
+        "outputs/stage4_rnaas_release_audit.json",
+        "outputs/toi3492_rnaas_submission.zip",
+        "arxiv_submission.zip",
         "data/toi3492_120s_reference.csv",
     ]
     for path in artifacts:
@@ -653,27 +612,23 @@ def main():
     groups_ran.append("stage5")
     _verify_stage5(checks)
 
-    # 11. Stage 4 K3
-    groups_ran.append("stage4_selector")
-    _verify_stage4(checks)
-
-    # 12. RNAAS
+    # 11. RNAAS
     groups_ran.append("rnaas")
     _verify_rnaas(checks)
 
-    # 13. Phase 6R
+    # 12. Phase 6R
     groups_ran.append("phase6r")
     _verify_phase6r(checks)
 
-    # 14. Stellar
+    # 13. Stellar
     groups_ran.append("stellar")
     _verify_stellar(checks)
 
-    # 15. Release
+    # 14. Release
     groups_ran.append("release")
     _verify_release_status(checks)
 
-    # 16. Independent recalculations
+    # 15. Independent recalculations
     groups_ran.append("recalc")
     _verify_recalculation_checks(checks)
 
@@ -704,7 +659,7 @@ def main():
         },
         "checks": checks,
         "interpretation": (
-            "ALL checks passed. Every frozen artifact, recomputation, and "
+            "ALL checks passed. Every recorded artifact, recomputation, and "
             "structural constraint is internally consistent."
             if status == "PASS"
             else f"{n_fail} check(s) FAILED. Review the 'checks' list for details."

@@ -13,9 +13,9 @@ def verify_expected_closures(audit: Verification) -> None:
         and release["gates"]["final_native_cadence_geometry_ready"] is False
         and release["gates"]["statistical_validation_ready"] is False
         and release["gates"]["planet_confirmation_ready"] is False
-        and release["stage3_scope_amendment"]["real_data_fit_authorized"] is False
         and release["phase_6r_numerical_remediation"]["status"] == "FAIL_RESIDUAL_CORRELATION"
-        and release["stage4_candidate_publication"]["limited_selector_status"] == "FAIL_CLAIM_REMOVED"
+        and release["retired_components"]["stage3_experimental_pipeline"]["status"]
+        == "RETIRED_NO_EXECUTION"
     ), release["strongest_supported_gate"])
     audit.check("release_gates", "formal_fpp_remains_unavailable", bool(
         validation["formal_fpp"] is None

@@ -26,6 +26,8 @@ REQUIRED = [
     "requirements-lock.txt",
     "references.bib",
     "toi3492_characterization.tex",
+    "arxiv_submission.zip",
+    "arxiv_submission/toi3492_characterization.pdf",
 ]
 if (ROOT / "toi3492_characterization.pdf").is_file():
     REQUIRED.append("toi3492_characterization.pdf")
@@ -133,8 +135,7 @@ REQUIRED.extend([
     "figures/toi3492_dilution_robustness.png",
 ])
 
-# The release claims full reproducibility, so freeze every Python pipeline and
-# its executable tests rather than only the generated scientific artifacts.
+# Include every Python pipeline and executable test, not only generated artifacts.
 REQUIRED.extend(
     sorted(
         str(path.relative_to(ROOT)).replace("\\", "/")

@@ -66,7 +66,7 @@ There is no validation. TRICERATOPS returned a numerically inconclusive FPP. The
 
 There is no formally adopted noise model. Phase 6 failed stationarity under every complex kernel, and Phase 6R failed the residual correlation threshold.
 
-The injection-recovery Stage 3 analysis has not been successfully executed. Three protocol revisions were attempted; all are closed with no scientific output.
+No experimental injection-recovery calibration is part of the active pipeline. A retired exploratory path supplies no scientific result and is not used by the candidate publications.
 
 ## Methodological Strength and Decision-Making
 
@@ -98,7 +98,7 @@ The Phase-5 window grid (13, 16, 20, 26, 32 hours) brackets the transit duration
 
 For multi-planet systems, the pipeline handles one transit signal at a time. Running it on a system with multiple candidates requires either independent instances per candidate or extending the joint-fit code to handle multiple periods.
 
-The Stage 3 injection-recovery framework is a research prototype. Three protocol revisions for TOI-3492.01 are closed with no scientific use. For a new target, a fresh protocol must be written, independently reviewed before execution, and the synthetic calibration run before any real-data model.
+This repository does not contain an active injection-recovery framework. Any future method-development project should begin separately rather than extending the retired exploratory path.
 
 ## Software
 

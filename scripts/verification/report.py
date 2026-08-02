@@ -64,16 +64,16 @@ def write_verification_report(
         "scope": "Calculation-only verification; manuscript, PDF, and writing-quality audit excluded.",
         "status": status,
         "verification_interpretation": (
-            "Frozen calculation artifacts are internally consistent with independently recomputed quantities. "
+            "Recorded calculation artifacts are internally consistent with independently recomputed quantities. "
             "Expected scientific gates remain closed."
             if status == "PASS" else
-            "At least one calculation, test, or frozen-artifact consistency check failed."
+            "At least one calculation, test, or recorded-artifact consistency check failed."
         ),
         "publication_ready": False,
         "expected_closed_gates": [
             "native-cadence geometry adoption", "calibrated PRF localization",
             "formal population false-positive probability", "statistical validation",
-            "planet confirmation", "Stage-3 K3 real-data adoption",
+            "planet confirmation",
         ],
         "elapsed_seconds": round(time.monotonic() - started, 1),
         "environment": {

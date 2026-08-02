@@ -150,27 +150,6 @@ def test_window_comparison_is_converged_and_nonadopted():
 def test_manuscript_math_audit_is_current_and_passes():
     stored = load_json("outputs/manuscript_math_audit.json")
     assert stored["status"] == "PASS"
-    release = load_json("outputs/release_status.json")
-    if release["strongest_supported_gate"] == "rnaas_candidate_paper_source_ready":
-        rnaas = load_json("outputs/stage4_rnaas_release_audit.json")
-        assert release["gates"]["candidate_paper_ready"] is True
-        assert rnaas["status"] == "PASS"
-        rnaas_tex = ROOT / "toi3492_rnaas.tex"
-        if rnaas_tex.exists():
-            assert rnaas["source_sha256"] == hashlib.sha256(rnaas_tex.read_bytes()).hexdigest()
-        return
-    if release["strongest_supported_gate"] in {
-        "working_draft_under_scientific_remediation",
-        "methodology_pipeline_under_protocol_remediation",
-        "stage3_blocked_refactor_freeze_required",
-    }:
-        assert release["gates"]["candidate_paper_ready"] is False
-        if release["strongest_supported_gate"] in {
-            "methodology_pipeline_under_protocol_remediation",
-            "stage3_blocked_refactor_freeze_required",
-        }:
-            assert release["gates"]["methodology_paper_ready"] is False
-        return
     char_tex = ROOT / "toi3492_characterization.tex"
     if char_tex.exists():
         calculated = build_audit()
@@ -182,8 +161,8 @@ def test_manuscript_math_audit_is_current_and_passes():
         for item in stored["inventory"]["math_expressions"]
         if item["kind"] == "display"
     ]
-    assert len(display) == 3
-    assert any("rho_\\star =" in item["expression"] for item in display)
+    assert len(display) == 1
+    assert "T_{\\rm eq}" in display[0]["expression"]
     assert all(
         item["status"] == "PASS" for item in stored["automated_recalculations"]
     )
@@ -218,16 +197,8 @@ def test_new_robustness_outputs_are_not_overclaimed():
     assert phase["secondary_phase_scan_performed"] is False
     assert dilution["adopted_dilution_treatment"]["additional_correction_applied"] is False
     assert source["nearest_mimic_candidate_summary"]["inside_pipeline_aperture_sector_count"] == 0
-    assert release["strongest_supported_gate"] in [
-        "descriptive_candidate_preprint",
-        "working_draft_under_scientific_remediation",
-        "rnaas_candidate_paper_source_ready",
-        "methodology_pipeline_under_protocol_remediation",
-        "stage3_blocked_refactor_freeze_required",
-    ]
-    if release["strongest_supported_gate"] == "rnaas_candidate_paper_source_ready":
-        assert release["gates"]["candidate_paper_ready"] is True
-        assert load_json("outputs/stage4_rnaas_release_audit.json")["status"] == "PASS"
+    assert release["strongest_supported_gate"] == "descriptive_candidate_preprint"
+    assert load_json("outputs/stage4_rnaas_release_audit.json")["status"] == "PASS"
     assert release["gates"]["archive_ready"] is False
     assert isinstance(release["gates"]["local_release_package_ready"], bool)
     assert release["gates"]["zenodo_deposit_verified"] is False
@@ -252,6 +223,8 @@ def test_release_hash_manifest():
     assert "outputs/transit_window_comparison.json" in manifest
     assert "outputs/manuscript_math_audit.json" in manifest
     assert "outputs/sector_depth_statistics.json" in manifest
+    assert "arxiv_submission.zip" in manifest
+    assert "arxiv_submission/toi3492_characterization.pdf" in manifest
     assert "data/faz5b_preregistered_handoff.json" in manifest
     assert "data/toi3492_faz5b_handoff_draws.npz" in manifest
     assert "outputs/faz5b_remediation.json" in manifest

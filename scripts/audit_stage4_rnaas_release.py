@@ -1,4 +1,4 @@
-"""Verify the frozen Stage-4 RNAAS source and its scientific claim boundary."""
+"""Verify the current Stage-4 RNAAS source and its scientific claim boundary."""
 
 import json
 import re
@@ -10,9 +10,7 @@ ROOT = Path(__file__).resolve().parent.parent
 SOURCE = ROOT / "toi3492_rnaas.tex"
 PDF = ROOT / "toi3492_rnaas.pdf"
 LOG = ROOT / "toi3492_rnaas.log"
-CLAIMS = ROOT / "data" / "stage4_claim_charter.json"
 RNAAS_AUDIT = ROOT / "outputs" / "stage4_rnaas_audit.json"
-PILOT_AUDIT = ROOT / "outputs" / "stage4_fast_calibration_gate.json"
 OUTPUT = ROOT / "outputs" / "stage4_rnaas_release_audit.json"
 
 
@@ -27,8 +25,6 @@ def _sha256(path):
 def main():
     source = SOURCE.read_text(encoding="utf-8")
     rnaas = _load(RNAAS_AUDIT)
-    pilot = _load(PILOT_AUDIT)
-    charter = _load(CLAIMS)
     log = LOG.read_text(encoding="utf-8", errors="replace") if LOG.exists() else ""
     required_phrases = (
         "descriptive reference",
@@ -44,8 +40,6 @@ def main():
         "compiled_pdf_present": PDF.exists() and PDF.stat().st_size > 0,
         "final_log_has_no_latex_error": "LaTeX Error:" not in log,
         "final_log_has_no_undefined_citations": "Citation `" not in log,
-        "claim_charter_frozen": charter.get("status") == "FROZEN",
-        "k3_claim_removed": pilot.get("status") == "FAIL_CLAIM_REMOVED",
         "required_limitation_language": all(
             phrase in re.sub(r"\s+", " ", source) for phrase in required_phrases
         ),
@@ -60,7 +54,7 @@ def main():
         "source_sha256": _sha256(SOURCE),
         "pdf": PDF.name,
         "pdf_sha256": _sha256(PDF),
-        "scientific_scope": "Candidate assessment only; Stage-3 K3 adoption remains closed.",
+        "scientific_scope": "Candidate assessment only; no experimental noise-model result is adopted.",
         "submission_readiness": (
             "RNAAS source, bibliography, single figure, and compiled PDF are ready "
             "for portal submission. Portal metadata entry and author submission remain manual steps."

@@ -77,13 +77,7 @@ def main():
     assert phase["secondary_phase_scan_performed"] is False
     assert sed["status"] == "approximate_sed_radius_crosscheck_not_isochrone_posterior"
     assert not dilution["adopted_dilution_treatment"]["additional_correction_applied"]
-    assert release_status["strongest_supported_gate"] in [
-        "descriptive_candidate_preprint",
-        "working_draft_under_scientific_remediation",
-        "rnaas_candidate_paper_source_ready",
-        "methodology_pipeline_under_protocol_remediation",
-        "stage3_blocked_refactor_freeze_required",
-    ]
+    assert release_status["strongest_supported_gate"] == "descriptive_candidate_preprint"
     assert not release_status["gates"]["statistical_validation_ready"]
     assert not release_status["gates"]["planet_confirmation_ready"]
     assert window["status"] == "window_definition_sensitivity_not_adopted"

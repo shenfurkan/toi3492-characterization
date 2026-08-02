@@ -15,12 +15,6 @@ POLICY_PATH = ROOT / "data" / "release_manifest_policy.json"
 RELEASE_TEST_ARGS = [
     "-m",
     "not integration",
-    # These tests require historical or quarantined inputs deliberately kept
-    # outside the candidate-paper release archive.
-    "--ignore=tests/test_stage3_input_manifest.py",
-    "--ignore=tests/test_stage3_interrupted_run_quarantine.py",
-    "-k",
-    "not test_s3_02_runner_verifies_and_refuses_to_clobber and not test_v2_builders_verify_and_refuse_to_clobber",
 ]
 
 

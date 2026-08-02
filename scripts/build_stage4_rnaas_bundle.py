@@ -1,4 +1,4 @@
-"""Build a minimal RNAAS portal-submission source bundle after Stage-4 freeze."""
+"""Build a minimal RNAAS portal-submission source bundle from the canonical source."""
 
 import argparse
 import hashlib
@@ -63,7 +63,7 @@ def main():
                 "MANIFEST.json", "references.bib", "toi3492_rnaas.tex",
                 "figures/toi3492_120s_reference_fold.png",
         ]):
-            raise RuntimeError("RNAAS bundle contents differ from the frozen source list")
+            raise RuntimeError("RNAAS bundle contents differ from the canonical source list")
         if archive.testzip() is not None:
             raise RuntimeError("RNAAS bundle CRC verification failed")
     print("Wrote {}".format(ZIP_PATH))
