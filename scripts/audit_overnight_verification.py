@@ -344,7 +344,7 @@ def _verify_stage4(checks):
 
 
 def _verify_rnaas(checks):
-    """Historical RNAAS source; deprecated as the primary publication object."""
+    """Current RNAAS candidate-note source and local submission artifacts."""
     source = (ROOT / "outputs" / "stage4_rnaas_submission"
               / "toi3492_rnaas.tex").read_text(encoding="utf-8")
     pdf = ROOT / "toi3492_rnaas.pdf"
@@ -360,13 +360,13 @@ def _verify_rnaas(checks):
             "\\begin{table" not in source, "")
     _record(checks, "rnaas", "email_present",
             "\\email{" in source, "")
-    _record(checks, "rnaas", "deprecated_not_built",
-            not pdf.exists() and not zip_path.exists(),
-            "primary target superseded by methodology paper")
+    _record(checks, "rnaas", "submission_artifacts_present",
+            pdf.exists() and zip_path.exists(),
+            "local PDF and submission bundle")
     release = _load_json("outputs/release_status.json")
-    _record(checks, "rnaas", "deprecated_status",
+    _record(checks, "rnaas", "conditional_submission_status",
             release["stage4_candidate_publication"]["publication_status"]
-            == "DEPRECATED_NOT_SUBMITTED", "")
+            == "SUBMISSION_READY_PENDING_INDEPENDENT_REVIEW", "")
 
     # Word count
     text = re.sub(r"%.*", "", source)
@@ -511,9 +511,9 @@ def _verify_release_status(checks):
     _record(checks, "release", "stage3_interrupted_quarantined",
             release["stage3_scope_amendment"]["s3_04b_status"]
             == "INTERRUPTED_INVALID_QUARANTINED", "")
-    _record(checks, "release", "stage4_historical_superseded",
+    _record(checks, "release", "stage4_candidate_reactivated",
             release["stage4_candidate_publication"]["status"]
-            == "HISTORICAL_SUPERSEDED_AS_PRIMARY_PUBLICATION", "")
+            == "REACTIVATED_CONDITIONAL_SELF_REVIEW", "")
     manifest = (ROOT / "outputs" / "quarantine"
                 / "stage3_s3-04b_20260725T222451Z_invalid" / "manifest.json")
     _record(checks, "release", "quarantine_manifest_present",

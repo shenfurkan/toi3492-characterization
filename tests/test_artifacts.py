@@ -1,5 +1,6 @@
 import json
 import hashlib
+import zipfile
 from pathlib import Path
 
 import numpy as np
@@ -186,6 +187,19 @@ def test_manuscript_math_audit_is_current_and_passes():
     assert all(
         item["status"] == "PASS" for item in stored["automated_recalculations"]
     )
+
+
+def test_arxiv_source_package_binds_canonical_source_bytes():
+    source = (ROOT / "toi3492_characterization.tex").read_bytes()
+    with zipfile.ZipFile(ROOT / "arxiv_submission.zip") as package:
+        assert package.testzip() is None
+        assert package.read("toi3492_characterization.tex") == source
+
+
+def test_characterization_pdf_matches_staged_arxiv_build():
+    assert (ROOT / "toi3492_characterization.pdf").read_bytes() == (
+        ROOT / "arxiv_submission" / "toi3492_characterization.pdf"
+    ).read_bytes()
 
 
 

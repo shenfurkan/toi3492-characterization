@@ -9,15 +9,17 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 DESTINATION = ROOT / "arxiv_submission"
+ROOT_PDF = ROOT / "toi3492_characterization.pdf"
 
 
 def main():
     source = ROOT / "toi3492_characterization.tex"
-    text = source.read_text()
+    source_bytes = source.read_bytes()
+    text = source_bytes.decode()
     if DESTINATION.exists():
         shutil.rmtree(DESTINATION)
     DESTINATION.mkdir(exist_ok=True)
-    (DESTINATION / source.name).write_text(text)
+    (DESTINATION / source.name).write_bytes(source_bytes)
     if re.search(r"(?:[A-Za-z]:\\|/Users/|/home/)", text):
         raise RuntimeError("Canonical manuscript contains a local absolute path")
     shutil.copy2(ROOT / "references.bib", DESTINATION / "references.bib")
@@ -56,6 +58,7 @@ def main():
             )
     if re.search(r"undefined citations|undefined references", final_output, re.I):
         raise RuntimeError("Staged arXiv build contains undefined references")
+    shutil.copy2(DESTINATION / f"{source.stem}.pdf", ROOT_PDF)
 
     archive = ROOT / "arxiv_submission.zip"
     with zipfile.ZipFile(archive, "w", compression=zipfile.ZIP_DEFLATED) as output:
