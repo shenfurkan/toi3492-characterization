@@ -84,3 +84,8 @@ paywalled_papers.txt
 *.sav
 *~
 crossref_rnaas.txt
+uat_terms.txt
+.gitignore
+exact_uat.txt
+uat_specific.txt
+uat_clean.txt
