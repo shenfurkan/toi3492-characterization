@@ -75,7 +75,7 @@ def robust_depth(time, flux, period, t0, duration_hr=OFFICIAL_DURATION_HR):
     return depth * 1e6, err * 1e6, int(in_mask.sum()), int(out_mask.sum())
 
 
-def bin_fold(time, flux, period, t0, limit_hr=14.0, bin_minutes=10.0):
+def bin_fold(time, flux, period, t0, limit_hr=14.0, bin_minutes=8.0):
     """Phase-fold and bin the light curve for plotting.
 
     Returns
