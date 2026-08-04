@@ -46,13 +46,16 @@ def filter_candidates(
     candidates: Iterable[CandidateWorkspace],
     tag: Optional[str] = None,
     phase: Optional[str] = None,
+    mission: Optional[str] = None,
 ) -> List[CandidateWorkspace]:
-    """Filter candidates by tag and/or workflow phase."""
+    """Filter candidates by tag, workflow phase, and/or mission."""
     filtered = []
     for candidate in candidates:
         if tag is not None and not has_tag(candidate, tag):
             continue
         if phase is not None and candidate.metadata["workflow"]["phase"] != phase:
+            continue
+        if mission is not None and candidate.metadata.get("identifiers", {}).get("mission") != mission:
             continue
         filtered.append(candidate)
     return filtered

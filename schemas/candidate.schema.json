@@ -39,6 +39,10 @@
           "items": { "type": "string", "minLength": 1 },
           "uniqueItems": true
         },
+        "mission": {
+          "type": ["string", "null"],
+          "enum": ["tess", "kepler", "k2", "plato", "cheops"]
+        },
         "tags": {
           "type": "array",
           "items": { "type": "string", "minLength": 1 },

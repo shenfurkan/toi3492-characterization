@@ -64,6 +64,7 @@ SCIENTIFIC_DISPOSITIONS = (
     "inconclusive",
 )
 PUBLICATION_STATES = ("none", "draft", "submitted", "published")
+MISSIONS = ("tess", "kepler", "k2", "plato", "cheops")
 
 _CANDIDATE_ID = re.compile(r"^[a-z0-9][a-z0-9._-]*$")
 _RESERVED_WINDOWS_NAMES = {
@@ -188,17 +189,22 @@ def new_candidate_metadata(
     toi: Optional[str] = None,
     tic: Optional[str] = None,
     tags: Optional[Sequence[str]] = None,
+    mission: Optional[str] = None,
 ) -> Dict[str, Any]:
     """Return the standard schema v2 identity record for a new candidate."""
     if toi is not None and not re.fullmatch(r"\d{1,7}(\.\d{1,2})?", str(toi)):
         raise ValueError("toi must look like a TOI number, e.g. 1234.01")
     if tic is not None and not re.fullmatch(r"[1-9]\d{0,19}", str(tic)):
         raise ValueError("tic must be a positive integer string")
+    if mission is not None and mission not in MISSIONS:
+        raise ValueError("mission must be one of: {0}".format(", ".join(MISSIONS)))
     identifiers: Dict[str, Any] = {
         "toi": toi,
         "tic": tic,
         "aliases": [candidate_id],
     }
+    if mission is not None:
+        identifiers["mission"] = mission
     if tags:
         identifiers["tags"] = list(tags)
     return {
@@ -234,6 +240,9 @@ def validate_metadata(metadata: Dict[str, Any], candidate_id: str) -> None:
         isinstance(tags, list) and all(isinstance(tag, str) and tag for tag in tags)
     ):
         raise ValueError("identifiers.tags must be a list of non-empty strings")
+    mission = identifiers.get("mission")
+    if mission is not None and mission not in MISSIONS:
+        raise ValueError("invalid mission identifier")
     lifecycle = metadata.get("lifecycle")
     if not isinstance(lifecycle, dict) or lifecycle.get("state") not in LIFECYCLE_STATES:
         raise ValueError("invalid lifecycle state")
@@ -252,6 +261,7 @@ def create_candidate(
     toi: Optional[str] = None,
     tic: Optional[str] = None,
     tags: Optional[Sequence[str]] = None,
+    mission: Optional[str] = None,
 ) -> CandidateWorkspace:
     """Create a registered candidate workspace without overwriting existing work."""
     repository_root = repository_root.resolve()
@@ -263,7 +273,7 @@ def create_candidate(
     if any(other.casefold() == normalized_id.casefold() for other in existing):
         raise FileExistsError("candidate ID collides with an existing workspace")
 
-    metadata = new_candidate_metadata(normalized_id, toi=toi, tic=tic, tags=tags)
+    metadata = new_candidate_metadata(normalized_id, toi=toi, tic=tic, tags=tags, mission=mission)
     path.mkdir(parents=True)
     for relative_path in WORKSPACE_DIRECTORIES:
         (path / relative_path).mkdir(parents=True)

@@ -21,7 +21,7 @@ from typing import Optional, Sequence
 from . import __version__
 from .freeze import freeze
 from .gatekeeper import GateError, advance
-from .isolation import check_repository, format_report
+from .isolation import format_report, run_audit
 from .tagging import add_tags, filter_candidates
 from .tracking import candidate_telemetry, format_dashboard
 from .workspace import (
@@ -56,12 +56,22 @@ def _build_parser() -> argparse.ArgumentParser:
     init_parser.add_argument("--toi", help="Canonical TOI identifier, without the TOI prefix.")
     init_parser.add_argument("--tic", help="Canonical TIC identifier.")
     init_parser.add_argument(
+        "--mission",
+        choices=["tess", "kepler", "k2", "plato", "cheops"],
+        help="Originating mission for the target.",
+    )
+    init_parser.add_argument(
         "--tag", action="append", default=[], help="Attach a metadata tag (repeatable)."
     )
 
     list_parser = commands.add_parser("list", help="List registered candidates.")
     list_parser.add_argument("--phase", help="Filter by workflow phase.")
     list_parser.add_argument("--tag", help="Filter by metadata tag.")
+    list_parser.add_argument(
+        "--mission",
+        choices=["tess", "kepler", "k2", "plato", "cheops"],
+        help="Filter by originating mission.",
+    )
 
     status_parser = commands.add_parser("status", help="Show one candidate record.")
     status_parser.add_argument("candidate_id")
@@ -80,7 +90,21 @@ def _build_parser() -> argparse.ArgumentParser:
     freeze_parser.add_argument("candidate_id")
     freeze_parser.add_argument("--version", help="Release version directory name.")
 
-    commands.add_parser("verify", help="Run the repository isolation audit.")
+    ingest_parser = commands.add_parser(
+        "ingest", help="Download SPOC products and record provenance."
+    )
+    ingest_parser.add_argument("candidate_id")
+    ingest_parser.add_argument(
+        "--sectors", nargs="+", type=int, default=None, help="TESS sectors to fetch."
+    )
+    ingest_parser.add_argument("--exptime", type=int, default=120, help="Cadence in seconds.")
+
+    verify_parser = commands.add_parser("verify", help="Run the repository audit.")
+    verify_parser.add_argument(
+        "--schemas-only",
+        action="store_true",
+        help="Validate JSON schemas only (skip the isolation scan).",
+    )
     return parser
 
 
@@ -95,7 +119,15 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
 
     try:
         if args.command == "verify":
-            report = check_repository(repository_root)
+            if args.schemas_only:
+                from .isolation import IsolationReport
+
+                from .schemas import validate_schemas
+
+                report = IsolationReport()
+                validate_schemas(repository_root, report)
+            else:
+                report = run_audit(repository_root)
             print(format_report(report))
             return 0 if report.ok else 1
 
@@ -106,13 +138,17 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
                 toi=args.toi,
                 tic=args.tic,
                 tags=args.tag or None,
+                mission=args.mission,
             )
             _print_json(candidate.metadata)
             return 0
 
         if args.command == "list":
             candidates = filter_candidates(
-                discover_candidates(repository_root), tag=args.tag, phase=args.phase
+                discover_candidates(repository_root),
+                tag=args.tag,
+                phase=args.phase,
+                mission=args.mission,
             )
             _print_json([candidate.metadata for candidate in candidates])
             return 0
@@ -148,6 +184,19 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         if args.command == "freeze":
             release_dir = freeze(candidate, version=args.version)
             print(release_dir.relative_to(repository_root).as_posix())
+            return 0
+
+        if args.command == "ingest":
+            from .ingest import fetch_tess_products, ingest_products
+
+            products = fetch_tess_products(candidate, sectors=args.sectors, exptime=args.exptime)
+            if not products:
+                print("no products found for the requested sectors")
+                return 0
+            written = ingest_products(candidate, products)
+            _print_json(
+                [str(path.relative_to(candidate.path)).replace("\\", "/") for path in written]
+            )
             return 0
     except (FileExistsError, FileNotFoundError, ValueError, GateError, RuntimeError) as exc:
         parser.exit(2, "error: {0}\n".format(exc))

@@ -39,14 +39,19 @@ ephemerides, research payload formats, symlinks, and top-level `archive/` or
 
 | Command | Syntax | Description |
 | --- | --- | --- |
-| `init` | `exonym init <id> --toi <toi> --tic <tic> [--tag ...]` | Provision workspace and clone global templates |
-| `list` | `exonym list [--phase <p>] [--tag <t>]` | Query and filter registered candidates |
+| `init` | `exonym init <id> --toi <toi> --tic <tic> [--mission <m>] [--tag ...]` | Provision workspace and clone global templates |
+| `ingest` | `exonym ingest <id> [--sectors S1 S2 ...]` | Download SPOC LC/TPF products and write provenance sidecars |
+| `list` | `exonym list [--phase <p>] [--tag <t>] [--mission <m>]` | Query and filter registered candidates |
 | `status` | `exonym status <id>` | Show one candidate identity record |
 | `track` | `exonym track <id>` | Render the QVG progress telemetry dashboard |
 | `advance` | `exonym advance <id>` | Validate the current gate and promote the phase |
 | `tag` | `exonym tag <id> <tag...>` | Attach metadata tags to a target record |
 | `freeze` | `exonym freeze <id> [--version <v>]` | Build lockfiles and a reproducibility bundle |
-| `verify` | `exonym verify` | Run the repository isolation audit |
+| `verify` | `exonym verify [--schemas-only]` | Run the isolation audit and JSON schema validation |
+
+Missions: `tess` (TOI/TIC), `kepler` (KOI), `k2` (EPIC), `plato` (PIC),
+`cheops`. `exonym ingest` records a SHA-256 provenance sidecar for every raw
+product, satisfying the acquisition gate.
 
 ## Workflow Phases
 

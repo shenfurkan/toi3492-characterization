@@ -39,6 +39,28 @@ exonym verify
 
 Report exact failures; do not hide known baseline failures.
 
+## Policy Enforcement
+
+The repository guard layer runs on every push and pull request:
+
+1. `python -m pytest -q` — shared-layer unit tests.
+2. `exonym verify` — repository isolation audit.
+3. `exonym verify --schemas-only` — JSON schema validation of candidate
+   records, provenance sidecars, and claim assertions.
+
+Install the local pre-commit hook to run the audit before every commit:
+
+```powershell
+pip install pre-commit
+pre-commit install
+```
+
+The hook runs `exonym verify` on the full repository (`always_run`) and
+rejects target identifiers, research payloads, symlinks, and schema
+violations outside `candidate/`. Policy, schema, and template files are
+owner-reviewed (`CODEOWNERS`); exceptions require an entry in
+`policy/isolation-exceptions.json` with an expiry date.
+
 ## Commit and Release
 
 Commit only intended files. Do not commit secrets. Do not tag, publish,

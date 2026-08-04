@@ -36,7 +36,7 @@ from .workspace import discover_candidates
 
 CANDIDATE_DIRECTORY = "candidate"
 
-NEUTRAL_TOP_LEVEL_EXTENSIONS = {".md", ".toml", ".txt", ".gitignore", ""}
+NEUTRAL_TOP_LEVEL_EXTENSIONS = {".md", ".toml", ".txt", ".yaml", ".yml", ".gitignore", ""}
 NEUTRAL_DIRECTORIES = (
     "src",
     "tests",
@@ -319,6 +319,19 @@ def check_repository(root: Path) -> IsolationReport:
     return report
 
 
+def run_audit(root: Path) -> IsolationReport:
+    """Run the full repository audit: isolation checks plus JSON schema
+    validation of candidate records, provenance sidecars, and claims."""
+    report = check_repository(root)
+    try:
+        from .schemas import validate_schemas
+
+        validate_schemas(root, report)
+    except Exception as exc:  # pragma: no cover - defensive
+        report.add(Path(root), "schema-validation-error", str(exc))
+    return report
+
+
 def format_report(report: IsolationReport) -> str:
     if report.ok:
         return "ISOLATION: PASS (no violations)"
@@ -328,10 +341,27 @@ def format_report(report: IsolationReport) -> str:
 
 
 def main(argv: Optional[Sequence[str]] = None) -> int:
-    parser = argparse.ArgumentParser(description="Enforce candidate/ research isolation.")
+    parser = argparse.ArgumentParser(
+        description="Enforce candidate/ research isolation and schema integrity."
+    )
     parser.add_argument("--root", type=Path, default=Path.cwd(), help="Repository root.")
+    parser.add_argument(
+        "--schemas-only",
+        action="store_true",
+        help="Validate JSON schemas only (skip the isolation scan).",
+    )
     args = parser.parse_args(argv)
-    report = check_repository(args.root.resolve())
+    root = args.root.resolve()
+    if args.schemas_only:
+        report = IsolationReport()
+        try:
+            from .schemas import validate_schemas
+
+            validate_schemas(root, report)
+        except Exception as exc:  # pragma: no cover - defensive
+            report.add(Path(root), "schema-validation-error", str(exc))
+    else:
+        report = run_audit(root)
     print(format_report(report))
     return 0 if report.ok else 1
 
