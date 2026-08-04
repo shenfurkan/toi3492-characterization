@@ -36,3 +36,4 @@ candidate/*/literature/fulltext/*
 candidate/*/releases/*/build/**
 candidate/*/.cache/*
 !candidate/**/.gitkeep
+EXONYM_FACTORY_PLAN.txt
