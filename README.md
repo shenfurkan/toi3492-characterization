@@ -189,6 +189,8 @@ pip install -e ".[test,screening,asteroseismology]"
 | `advance` | `exonym advance <id>` | Audit current gate requirements and promote workflow phase |
 | `tag` | `exonym tag <id> <tag...>` | Attach metadata tags to a candidate record |
 | `freeze` | `exonym freeze <id> [--version <v>]` | Build a sealed reproducibility bundle under `releases/<version>/` |
+| `search` | `exonym search <id> [--period-min <d>] [--period-max <d>]` | Run a BLS transit search and save `outputs/bls_search_results.json` |
+| `plot` | `exonym plot <id>` | Generate diagnostic figures under `figures/` (uses BLS result when present) |
 | `verify` | `exonym verify [--schemas-only]` | Run the repository target-isolation scan & JSON schema validation |
 
 ---
@@ -319,6 +321,46 @@ Generates:
 - `Dockerfile`: Container image specification (`python:3.9-slim`).
 - `Apptainer.def`: HPC Singularity/Apptainer definition file.
 - `manifest.json`: SHA-256 hashes of all release files, target `candidate.json`, and git commit hash.
+
+---
+
+### `exonym search`
+
+Run a Box Least Squares (BLS) transit period search over the candidate's light curve data and save the winning signal to `candidate/<id>/outputs/bls_search_results.json`.
+
+```powershell
+exonym search candidate-alpha --period-min 1.0 --period-max 10.0
+```
+
+- **Data source**: FITS products under `data/processed/` (preferred) or `data/raw/` are median-binned and normalized before the search. When no readable light curve exists, a synthetic demonstration grid is analyzed and the payload is explicitly marked `"source": "synthetic-demo"`; real-data runs are marked `"source": "candidate-data"`.
+
+Output schema:
+
+```json
+{
+  "best_period": 4.20155,
+  "best_epoch": 2459005.0,
+  "best_depth_ppm": 5000.0,
+  "best_duration_hours": 3.0,
+  "snr": 28.41,
+  "source": "candidate-data",
+  "n_points": 4000
+}
+```
+
+---
+
+### `exonym plot`
+
+Generate headless diagnostic vetting figures under `candidate/<id>/figures/`:
+
+```powershell
+exonym plot candidate-alpha
+```
+
+- Produces `phase_folded_lc.png` and `centroid_offset.png` at 300 dpi.
+- When `outputs/bls_search_results.json` exists, the phase fold automatically uses its best period and epoch.
+- Real candidate light curves are plotted when available; otherwise a deterministic synthetic grid is rendered (fixed RNG seed, reproducible).
 
 ---
 

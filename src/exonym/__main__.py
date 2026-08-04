@@ -8,6 +8,8 @@ Commands:
   advance  Validate the current gate and promote the workflow phase
   tag      Attach metadata tags to a candidate record
   freeze   Build a reproducibility bundle under releases/<version>/
+  search   Run a BLS transit search on candidate light curve data
+  plot     Generate diagnostic vetting figures for a candidate
   verify   Run the repository isolation audit
 """
 

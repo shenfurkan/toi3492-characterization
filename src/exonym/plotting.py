@@ -6,6 +6,7 @@ in automated pipelines and CI/CD without requiring display servers.
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 from typing import Optional, Sequence
 
@@ -15,7 +16,11 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from .lightcurve import bin_phase_folded_flux, phase_hours
+from .search import load_candidate_light_curve
 from .workspace import CandidateWorkspace
+
+DEFAULT_FOLD_PERIOD_DAYS = 3.5
+DEFAULT_FOLD_EPOCH_BTJD = 0.0
 
 
 def plot_phase_folded_lc(
@@ -112,23 +117,47 @@ def plot_centroid_offsets(
 
 def generate_candidate_plots(
     workspace: CandidateWorkspace,
-    period_days: float = 3.5,
-    epoch_btjd: float = 0.0,
+    period_days: Optional[float] = None,
+    epoch_btjd: Optional[float] = None,
 ) -> Sequence[Path]:
-    """Generate default diagnostic plots under candidate/<id>/figures/."""
+    """Generate default diagnostic plots under candidate/<id>/figures/.
+
+    When a BLS search result exists in ``outputs/bls_search_results.json`` its
+    best period and epoch are used for the phase fold. Real candidate light
+    curves are used when available; otherwise a deterministic synthetic grid is
+    rendered. Random offsets use a fixed seed for reproducibility.
+    """
     figures_dir = workspace.path / "figures"
     figures_dir.mkdir(parents=True, exist_ok=True)
+    rng = np.random.default_rng(seed=0)
 
-    # Synthetic baseline data for demo plotting
-    time = np.linspace(0, 27, 2000)
-    flux = 1.0 - 0.0015 * (np.abs((time - epoch_btjd) % period_days) < 0.08).astype(float)
-    flux += np.random.normal(0, 0.0003, size=time.shape)
+    if period_days is None or epoch_btjd is None:
+        search_result = workspace.path / "outputs" / "bls_search_results.json"
+        if search_result.is_file():
+            try:
+                payload = json.loads(search_result.read_text(encoding="utf-8"))
+                period_days = float(payload["best_period"])
+                epoch_btjd = float(payload["best_epoch"])
+            except (json.JSONDecodeError, KeyError, OSError, TypeError, ValueError):
+                pass
+    if period_days is None:
+        period_days = DEFAULT_FOLD_PERIOD_DAYS
+    if epoch_btjd is None:
+        epoch_btjd = DEFAULT_FOLD_EPOCH_BTJD
+
+    loaded = load_candidate_light_curve(workspace)
+    if loaded is None:
+        time = np.linspace(0, 27, 2000)
+        flux = 1.0 - 0.0015 * (np.abs((time - epoch_btjd) % period_days) < 0.08).astype(float)
+        flux += rng.normal(0, 0.0003, size=time.shape)
+    else:
+        time, flux = loaded
 
     lc_plot = figures_dir / "phase_folded_lc.png"
     plot_phase_folded_lc(time, flux, period_days, epoch_btjd, lc_plot)
 
-    ra_offsets = np.random.normal(0.05, 0.08, size=15)
-    dec_offsets = np.random.normal(-0.04, 0.08, size=15)
+    ra_offsets = rng.normal(0.05, 0.08, size=15)
+    dec_offsets = rng.normal(-0.04, 0.08, size=15)
     centroid_plot = figures_dir / "centroid_offset.png"
     plot_centroid_offsets(ra_offsets, dec_offsets, sigma_arcsec=0.10, output_path=centroid_plot)
 

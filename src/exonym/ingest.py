@@ -80,7 +80,7 @@ def fetch_tess_products(
 
         light_curve = search[index].download()
         fits_path = staging / "s{0:04d}_lc.fits".format(sector_value or index)
-        light_curve.to_fits(output_fn=fits_path, overwrite=True)
+        light_curve.to_fits(path=fits_path, overwrite=True)
         obs_id = str(row["obs_id"]) if "obs_id" in row.colnames else str(row["productFilename"])
         source_uri = "https://mast.stsci.edu/api/v0.1/Download/file?uri=mast:TESS/product/{0}".format(
             obs_id

@@ -1,5 +1,6 @@
 import json
 
+import numpy as np
 import pytest
 
 from exonym.catalog import (
@@ -94,3 +95,62 @@ def test_ingest_products_requires_tic_for_network_fetch(tmp_path):
 
     with pytest.raises(ValueError, match="TIC"):
         fetch_tess_products(candidate, sectors=[37])
+
+
+class _FakeDownload:
+    def __init__(self, light_curve):
+        self._light_curve = light_curve
+
+    def download(self):
+        return self._light_curve
+
+
+class _FakeSearch:
+    def __init__(self, table, light_curves):
+        self.table = table
+        self._light_curves = light_curves
+
+    def __len__(self):
+        return len(self._light_curves)
+
+    def __getitem__(self, index):
+        return _FakeDownload(self._light_curves[index])
+
+
+def test_fetch_tess_products_writes_fits_and_ingests(tmp_path, monkeypatch):
+    import lightkurve as lk
+    from astropy.table import Table
+
+    from exonym.ingest import fetch_tess_products, ingest_products
+
+    create_candidate(tmp_path, "candidate-ingest", tic="123456789")
+    candidate = [
+        c for c in discover_candidates(tmp_path) if c.candidate_id == "candidate-ingest"
+    ][0]
+
+    table = Table(
+        rows=[("s0037", "tess2021000000000-s0037-0000000123456789-0218-s.fits")],
+        names=("sequence_number", "obs_id"),
+    )
+    time = np.linspace(2459000.0, 2459030.0, 600)
+    light_curve = lk.LightCurve(time=time, flux=np.ones_like(time))
+    fake_search = _FakeSearch(table, [light_curve])
+
+    monkeypatch.setattr(lk, "search_lightcurve", lambda *args, **kwargs: fake_search)
+
+    products = fetch_tess_products(candidate, exptime=120)
+    assert len(products) == 1
+    staged, source_uri = products[0]
+    assert staged.is_file()
+    assert staged.stat().st_size > 0
+    assert source_uri.startswith("https://mast.stsci.edu")
+
+    written = ingest_products(candidate, products)
+    raw = candidate.path / "data" / "raw"
+    assert written[0].is_file()
+    assert written[0].parent == raw
+    sidecar = written[0].with_name(written[0].stem + ".provenance.json")
+    assert sidecar.is_file()
+    record = json.loads(sidecar.read_text(encoding="utf-8"))
+    assert record["source_uri"] == source_uri
+    assert len(record["sha256"]) == 64

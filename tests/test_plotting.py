@@ -1,5 +1,7 @@
 """Tests for headless diagnostic figure generation."""
 
+import hashlib
+
 import numpy as np
 
 from exonym.plotting import generate_candidate_plots, plot_centroid_offsets, plot_phase_folded_lc
@@ -28,3 +30,13 @@ def test_generate_candidate_plots(tmp_path):
     assert len(plots) == 2
     for path in plots:
         assert path.is_file()
+
+
+def test_generate_candidate_plots_deterministic(tmp_path):
+    workspace = create_candidate(tmp_path, "candidate-test-deterministic")
+    first = generate_candidate_plots(workspace)
+    second = generate_candidate_plots(workspace)
+    for first_path, second_path in zip(first, second):
+        digest_one = hashlib.sha256(first_path.read_bytes()).hexdigest()
+        digest_two = hashlib.sha256(second_path.read_bytes()).hexdigest()
+        assert digest_one == digest_two
