@@ -1,8 +1,0 @@
-# Repository ownership rules.
-# Changes to these paths require review by the listed owners.
-
-/policy/                 @shenfurkan
-/schemas/                @shenfurkan
-/templates/              @shenfurkan
-/src/exonym/             @shenfurkan
-/.github/workflows/      @shenfurkan

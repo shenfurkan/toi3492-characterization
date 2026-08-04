@@ -63,3 +63,4 @@ candidate/*/**/*.md
 !candidate/**/.gitkeep
 EXONYM_FACTORY_PLAN.txt
 
+AGENTS.md
