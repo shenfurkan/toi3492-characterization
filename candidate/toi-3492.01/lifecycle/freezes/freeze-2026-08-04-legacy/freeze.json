@@ -1,0 +1,17 @@
+{
+  "freeze_id": "freeze-2026-08-04-legacy",
+  "candidate_id": "toi-3492.01",
+  "lifecycle": "archived",
+  "frozen_at": "2026-08-04T00:00:00Z",
+  "reason": "Immutable historical evidence retained for reproducibility and method reference.",
+  "payload_root": "legacy-project/",
+  "verification": {
+    "release_zip_sha256": "984d05e2c609a1f9a0657c5748291709f9a2ca27a38988da7c2ee53f4ab7181e",
+    "release_zip_check": "MATCH"
+  },
+  "rules": [
+    "Manifest-listed evidence must not be edited, deleted, renamed, or regenerated in place.",
+    "Corrections require new versioned files with explicit supersession links.",
+    "Legacy generators and release builders must not be rerun from the factory root."
+  ]
+}

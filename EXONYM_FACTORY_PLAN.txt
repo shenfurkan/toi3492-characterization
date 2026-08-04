@@ -1,0 +1,359 @@
+================================================================================
+PROJECT EXONYM: SYSTEMS ARCHITECTURE & SCIENTIFIC DATA PIPELINE SPECIFICATION
+================================================================================
+Document ID: EXONYM-SYS-SPEC-2026-V2 (NASA-Grade Enterprise Edition)
+Classification: Exoplanet Candidate Processing & Verification Architecture
+Standard Alignment: NASA/SP-2016-6105 Rev2 (Systems Engineering Handbook),
+                    TESS SPOC DV Standards, MAST/ExoFOP Metadata Governance,
+                    FAIR Data Principles (Findable, Accessible, Interoperable, Reusable).
+
+================================================================================
+TABLE OF CONTENTS
+================================================================================
+1. EXECUTIVE SUMMARY & SYSTEM IDENTIFICATION
+2. CORE ARCHITECTURAL PHILOSOPHY (THE FACTORY PARADIGM)
+3. DIRECTORY BLUEPRINT & TEMPLATE INHERITANCE ARCHITECTURE
+4. SCIENTIFIC WORKFLOW STAGES & QUALITY VERIFICATION GATES (QVG)
+5. MATHEMATICAL & PHYSICAL FORMALISMS FOR DIAGNOSTIC VETTING
+6. MARKDOWN AST TELEMETRY & METADATA TAGGING ENGINE
+7. REPOSITORY ISOLATION & DATA GOVERNANCE ENFORCEMENT
+8. MACHINE-PARSABLE JSON SCHEMAS & EVIDENCE ASSERTIONS
+9. MULTI-MISSION ADAPTER & CATALOG CROSS-MATCHING ENGINE
+10. REPRODUCIBILITY, CONTAINERIZATION & ENVIRONMENT FREEZE
+11. SOFTWARE MODULE ARCHITECTURE & CLI COMMAND MATRIX
+================================================================================
+
+--------------------------------------------------------------------------------
+1. EXECUTIVE SUMMARY & SYSTEM IDENTIFICATION
+--------------------------------------------------------------------------------
+Project EXONYM (Exoplanet Naming, Observation, and Yield Verification Management)
+is an automated, highly reproducible, candidate-isolated astrophysics workspace 
+engineered for rapid, evidence-first characterization of exoplanet candidates 
+(e.g., TESS Objects of Interest - TOIs, K2 TCEs, and PLATO candidates).
+
+The system replaces ad-hoc research workflows with an industrial-grade "Science 
+Assembly Line" (Factory Pattern). Every candidate is ingested into a 
+hermetically isolated workspace (`candidate/<candidate-id>/`), instantiated with 
+standardized NASA-grade protocol templates, evaluated against strict Quality 
+Verification Gates (QVGs), and tracked using a deterministic Markdown-native 
+telemetry parser.
+
+--------------------------------------------------------------------------------
+2. CORE ARCHITECTURAL PHILOSOPHY (THE FACTORY PARADIGM)
+--------------------------------------------------------------------------------
+2.1 Target Isolation Axiom
+- No target-specific code, data, ephemeris, constant, or manuscript may exist 
+  outside `candidate/<candidate-id>/`.
+- The root codebase (`src/exonym/`, `protocols/`, `methods/`, `schemas/`) is 
+  strictly target-neutral shared infrastructure.
+- Archiving a candidate is defined as an immutable state modification in 
+  `candidate.json` (`"lifecycle": "archived"`), never a directory relocation.
+
+2.2 The Science Assembly Line (Factory Pattern)
+- Traditional scientific workflows suffer from observer bias and inconsistent 
+  record-keeping. Exonym treats target characterization as an automated factory:
+  a candidate enters Station 0 (Intake), moves through strictly defined Quality 
+  Verification Gates (QVGs), and cannot advance to downstream analysis 
+  stations without explicit digital sign-offs.
+
+2.3 Immutable Markdown-Native State Engine
+- Rather than relying on heavyweight external database servers (e.g., PostgreSQL), 
+  Exonym uses human-readable, Git-versioned Markdown files as canonical 
+  state records. 
+- Progress tracking is derived deterministically by parsing Task Checkboxes 
+  (`- [ ]` vs `- [x]`) and key-value metadata within candidate-local documents.
+
+--------------------------------------------------------------------------------
+3. DIRECTORY BLUEPRINT & TEMPLATE INHERITANCE ARCHITECTURE
+--------------------------------------------------------------------------------
+3.1 Global Template Repository (`/templates`)
+The root repository maintains a master set of standardized, immutable NASA-grade 
+protocol templates under `/templates`:
+
+/templates
+  â”œâ”€â”€ docs/
+  â”‚   â”œâ”€â”€ 01_intake_manifest.md       # TOI/TIC catalog cross-match & ephemeris
+  â”‚   â”œâ”€â”€ 02_feasibility_report.md    # Dilution, SNR, TESS sector coverage
+  â”‚   â”œâ”€â”€ 03_spoc_dv_vetting.md       # SPOC Data Validation triage & centroid tests
+  â”‚   â””â”€â”€ 04_tfop_sg_followup.md      # Ground-based TFOP SG1-SG5 status
+  â”œâ”€â”€ protocols/
+  â”‚   â”œâ”€â”€ transit_fitting.md          # Prior specification for MCMC/Nested Sampling
+  â”‚   â””â”€â”€ radial_velocity.md          # Keplerian orbit fitting protocols
+  â”œâ”€â”€ decisions/
+  â”‚   â””â”€â”€ review_gate.md              # Peer-review & scientific disposition gate
+  â””â”€â”€ tracking/
+      â””â”€â”€ pipeline_status.md         # Local checkpoint telemetry summary
+
+3.2 Candidate Instantiation (`exonym init <candidate-id>`)
+When a new target is ingested into the system:
+1. `candidate/<candidate-id>/` is provisioned.
+2. The entire contents of `/templates` are recursively cloned into the candidate 
+   workspace.
+3. Placeholders (e.g., `{{CANDIDATE_ID}}`, `{{TIMESTAMP}}`) are bound to the 
+   target's verified catalog identifiers (TOI, TIC, Gaia DR3).
+4. An immutable `candidate.json` (Schema v2) identity record is created.
+
+Workspace Layout:
+candidate/<candidate-id>/
+  â”œâ”€â”€ candidate.json                  # Target metadata & workflow state
+  â”œâ”€â”€ README.md                       # Auto-generated workspace overview
+  â”œâ”€â”€ config/                         # Target-specific model priors & settings
+  â”œâ”€â”€ data/
+  â”‚   â”œâ”€â”€ raw/                        # Unmodified FITS / TPF files (MAST source)
+  â”‚   â”œâ”€â”€ external/                   # Gaia DR3, ExoFOP, Archival imagery
+  â”‚   â”œâ”€â”€ interim/                    # Detrended light curves, flux corrections
+  â”‚   â””â”€â”€ processed/                  # Phase-folded light curves, RV arrays
+  â”œâ”€â”€ docs/                           # Instantiated protocol manifests
+  â”œâ”€â”€ protocols/                      # Frozen analysis scripts & prior configs
+  â”œâ”€â”€ runs/                           # MCMC chains, sampling checkpoints
+  â”œâ”€â”€ gates/                          # Signed QVG pass/fail decision logs
+  â”œâ”€â”€ claims/                         # Machine-parsable scientific assertions
+  â”œâ”€â”€ outputs/                        # Derived parameters (table exports)
+  â”œâ”€â”€ figures/                        # Publication-quality plots (PDF/PNG)
+  â”œâ”€â”€ literature/                     # Referenced BibTeX records & papers
+  â”œâ”€â”€ manuscripts/                    # LaTeX source for discovery papers
+  â””â”€â”€ releases/                       # Archived reproducibility bundles
+
+--------------------------------------------------------------------------------
+4. SCIENTIFIC WORKFLOW STAGES & QUALITY VERIFICATION GATES (QVG)
+--------------------------------------------------------------------------------
+The processing line consists of seven sequential, non-bypassable phases. 
+Progression between phases requires running `exonym advance <candidate-id>`, 
+which invokes the Gatekeeper Engine to verify that all mandatory checkboxes 
+in the current phase's document are checked (`- [x]`).
+
+Phase 0: INTAKE & CATALOG CROSS-MATCH (`intake`)
+- Mandated Document: `docs/01_intake_manifest.md`
+- Key Metrics: TOI/TIC ID validation, Gaia DR3 astrometry, TESS magnitude, 
+  proper motions, companion separation limits.
+- Gate Check: Canonical catalog source verified; no duplicate identifier collisions.
+
+Phase 1: FEASIBILITY & CONTAMINATION ANALYSIS (`feasibility`)
+- Mandated Document: `docs/02_feasibility_report.md`
+- Key Metrics: Contamination Ratio ($r_{\text{cont}}$), Expected Transit SNR, 
+  TESS Sector availability, Stellar parameters ($\log g, T_{\text{eff}}, R_*$).
+- Gate Check: SNR $> 7.1$; Contamination ratio within acceptable bounds for 
+  target transit depth.
+
+Phase 2: DATA ACQUISITION & RAW PROVENANCE (`acquisition`)
+- Mandated Directory: `data/raw/`
+- Key Metrics: Download of TESS SPOC Target Pixel Files (TPF) and Light Curves 
+  (PDCSAP_FLUX) via Astroquery/MAST.
+- Gate Check: SHA-256 hash generated and recorded for every raw FITS product.
+
+Phase 3: SPOC DV VETTING & DIAGNOSTICS (`vetting`)
+- Mandated Document: `docs/03_spoc_dv_vetting.md`
+- Diagnostic Tests (NASA TESS SPOC Standards):
+  1. Odd-Even Transit Depth Asymmetry Test (Eclipsing Binary check).
+  2. Difference Image Centroid Offset Test (Background EB check).
+  3. Transit Duration Asymmetry & Secondary Eclipse Search.
+  4. Ephemeris Match Filter (Cross-matching against known EBs).
+- Gate Check: All SPOC diagnostic flags evaluated; no significant centroid offset.
+
+Phase 4: TFOP SUBGROUP MULTI-FACETED FOLLOW-UP (`followup`)
+- Mandated Document: `docs/04_tfop_sg_followup.md`
+- Subgroup Coordination (TESS Follow-Up Observing Program):
+  - SG1 (Seeing-limited Photometry): On-target transit confirmation, neighbor EB clearance.
+  - SG2 (Recon Spectroscopy): Host star $T_{\text{eff}}, \log g, [\text{Fe/H}]$, double-lined binary check.
+  - SG3 (High-Res Imaging / AO): Speckle/AO imaging for unresolved blending ($< 2''$).
+  - SG4 (Precision RV): Mass measurement & orbital eccentricity determination.
+  - SG5 (Space Photometry): CHEOPS/Spitzer high-precision transit timing.
+- Gate Check: High-resolution imaging clear of blended sources down to $\Delta m = 5$ at $0.5''$.
+
+Phase 5: STATISTICAL VALIDATION & FPP CALCULATIONS (`analysis`)
+- Mandated Execution: Automated False Positive Probability (FPP) estimation.
+- Software Interface: TRICERATOPS / VESPA framework integration.
+- Gate Check: $\text{FPP} < 0.01$ ($99\%$ statistical validation threshold).
+
+Phase 6: PEER REVIEW, MANUSCRIPT & RELEASE (`review` / `archived`)
+- Mandated Document: `decisions/review_gate.md`
+- Deliverables: LaTeX manuscript compiled in `manuscripts/`, reproducible 
+  docker/conda environment manifest generated in `releases/`.
+- Gate Check: Final sign-off logged; workspace lifecycle locked to `"published"` 
+  or `"archived"`.
+
+--------------------------------------------------------------------------------
+5. MATHEMATICAL & PHYSICAL FORMALISMS FOR DIAGNOSTIC VETTING
+--------------------------------------------------------------------------------
+5.1 Flux Dilution & Apparent Transit Depth
+For a target star blended with nearby companion stars within the photometric 
+aperture, the observed transit depth $\delta_{\text{obs}}$ is diluted:
+
+    \delta_{\text{obs}} = \delta_{\text{true}} \cdot \frac{F_{\text{target}}}{F_{\text{target}} + \sum F_{\text{blend}}} = \frac{\delta_{\text{true}}}{1 + r_{\text{cont}}}
+
+Where $r_{\text{cont}} \equiv \frac{\sum F_{\text{blend}}}{F_{\text{target}}}$ is 
+the aperture contamination ratio derived from Gaia DR3 G-band fluxes.
+
+5.2 Centroid Offset Significance Metric
+The Difference Image Centroid Offset significance $Z_{\text{centroid}}$ evaluates 
+whether the transit signal originates on the target star or an offset background source:
+
+    Z_{\text{centroid}} = \frac{\sqrt{(\Delta \alpha \cos \delta)^2 + (\Delta \delta)^2}}{\sigma_{\text{centroid}}}
+
+- Criteria: $Z_{\text{centroid}} < 3.0 \sigma \implies$ Pass (On-target Transit).
+- Criteria: $Z_{\text{centroid}} \ge 3.0 \sigma \implies$ FAIL (Background Eclipsing Binary).
+
+5.3 Odd-Even Transit Depth Asymmetry Test
+To rule out a secondary eclipsing binary with twice the assumed orbital period:
+
+    Z_{\text{odd-even}} = \frac{|\delta_{\text{odd}} - \delta_{\text{even}}|}{\sqrt{\sigma_{\text{odd}}^2 + \sigma_{\text{even}}^2}}
+
+- Criteria: $Z_{\text{odd-even}} < 3.0 \sigma \implies$ Pass (Planetary Candidate).
+
+--------------------------------------------------------------------------------
+6. MARKDOWN AST TELEMETRY & METADATA TAGGING ENGINE
+--------------------------------------------------------------------------------
+6.1 Markdown Telemetry Parser (`exonym track`)
+- The telemetry engine parses Markdown Abstract Syntax Trees (AST) using regex and 
+  lightweight parsing.
+- Metric Formulas:
+  Completion Rate (%) = (N_checked / N_total_mandatory) * 100
+
+6.2 ANSI Telemetry Dashboard Spec
+  +---------------------------------------------------------------------+
+  | EXONYM CANDIDATE TELEMETRY DASHBOARD :: Target: candidate-alpha        |
+  +---------------------------------------------------------------------+
+  | Lifecycle State    : ACTIVE                                         |
+  | Workflow Phase     : VETTING (Phase 3 of 6)                         |
+  | Scientific Disp.   : UNVALIDATED_CANDIDATE                          |
+  | Progress           : [===================-----------------] 52.5%   |
+  +---------------------------------------------------------------------+
+  | DOCUMENT MANIFEST:                                                  |
+  | [X] docs/01_intake_manifest.md      (100% - 6/6 tasks completed)   |
+  | [X] docs/02_feasibility_report.md   (100% - 8/8 tasks completed)   |
+  | [!] docs/03_spoc_dv_vetting.md      ( 35% - 2/6 tasks completed)   |
+  |     - [x] Difference image centroid offset evaluated               |
+  |     - [x] Odd-even transit depth comparison verified              |
+  |     - [ ] [MANDATORY] Ephemeris match filter cross-check run      |
+  |     - [ ] [MANDATORY] Secondary eclipse search completed           |
+  | [ ] docs/04_tfop_sg_followup.md     (  0% - PENDING PHASE 4)        |
+  +---------------------------------------------------------------------+
+
+6.3 Metadata Tagging Engine (`exonym tag`)
+- Candidate classifications are recorded in `candidate.json` under `"identifiers.tags"`.
+- Usage:
+  `exonym tag candidate-alpha priority-1 habitability-zone sg1-cleared`
+- Filtering:
+  `exonym list --tag priority-1 --phase vetting`
+
+--------------------------------------------------------------------------------
+7. REPOSITORY ISOLATION & DATA GOVERNANCE ENFORCEMENT
+--------------------------------------------------------------------------------
+7.1 Automated Isolation Checker (`python -m exonym.isolation --root .`)
+The isolation enforcement script ensures zero target creep into root infrastructure:
+1. Rejects any hardcoded TIC/TOI numbers outside `candidate/`.
+2. Prohibits symlinks pointing between candidate workspaces.
+3. Validates that top-level `archive/` or `data/` directories do not exist outside `candidate/`.
+4. Enforces Schema v2 integrity on all `candidate.json` files.
+
+7.2 Reproducibility & Provenance Standards
+- Every dataset in `data/raw/` must have a corresponding `.provenance.json` sidecar 
+  file detailing:
+  - Source URI (e.g., MAST URL)
+  - Download Timestamp (ISO 8601 UTC)
+  - SHA-256 Digest
+  - Fetching Script & Version
+
+--------------------------------------------------------------------------------
+8. MACHINE-PARSABLE JSON SCHEMAS & EVIDENCE ASSERTIONS
+--------------------------------------------------------------------------------
+All structured data within candidate workspaces must adhere strictly to 
+JSON Schema draft 2020-12 specifications.
+
+8.1 Provenance Sidecar Schema (`schemas/provenance.schema.json`)
+```json
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Data Asset Provenance Sidecar",
+  "type": "object",
+  "required": ["source_uri", "download_timestamp_utc", "sha256", "fetched_by"],
+  "properties": {
+    "source_uri": { "type": "string", "format": "uri" },
+    "download_timestamp_utc": { "type": "string", "format": "date-time" },
+    "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "fetched_by": { "type": "string" }
+  }
+}
+```
+
+8.2 Scientific Claim Assertion Schema (`schemas/claim.schema.json`)
+Located in `candidate/<id>/claims/<claim-id>.json` to represent machine-readable 
+findings (e.g., measured radius, period, FPP):
+```json
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Scientific Claim Assertion",
+  "type": "object",
+  "required": ["parameter", "value", "uncertainty_upper", "uncertainty_lower", "unit", "method"],
+  "properties": {
+    "parameter": { "type": "string", "enum": ["period_days", "radius_earth", "mass_earth", "fpp"] },
+    "value": { "type": "number" },
+    "uncertainty_upper": { "type": "number" },
+    "uncertainty_lower": { "type": "number" },
+    "unit": { "type": "string" },
+    "method": { "type": "string" }
+  }
+}
+```
+
+--------------------------------------------------------------------------------
+9. MULTI-MISSION ADAPTER & CATALOG CROSS-MATCHING ENGINE
+--------------------------------------------------------------------------------
+While initial implementation targets NASA TESS (TOI/TIC), Exonym includes abstract 
+mission adapters to support:
+- NASA Kepler / K2 (KOI / EPIC identifiers)
+- ESA CHEOPS (Target Name / Star Catalog)
+- ESA PLATO (PIC - PLATO Input Catalog identifiers)
+
+The catalog cross-matching engine queries:
+1. MAST (Mikulski Archive for Space Telescopes) via `astroquery.mast`
+2. ExoFOP (Exoplanet Follow-up Observing Program) API
+3. Gaia Archive via TAP/ADQL queries for precise astrometry and DR3 RUWE metrics.
+
+--------------------------------------------------------------------------------
+10. REPRODUCIBILITY, CONTAINERIZATION & ENVIRONMENT FREEZE
+--------------------------------------------------------------------------------
+When a candidate reaches Phase 6 (Publication/Release), running `exonym freeze <id>` 
+automatically builds a frozen reproducibility bundle in `candidate/<id>/releases/`:
+1. `environment.lock.yml`: Fully pinned Conda/Mamba package specification.
+2. `requirements.lock.txt`: Pinned PyPI wheels with SHA-256 hashes.
+3. `Dockerfile` / `Apptainer.def`: Self-contained OCI image specification capable of 
+   re-executing all transit fits and generating identical publication figures.
+
+--------------------------------------------------------------------------------
+11. SOFTWARE MODULE ARCHITECTURE & CLI COMMAND MATRIX
+--------------------------------------------------------------------------------
+11.1 Python Package Restructuring (`src/exonym/`)
+
+src/exonym/
+  â”œâ”€â”€ __init__.py            # Package metadata & version (__version__ = "0.3.0")
+  â”œâ”€â”€ __main__.py            # CLI entrypoint router (exonym)
+  â”œâ”€â”€ workspace.py           # Candidate creation, template mirroring, schema validation
+  â”œâ”€â”€ isolation.py           # Isolation checker & static code analyzer
+  â”œâ”€â”€ tracking.py            # AST Markdown parser & ANSI dashboard generator
+  â”œâ”€â”€ gatekeeper.py          # QVG phase-advance validation engine
+  â”œâ”€â”€ tagging.py             # Tag management and candidate metadata query engine
+  â”œâ”€â”€ freeze.py              # Environment reproducibility & release packager
+  â””â”€â”€ vetting/               # NASA SPOC & TFOP diagnostic helper routines
+      â”œâ”€â”€ __init__.py
+      â”œâ”€â”€ centroid.py        # Difference image centroid offset calculation
+      â”œâ”€â”€ oddeven.py         # Odd-even depth asymmetry test
+      â””â”€â”€ triceraparse.py    # Interface to TRICERATOPS FPP results
+
+11.2 CLI Command Matrix (`exonym`)
+
++------------------+----------------------------------+------------------------------------------------+
+| Command          | Syntax                           | Description                                    |
++------------------+----------------------------------+------------------------------------------------+
+| exonym init      | `exonym init <id> --toi --tic`   | Provision workspace & clone global templates   |
+| exonym track     | `exonym track <id>`              | Display ANSI QVG progress telemetry dashboard  |
+| exonym advance   | `exonym advance <id>`            | Validate QVG checklist & promote phase         |
+| exonym tag       | `exonym tag <id> <tag...>`       | Attach metadata tags to target record          |
+| exonym list      | `exonym list [--phase] [--tag]`  | Query and filter registered candidates         |
+| exonym freeze    | `exonym freeze <id>`             | Generate lockfiles & reproducibility bundle    |
+| exonym verify    | `exonym verify`                  | Run repository isolation audit & AST check     |
++------------------+----------------------------------+------------------------------------------------+
+
+================================================================================
+END OF SPECIFICATION DOCUMENT :: EXONYM-SYS-SPEC-2026-V2
+================================================================================

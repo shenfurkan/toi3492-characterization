@@ -1,0 +1,23 @@
+{
+    "schema_version":  2,
+    "workflow":  {
+                     "phase":  "feasibility"
+                 },
+    "identifiers":  {
+                        "toi":  null,
+                        "aliases":  [
+                                        "TOI-5952"
+                                    ],
+                        "tic":  null
+                    },
+    "candidate_id":  "toi-5952",
+    "notes":  "Screened in followup-2026-07 campaign; source evidence frozen in toi-3492.01/legacy-project/docs/.",
+    "publication":  "none",
+    "created_at":  "2026-08-04T00:00:00Z",
+    "lifecycle":  {
+                      "state_since":  "2026-08-04T00:00:00Z",
+                      "reason":  "Screened out: collaboration required",
+                      "state":  "stopped"
+                  },
+    "scientific_disposition":  "unknown"
+}

@@ -1,0 +1,159 @@
+"""EXONYM command-line entry point.
+
+Commands:
+  init     Provision a candidate workspace from global templates
+  list     List registered candidates (--phase, --tag filters)
+  status   Show one candidate identity record
+  track    Render the QVG progress telemetry dashboard
+  advance  Validate the current gate and promote the workflow phase
+  tag      Attach metadata tags to a candidate record
+  freeze   Build a reproducibility bundle under releases/<version>/
+  verify   Run the repository isolation audit
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+from pathlib import Path
+from typing import Optional, Sequence
+
+from . import __version__
+from .freeze import freeze
+from .gatekeeper import GateError, advance
+from .isolation import check_repository, format_report
+from .tagging import add_tags, filter_candidates
+from .tracking import candidate_telemetry, format_dashboard
+from .workspace import (
+    create_candidate,
+    discover_candidates,
+    load_candidate,
+    workspace_layout,
+)
+
+
+def _default_repository_root() -> Path:
+    return Path(__file__).resolve().parents[2]
+
+
+def _build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        prog="exonym",
+        description="EXONYM candidate factory: provision, gate, track, and freeze "
+        "exoplanet candidate research workspaces.",
+    )
+    parser.add_argument("--version", action="version", version="exonym " + __version__)
+    parser.add_argument(
+        "--root",
+        type=Path,
+        default=_default_repository_root(),
+        help="Repository root containing the candidate directory.",
+    )
+    commands = parser.add_subparsers(dest="command", required=True)
+
+    init_parser = commands.add_parser("init", help="Provision a candidate workspace.")
+    init_parser.add_argument("candidate_id", help="Lowercase workspace identifier.")
+    init_parser.add_argument("--toi", help="Canonical TOI identifier, without the TOI prefix.")
+    init_parser.add_argument("--tic", help="Canonical TIC identifier.")
+    init_parser.add_argument(
+        "--tag", action="append", default=[], help="Attach a metadata tag (repeatable)."
+    )
+
+    list_parser = commands.add_parser("list", help="List registered candidates.")
+    list_parser.add_argument("--phase", help="Filter by workflow phase.")
+    list_parser.add_argument("--tag", help="Filter by metadata tag.")
+
+    status_parser = commands.add_parser("status", help="Show one candidate record.")
+    status_parser.add_argument("candidate_id")
+
+    track_parser = commands.add_parser("track", help="Render the telemetry dashboard.")
+    track_parser.add_argument("candidate_id")
+
+    advance_parser = commands.add_parser("advance", help="Promote the workflow phase.")
+    advance_parser.add_argument("candidate_id")
+
+    tag_parser = commands.add_parser("tag", help="Attach tags to a candidate.")
+    tag_parser.add_argument("candidate_id")
+    tag_parser.add_argument("tags", nargs="+", help="Tags to attach.")
+
+    freeze_parser = commands.add_parser("freeze", help="Build a reproducibility bundle.")
+    freeze_parser.add_argument("candidate_id")
+    freeze_parser.add_argument("--version", help="Release version directory name.")
+
+    commands.add_parser("verify", help="Run the repository isolation audit.")
+    return parser
+
+
+def _print_json(value: object) -> None:
+    print(json.dumps(value, indent=2, sort_keys=True))
+
+
+def main(argv: Optional[Sequence[str]] = None) -> int:
+    parser = _build_parser()
+    args = parser.parse_args(argv)
+    repository_root = args.root.resolve()
+
+    try:
+        if args.command == "verify":
+            report = check_repository(repository_root)
+            print(format_report(report))
+            return 0 if report.ok else 1
+
+        if args.command == "init":
+            candidate = create_candidate(
+                repository_root,
+                args.candidate_id,
+                toi=args.toi,
+                tic=args.tic,
+                tags=args.tag or None,
+            )
+            _print_json(candidate.metadata)
+            return 0
+
+        if args.command == "list":
+            candidates = filter_candidates(
+                discover_candidates(repository_root), tag=args.tag, phase=args.phase
+            )
+            _print_json([candidate.metadata for candidate in candidates])
+            return 0
+
+        candidate = load_candidate(repository_root, args.candidate_id)
+
+        if args.command == "status":
+            result = dict(candidate.metadata)
+            result["paths"] = {
+                name: str(path.relative_to(repository_root)).replace("\\", "/")
+                for name, path in workspace_layout(candidate).items()
+            }
+            _print_json(result)
+            return 0
+
+        if args.command == "track":
+            print(
+                format_dashboard(
+                    candidate, candidate_telemetry(candidate)
+                )
+            )
+            return 0
+
+        if args.command == "advance":
+            event = advance(candidate)
+            _print_json(event)
+            return 0
+
+        if args.command == "tag":
+            _print_json(add_tags(candidate, args.tags))
+            return 0
+
+        if args.command == "freeze":
+            release_dir = freeze(candidate, version=args.version)
+            print(release_dir.relative_to(repository_root).as_posix())
+            return 0
+    except (FileExistsError, FileNotFoundError, ValueError, GateError, RuntimeError) as exc:
+        parser.exit(2, "error: {0}\n".format(exc))
+
+    parser.exit(2, "error: unknown command\n")
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

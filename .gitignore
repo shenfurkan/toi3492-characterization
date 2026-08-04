@@ -1,18 +1,11 @@
-# ==============================================================================
-# TOI-3492 — GitHub tracks CODE ONLY.
-# Data, documents, outputs, protocols, and forensic evidence stay local.
-# Tracked: *.py (scripts/, src/, tests/), pyproject.toml, requirements-lock.txt,
-# LICENSE, README.md, and this file.
-# ==============================================================================
-
 # Python caches & build artifacts
 __pycache__/
 *.py[cod]
 *$py.class
 *.egg-info/
 .eggs/
-dist/
 build/
+dist/
 .venv/
 venv/
 .env/
@@ -28,64 +21,18 @@ desktop.ini
 *.swp
 *.swo
 
-# ---- Everything that is not code stays local ----
-data/
-outputs/
-protocols/
-docs/
-papers/
-literature/
-figures/
-provenance/
-arxiv_submission/
-AstrophysicsResources/
-toi3492_reproducible_release_v*/
-
-# Documents and notes
-*.md
-*.tex
-*.bib
-*.pdf
-
-# Data, results, and archives
-*.json
-*.csv
-*.fits
-*.gz
-*.npy
-*.npz
-*.pk
-*.zip
-*.sha256
-*.log
-*.backup
-*.png
-*.ps1
-CITATION.cff
-81077799_TRILEGAL.csv
-human.txt
-paywalled_papers.txt
-
-# LaTeX build byproducts
-*.aux
-*.bbl
-*.blg
-*.out
-*.toc
-*.fls
-*.fdb_latexmk
-*.synctex.gz
-*.nav
-*.snm
-*.vrb
-*.run.xml
-*.bcf
-*.bak
-*.sav
-*~
-crossref_rnaas.txt
-uat_terms.txt
-.gitignore
-exact_uat.txt
-uat_specific.txt
-uat_clean.txt
+# Candidate workspaces: heavy or generated research artifacts stay local.
+# Identity records, protocols, decisions, and code remain tracked.
+# Legacy frozen projects honor their own ignore rules inside
+# candidate/<id>/legacy-project/.
+candidate/*/data/raw/*
+candidate/*/data/external/*
+candidate/*/data/interim/*
+candidate/*/data/processed/*
+candidate/*/outputs/*
+candidate/*/figures/*
+candidate/*/scratch/*
+candidate/*/literature/fulltext/*
+candidate/*/releases/*/build/**
+candidate/*/.cache/*
+!candidate/**/.gitkeep
