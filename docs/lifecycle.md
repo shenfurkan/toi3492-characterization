@@ -55,3 +55,7 @@ supersession links. Reopening preserves the old snapshot before new work.
 | Q8 | External verification |
 
 A release claim must state the highest completed layer.
+
+### Verification Cadence Rule
+
+To prevent unnecessary administrative red tape, layer Q1 (`pytest`) verification is skipped for non-code tasks where no source code has changed. As a candidate manuscript or milestone takes shape as a draft, Q1–Q6 verification checks are executed more frequently prior to formal release freezing (Q7).

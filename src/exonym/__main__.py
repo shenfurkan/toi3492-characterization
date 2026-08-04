@@ -105,6 +105,14 @@ def _build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Validate JSON schemas only (skip the isolation scan).",
     )
+
+    search_parser = commands.add_parser("search", help="Run BLS transit search on candidate data.")
+    search_parser.add_argument("candidate_id")
+    search_parser.add_argument("--period-min", type=float, default=0.5, help="Minimum orbital period.")
+    search_parser.add_argument("--period-max", type=float, default=15.0, help="Maximum orbital period.")
+
+    plot_parser = commands.add_parser("plot", help="Generate diagnostic vetting plots.")
+    plot_parser.add_argument("candidate_id")
     return parser
 
 
@@ -197,6 +205,22 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
             _print_json(
                 [str(path.relative_to(candidate.path)).replace("\\", "/") for path in written]
             )
+            return 0
+
+        if args.command == "search":
+            from .search import run_bls_on_candidate
+
+            output = run_bls_on_candidate(
+                candidate, period_min=args.period_min, period_max=args.period_max
+            )
+            print(output.relative_to(repository_root).as_posix())
+            return 0
+
+        if args.command == "plot":
+            from .plotting import generate_candidate_plots
+
+            generated = generate_candidate_plots(candidate)
+            _print_json([str(path.relative_to(repository_root)).replace("\\", "/") for path in generated])
             return 0
     except (FileExistsError, FileNotFoundError, ValueError, GateError, RuntimeError) as exc:
         parser.exit(2, "error: {0}\n".format(exc))

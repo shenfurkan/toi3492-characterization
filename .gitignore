@@ -1,4 +1,4 @@
-# Python caches & build artifacts
+# Python Caches & Build Artifacts
 __pycache__/
 *.py[cod]
 *$py.class
@@ -8,20 +8,36 @@ build/
 dist/
 .venv/
 venv/
+ENV/
+env/
 .env/
 .pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+.hypothesis/
 .ipynb_checkpoints/
 
-# OS & IDE
+# Ingestion Staging & Temporary Downloads
+exonym-ingest-*/
+.ingest-staging/
+*.tmp
+*.log
+
+# OS & Editor Artifacts
 .DS_Store
 Thumbs.db
 desktop.ini
+.directory
 .idea/
 .vscode/
+.gemini/
+.opencode/
 *.swp
 *.swo
 
-# Candidate workspaces: heavy or generated research artifacts stay local.
+# Candidate Workspaces: heavy or generated research artifacts stay local.
 # Identity records, protocols, decisions, and code remain tracked.
 # Legacy frozen projects honor their own ignore rules inside
 # candidate/<id>/legacy-project/.
@@ -35,5 +51,15 @@ candidate/*/scratch/*
 candidate/*/literature/fulltext/*
 candidate/*/releases/*/build/**
 candidate/*/.cache/*
+candidate/*/__pycache__/*
+candidate/*/.pytest_cache/*
+
+# Candidate research markdown notes, drafts, and manuscripts stay local.
+# Candidate identity (candidate.json) and candidate workspace README.md remain tracked.
+candidate/*/*.md
+candidate/*/**/*.md
+!candidate/*/README.md
+
 !candidate/**/.gitkeep
 EXONYM_FACTORY_PLAN.txt
+

@@ -17,8 +17,8 @@
     "created_at":  "2026-08-04T00:00:00Z",
     "lifecycle":  {
                       "state_since":  "2026-08-04T00:00:00Z",
-                      "reason":  "High-priority warm-Jupiter candidate from 2026-07 screening",
-                      "state":  "paused"
+                      "reason":  "Resumed campaign: primary target unpaused for vetting",
+                      "state":  "active"
                   },
     "scientific_disposition":  "candidate"
 }

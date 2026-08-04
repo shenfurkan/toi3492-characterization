@@ -37,6 +37,8 @@ python -m pytest -q
 exonym verify
 ```
 
+> **Testing Policy**: To prevent unnecessary operational overhead ("red tape"), automated test suites (`pytest`) do not need to be run after minor tasks where no Python code (`src/`, `tests/`) has been created or modified. Once a candidate manuscript or campaign milestone takes shape as a draft, test suites should be executed more frequently to ensure data integrity and baseline stability.
+
 Report exact failures; do not hide known baseline failures.
 
 ## Policy Enforcement
