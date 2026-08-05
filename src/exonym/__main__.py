@@ -95,6 +95,13 @@ def _build_parser() -> argparse.ArgumentParser:
     advance_parser = commands.add_parser("advance", help="Promote the workflow phase.")
     advance_parser.add_argument("candidate_id")
 
+    setstate_parser = commands.add_parser(
+        "set-state", help="Set the lifecycle state (safe alternative to hand-editing candidate.json)."
+    )
+    setstate_parser.add_argument("candidate_id")
+    setstate_parser.add_argument("--state", required=True, help="New lifecycle state.")
+    setstate_parser.add_argument("--reason", default=None, help="Reason for the state change.")
+
     tag_parser = commands.add_parser("tag", help="Attach tags to a candidate.")
     tag_parser.add_argument("candidate_id")
     tag_parser.add_argument("tags", nargs="+", help="Tags to attach.")
@@ -111,6 +118,12 @@ def _build_parser() -> argparse.ArgumentParser:
         "--sectors", nargs="+", type=int, default=None, help="TESS sectors to fetch."
     )
     ingest_parser.add_argument("--exptime", type=int, default=120, help="Cadence in seconds.")
+    ingest_parser.add_argument(
+        "--products",
+        choices=("lc", "tp", "both"),
+        default="lc",
+        help="SPOC product type: light curves (lc), target pixel files (tp), or both.",
+    )
 
     verify_parser = commands.add_parser("verify", help="Run the repository audit.")
     verify_parser.add_argument(
@@ -273,6 +286,12 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
             _print_json(event)
             return 0
 
+        if args.command == "set-state":
+            from .gatekeeper import set_lifecycle_state
+
+            _print_json(set_lifecycle_state(candidate, args.state, reason=args.reason))
+            return 0
+
         if args.command == "tag":
             _print_json(add_tags(candidate, args.tags))
             return 0
@@ -283,13 +302,21 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
             return 0
 
         if args.command == "ingest":
-            from .ingest import fetch_tess_products, ingest_products
+            from .ingest import fetch_tess_products, fetch_tess_tpfs, ingest_products
 
-            products = fetch_tess_products(candidate, sectors=args.sectors, exptime=args.exptime)
-            if not products:
+            all_products = []
+            if args.products in ("lc", "both"):
+                all_products.extend(
+                    fetch_tess_products(candidate, sectors=args.sectors, exptime=args.exptime)
+                )
+            if args.products in ("tp", "both"):
+                all_products.extend(
+                    fetch_tess_tpfs(candidate, sectors=args.sectors, exptime=args.exptime)
+                )
+            if not all_products:
                 print("no products found for the requested sectors")
                 return 0
-            written = ingest_products(candidate, products)
+            written = ingest_products(candidate, all_products)
             _print_json(
                 [str(path.relative_to(candidate.path)).replace("\\", "/") for path in written]
             )

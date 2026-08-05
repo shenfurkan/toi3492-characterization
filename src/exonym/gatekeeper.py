@@ -123,6 +123,53 @@ def gate_errors(workspace: CandidateWorkspace) -> List[str]:
     return errors
 
 
+def set_lifecycle_state(
+    workspace: CandidateWorkspace,
+    state: str,
+    reason: Optional[str] = None,
+) -> Dict:
+    """Set the lifecycle state of a candidate, recording the change as an event.
+
+    ``state`` must be one of the registered lifecycle states. Changing the state
+    of a locked candidate (``published``/``archived``) requires a ``reason`` so
+    audit history always explains why a locked workspace was reopened.
+    """
+    from .workspace import LIFECYCLE_STATES
+
+    if state not in LIFECYCLE_STATES:
+        raise ValueError("invalid lifecycle state: {0}".format(state))
+    workspace = load_candidate(workspace.repository_root, workspace.candidate_id)
+    metadata = dict(workspace.metadata)
+    lifecycle = dict(metadata["lifecycle"])
+    old_state = lifecycle["state"]
+    if old_state == state:
+        raise GateError("lifecycle state unchanged: {0}".format(state))
+    if old_state in ("published", "archived") and not reason:
+        raise GateError(
+            "a reason is required to change the state of a locked candidate "
+            "({0} -> {1})".format(old_state, state)
+        )
+    lifecycle["state"] = state
+    lifecycle["state_since"] = _now()
+    if reason:
+        lifecycle["reason"] = reason
+    metadata["lifecycle"] = lifecycle
+    validate_metadata(metadata, workspace.candidate_id)
+    _write_metadata(workspace, metadata)
+    _append_event(
+        workspace,
+        {
+            "event": "state_changed",
+            "candidate_id": workspace.candidate_id,
+            "from": old_state,
+            "to": state,
+            "reason": reason,
+            "timestamp": _now(),
+        },
+    )
+    return lifecycle
+
+
 def advance(workspace: CandidateWorkspace) -> Dict:
     """Validate the current gate and promote the candidate one phase.
 
@@ -140,21 +187,24 @@ def advance(workspace: CandidateWorkspace) -> Dict:
         raise GateError("; ".join(errors))
 
     next_phase_name = next_phase(phase)
-    if next_phase_name is None:
+    if next_phase_name is None and phase != "review":
         raise GateError("terminal phase reached: {0}".format(phase))
 
     event: Dict = {
         "event": "advanced",
         "candidate_id": workspace.candidate_id,
         "from": phase,
-        "to": next_phase_name,
+        "to": next_phase_name or phase,
         "timestamp": _now(),
     }
     if phase == "review":
-        if metadata["lifecycle"]["state"] not in ("published", "archived"):
-            metadata["lifecycle"]["state"] = "published"
-            metadata["lifecycle"]["state_since"] = _now()
-            metadata["lifecycle"]["reason"] = "Review gate passed; lifecycle locked"
+        if metadata["lifecycle"]["state"] in ("published", "archived"):
+            raise GateError(
+                "candidate lifecycle is already locked: {0}".format(metadata["lifecycle"]["state"])
+            )
+        metadata["lifecycle"]["state"] = "published"
+        metadata["lifecycle"]["state_since"] = _now()
+        metadata["lifecycle"]["reason"] = "Review gate passed; lifecycle locked"
         event["lifecycle"] = metadata["lifecycle"]["state"]
         event["to"] = "review (locked)"
 

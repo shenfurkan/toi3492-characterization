@@ -246,11 +246,18 @@ def load_light_curve_table(
         workspace.path / "data" / "raw",
     )
     fits_files: List[Path] = []
+    processed_names: set = set()
     for root in roots:
         if not root.is_dir():
             continue
+        hits: List[Path] = []
         for suffix in (".fits", ".fits.fz", ".fz"):
-            fits_files.extend(root.rglob("*" + suffix))
+            hits.extend(root.rglob("*" + suffix))
+        if root.name == "processed":
+            processed_names = {h.name for h in hits}
+        else:
+            hits = [h for h in hits if h.name not in processed_names]
+        fits_files.extend(hits)
     fits_files = [path for path in fits_files if "tp" not in path.stem.lower()]
     fits_files.sort()
     if not fits_files:
@@ -328,11 +335,18 @@ def load_tpf_cubes(workspace: CandidateWorkspace) -> List[Dict[str, Any]]:
         workspace.path / "data" / "raw",
     )
     fits_files: List[Path] = []
+    processed_names: set = set()
     for root in roots:
         if not root.is_dir():
             continue
+        hits: List[Path] = []
         for suffix in (".fits", ".fits.fz", ".fz"):
-            fits_files.extend(root.rglob("*" + suffix))
+            hits.extend(root.rglob("*" + suffix))
+        if root.name == "processed":
+            processed_names = {h.name for h in hits}
+        else:
+            hits = [h for h in hits if h.name not in processed_names]
+        fits_files.extend(hits)
     fits_files = [path for path in fits_files if "tp" in path.stem.lower()]
     fits_files.sort()
     if not fits_files:

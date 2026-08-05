@@ -95,6 +95,27 @@ def test_seismic_mass_radius_falls_back_to_priors():
     assert "priors" in result["method"]
 
 
+def test_seismic_sanity_check_rejects_unphysical_scaling():
+    from exonym.asteroseismology import seismic_sanity_check
+
+    implausible = {"mass_solar": 25.99, "radius_solar": 6.68}
+    verdict = seismic_sanity_check(
+        implausible, radius_prior_solar=2.15, prior_is_catalog=True
+    )
+    assert verdict["plausible"] is False
+    assert any("mass" in reason for reason in verdict["reasons"])
+    assert any("prior" in reason for reason in verdict["reasons"])
+
+    plausible = {"mass_solar": 1.9, "radius_solar": 2.1}
+    assert seismic_sanity_check(plausible, radius_prior_solar=2.15, prior_is_catalog=True)[
+        "plausible"
+    ]
+
+    synthetic_source = seismic_sanity_check(implausible)
+    assert synthetic_source["plausible"] is False
+    assert synthetic_source["reasons"] == ["mass outside plausible range"]
+
+
 # ---------------------------------------------------------------------------
 # Scientific analysis modules: PRF localization
 # ---------------------------------------------------------------------------

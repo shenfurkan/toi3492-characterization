@@ -189,11 +189,129 @@ def test_analysis_gate_requires_fpp_claim(tmp_path):
     assert not gate_errors(candidate)
 
 
+def test_set_lifecycle_state_records_reason_and_event(tmp_path):
+    candidate = create_candidate(_templated_repo(tmp_path), "candidate-alpha")
+
+    from exonym.gatekeeper import GateError, set_lifecycle_state
+
+    with pytest.raises(ValueError):
+        set_lifecycle_state(candidate, "not-a-state")
+
+    with pytest.raises(GateError):
+        set_lifecycle_state(candidate, "active")
+
+    lifecycle = set_lifecycle_state(candidate, "paused", reason="awaiting follow-up data")
+    assert lifecycle["state"] == "paused"
+    assert lifecycle["reason"] == "awaiting follow-up data"
+
+    reloaded = _reload(tmp_path)
+    assert reloaded.metadata["lifecycle"]["state"] == "paused"
+    events = (candidate.path / "lifecycle" / "events.jsonl").read_text(encoding="utf-8")
+    assert "state_changed" in events
+    assert "awaiting follow-up data" in events
+
+
+def test_set_lifecycle_state_locked_requires_reason(tmp_path):
+    candidate = create_candidate(_templated_repo(tmp_path), "candidate-alpha")
+
+    from exonym.gatekeeper import GateError, set_lifecycle_state
+
+    set_lifecycle_state(candidate, "published", reason="review complete")
+
+    with pytest.raises(GateError, match="reason is required"):
+        set_lifecycle_state(candidate, "paused")
+
+    lifecycle = set_lifecycle_state(
+        candidate, "paused", reason="audit: transit not independently detectable"
+    )
+    assert lifecycle["state"] == "paused"
+
+
 def test_phase_ordering_and_terminal(tmp_path):
     assert next_phase("intake") == "feasibility"
     assert next_phase("review") is None
     with pytest.raises(ValueError):
         next_phase("mystery")
+
+
+def _checked_doc(path, items=4):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        "".join("- [x] [MANDATORY] task {0}\n".format(i) for i in range(items)),
+        encoding="utf-8",
+    )
+
+
+def _to_review_phase(tmp_path):
+    candidate = create_candidate(_templated_repo(tmp_path), "candidate-alpha")
+    _checked_doc(candidate.path / "docs" / "01_intake_manifest.md")
+    advance(candidate)
+    _checked_doc(candidate.path / "docs" / "02_feasibility_report.md")
+    advance(candidate)
+    raw = candidate.path / "data" / "raw"
+    raw.mkdir(parents=True, exist_ok=True)
+    (raw / "lc.fits").write_bytes(b"fits")
+    (raw / "lc.provenance.json").write_text(
+        json.dumps(
+            {
+                "source_uri": "https://archive.stsci.edu/example",
+                "download_timestamp_utc": "2026-08-04T00:00:00Z",
+                "sha256": "a" * 64,
+                "fetched_by": "test",
+            }
+        ),
+        encoding="utf-8",
+    )
+    advance(candidate)
+    _checked_doc(candidate.path / "docs" / "03_spoc_dv_vetting.md")
+    advance(candidate)
+    _checked_doc(candidate.path / "docs" / "04_tfop_sg_followup.md")
+    advance(candidate)
+    claims = candidate.path / "claims"
+    claims.mkdir(parents=True, exist_ok=True)
+    claims.joinpath("fpp.json").write_text(
+        json.dumps(
+            {
+                "parameter": "fpp",
+                "value": 0.003,
+                "uncertainty_upper": 0.001,
+                "uncertainty_lower": 0.001,
+                "unit": "dimensionless",
+                "method": "triceratops",
+            }
+        ),
+        encoding="utf-8",
+    )
+    advance(candidate)
+    reloaded = _reload(tmp_path)
+    assert reloaded.metadata["workflow"]["phase"] == "review"
+    return reloaded
+
+
+def test_advance_review_phase_locks_lifecycle(tmp_path):
+    candidate = _to_review_phase(tmp_path)
+    assert candidate.metadata["lifecycle"]["state"] == "active"
+
+    _checked_doc(candidate.path / "decisions" / "review_gate.md")
+    event = advance(candidate)
+
+    assert event["to"] == "review (locked)"
+    assert event["lifecycle"] == "published"
+
+    locked = _reload(tmp_path)
+    assert locked.metadata["workflow"]["phase"] == "review"
+    assert locked.metadata["lifecycle"]["state"] == "published"
+    assert locked.metadata["lifecycle"]["reason"] == "Review gate passed; lifecycle locked"
+    assert locked.metadata["lifecycle"]["state_since"]
+
+    gate_record = json.loads(
+        (candidate.path / "gates" / "gate-006-review.json").read_text(encoding="utf-8")
+    )
+    assert gate_record["gate"] == "review"
+    assert gate_record["result"] == "PASS"
+
+    with pytest.raises(GateError, match="already locked"):
+        advance(locked)
 
 
 def test_tagging_add_and_filter(tmp_path):

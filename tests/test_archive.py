@@ -52,6 +52,55 @@ def test_query_gaia_astrometry_mock():
         assert len(res["sources"]) == 2
 
 
+def test_query_gaia_falls_back_to_tap_when_astroquery_fails():
+    service = ArchivalVettingService()
+    esa_rows = {"data": [["111", 10.0, 20.0, 12.5, 1.05, 0.5]]}
+    with patch(
+        "astroquery.gaia.Gaia.cone_search_async", side_effect=RuntimeError("archive down")
+    ), patch.object(service, "_http_get_json", return_value=esa_rows):
+        res = service.query_gaia_astrometry(10.0, 20.0, radius_arcsec=10.0)
+    assert res["backend"] == "esa-tap"
+    assert res["validated"] is True
+    assert res["nearby_sources_count"] == 1
+    assert res["ruwe"] == 1.05
+
+
+def test_query_gaia_validation_rejects_incomplete_backend():
+    service = ArchivalVettingService()
+    stale = {"data": [["111", 10.0, 20.0, 15.0, 1.1, 25.0]]}
+    complete = {
+        "data": [
+            ["222", 10.0, 20.0, 12.5, 1.02, 0.1],
+            ["333", 10.001, 20.001, 14.0, 1.3, 8.0],
+        ]
+    }
+    responses = iter([stale, complete])
+    with patch(
+        "astroquery.gaia.Gaia.cone_search_async", side_effect=RuntimeError("archive down")
+    ), patch.object(service, "_gaia_sources_vizier", return_value=[]), patch.object(
+        service, "_http_get_json", side_effect=lambda url: next(responses)
+    ):
+        res = service.query_gaia_astrometry(10.0, 20.0, radius_arcsec=30.0)
+    assert res["backend"] == "gaia-mirror"
+    assert res["validated"] is True
+    assert res["nearby_sources_count"] == 2
+    assert res["ruwe"] == 1.02
+
+
+def test_query_gaia_flags_unvalidated_when_no_backend_sees_target():
+    service = ArchivalVettingService()
+    stale = {"data": [["111", 10.0, 20.0, 15.0, 1.1, 25.0]]}
+    with patch(
+        "astroquery.gaia.Gaia.cone_search_async", side_effect=RuntimeError("archive down")
+    ), patch.object(service, "_gaia_sources_vizier", return_value=[]), patch.object(
+        service, "_http_get_json", return_value=stale
+    ):
+        res = service.query_gaia_astrometry(10.0, 20.0, radius_arcsec=30.0)
+    assert res["validated"] is False
+    assert res["backend"] == "esa-tap"
+    assert res["nearby_sources_count"] == 1
+
+
 def test_query_exofop_metadata_mock():
     service = ArchivalVettingService()
     mock_exofop_data = {

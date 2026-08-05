@@ -26,6 +26,10 @@ from .workspace import CandidateWorkspace
 class ArchivalVettingService:
     """Service for querying astronomical archives (Gaia, ExoFOP) and evaluating candidate vetting metrics."""
 
+    ESA_GAIA_TAP_URL = "https://gea.esac.esa.int/tap-server/tap/sync"
+    MIRROR_GAIA_TAP_URL = "https://gaia.gec.asiaa.sinica.edu.tw/tap-server/tap/sync"
+    TARGET_PRESENCE_ARCSEC = 2.0
+
     def __init__(
         self,
         timeout: float = 10.0,
@@ -59,13 +63,132 @@ class ArchivalVettingService:
                     time.sleep(self.retry_backoff_factor * (2**attempt))
         return None
 
+    def _gaia_sources_astroquery(
+        self, ra: float, dec: float, radius_arcsec: float
+    ) -> List[Dict[str, Any]]:
+        """Cone search via astroquery (official ESA Gaia archive)."""
+        from astroquery.gaia import Gaia
+        import astropy.units as u
+        from astropy.coordinates import SkyCoord
+
+        coord = SkyCoord(ra=ra, dec=dec, unit=(u.deg, u.deg), frame="icrs")
+        radius_deg = u.Quantity(radius_arcsec / 3600.0, u.deg)
+        job = Gaia.cone_search_async(coord, radius=radius_deg, verbose=False)
+        table = job.get_results()
+        if table is None or len(table) == 0:
+            return []
+        sources: List[Dict[str, Any]] = []
+        for row in table:
+            source_id = str(row["source_id"]) if "source_id" in row.colnames else "unknown"
+            sep_arcsec = float(row["dist"]) * 3600.0 if "dist" in row.colnames else 0.0
+            ruwe_val = None
+            if "ruwe" in row.colnames and not math.isnan(row["ruwe"]):
+                ruwe_val = float(row["ruwe"])
+            g_mag = None
+            if "phot_g_mean_mag" in row.colnames and not math.isnan(row["phot_g_mean_mag"]):
+                g_mag = float(row["phot_g_mean_mag"])
+            sources.append(
+                {
+                    "source_id": source_id,
+                    "separation_arcsec": round(sep_arcsec, 4),
+                    "ruwe": round(ruwe_val, 4) if ruwe_val is not None else None,
+                    "phot_g_mean_mag": round(g_mag, 4) if g_mag is not None else None,
+                }
+            )
+        sources.sort(key=lambda item: item["separation_arcsec"])
+        return sources
+
+    def _gaia_sources_tap(
+        self, ra: float, dec: float, radius_arcsec: float, base_url: str
+    ) -> List[Dict[str, Any]]:
+        """Cone search via a TAP sync endpoint returning JSON row data."""
+        tap_query = (
+            f"SELECT source_id, ra, dec, phot_g_mean_mag, ruwe, "
+            f"DISTANCE(POINT('ICRS', ra, dec), POINT('ICRS', {ra}, {dec}))*3600.0 AS sep_arcsec "
+            f"FROM gaiadr3.gaia_source "
+            f"WHERE 1=CONTAINS(POINT('ICRS', ra, dec), CIRCLE('ICRS', {ra}, {dec}, {radius_arcsec/3600.0})) "
+            f"ORDER BY sep_arcsec ASC"
+        )
+        url = (
+            f"{base_url}?REQUEST=doQuery&LANG=ADQL&FORMAT=json&QUERY={urllib.parse.quote(tap_query)}"
+        )
+        data = self._http_get_json(url)
+        if not (isinstance(data, dict) and data.get("data")):
+            return []
+        sources: List[Dict[str, Any]] = []
+        for row in data["data"]:
+            sid = str(row[0]) if len(row) > 0 else "unknown"
+            gmag = float(row[3]) if len(row) > 3 and row[3] is not None else None
+            ruwe_val = float(row[4]) if len(row) > 4 and row[4] is not None else None
+            sep_val = float(row[5]) if len(row) > 5 and row[5] is not None else 0.0
+            sources.append(
+                {
+                    "source_id": sid,
+                    "separation_arcsec": round(sep_val, 4),
+                    "ruwe": round(ruwe_val, 4) if ruwe_val is not None else None,
+                    "phot_g_mean_mag": round(gmag, 4) if gmag is not None else None,
+                }
+            )
+        sources.sort(key=lambda item: item["separation_arcsec"])
+        return sources
+
+    def _gaia_sources_vizier(
+        self, ra: float, dec: float, radius_arcsec: float
+    ) -> List[Dict[str, Any]]:
+        """Cone search via VizieR Gaia DR3 (independent of Gaia TAP outages)."""
+        from astroquery.vizier import Vizier
+
+        Vizier.ROW_LIMIT = -1
+        result = Vizier.query_region(
+            f"{ra} {dec}", radius=f"{radius_arcsec}s", catalog="I/355/gaiadr3"
+        )
+        if not result or len(result) == 0:
+            return []
+        cos_dec = math.cos(math.radians(dec))
+        sources: List[Dict[str, Any]] = []
+        for row in result[0]:
+            try:
+                row_ra = float(row["RA_ICRS"])
+                row_dec = float(row["DE_ICRS"])
+            except (KeyError, TypeError, ValueError):
+                continue
+            sep_arcsec = math.hypot(
+                (row_ra - ra) * cos_dec * 3600.0, (row_dec - dec) * 3600.0
+            )
+            ruwe_val = None
+            try:
+                if row["RUWE"] is not None and not math.isnan(float(row["RUWE"])):
+                    ruwe_val = float(row["RUWE"])
+            except (KeyError, TypeError, ValueError):
+                ruwe_val = None
+            g_mag = None
+            try:
+                if row["Gmag"] is not None and not math.isnan(float(row["Gmag"])):
+                    g_mag = float(row["Gmag"])
+            except (KeyError, TypeError, ValueError):
+                g_mag = None
+            sources.append(
+                {
+                    "source_id": str(row["Source"]) if "Source" in row.colnames else "unknown",
+                    "separation_arcsec": round(sep_arcsec, 4),
+                    "ruwe": round(ruwe_val, 4) if ruwe_val is not None else None,
+                    "phot_g_mean_mag": round(g_mag, 4) if g_mag is not None else None,
+                }
+            )
+        sources.sort(key=lambda item: item["separation_arcsec"])
+        return sources
+
     def query_gaia_astrometry(
         self, ra: float, dec: float, radius_arcsec: float = 10.0
     ) -> Dict[str, Any]:
-        """Cone search Gaia DR3/EDR3 for celestial sources around target coordinates.
+        """Cone search Gaia DR3 for celestial sources around target coordinates.
 
-        Extracts RUWE (Renormalised Unit Weight Error) for target star and counts
-        detected nearby sources within radius_arcsec. Flags suspected_binary if RUWE > 1.4.
+        Queries backends in order (astroquery/ESA, ESA TAP sync, VizieR, mirror)
+        and adopts the first result validated by the presence of a source within
+        ``TARGET_PRESENCE_ARCSEC`` of the target — a cone search of the target
+        position must recover the target itself, otherwise the catalog view is
+        considered incomplete and the next backend is tried. Extracts RUWE for
+        the nearest source and flags suspected_binary if RUWE > 1.4.
         """
         results: Dict[str, Any] = {
             "target_ra_deg": float(ra),
@@ -76,101 +199,60 @@ class ArchivalVettingService:
             "nearby_sources_count": 0,
             "sources": [],
             "source": "gaia-dr3",
+            "backend": None,
+            "validated": False,
         }
 
         if ra == 0.0 and dec == 0.0:
             return results
 
-        astroquery_success = False
-        try:
-            from astroquery.gaia import Gaia
-            import astropy.units as u
-            from astropy.coordinates import SkyCoord
+        backends = (
+            ("astroquery-gaia", lambda: self._gaia_sources_astroquery(ra, dec, radius_arcsec)),
+            ("esa-tap", lambda: self._gaia_sources_tap(ra, dec, radius_arcsec, self.ESA_GAIA_TAP_URL)),
+            ("vizier-dr3", lambda: self._gaia_sources_vizier(ra, dec, radius_arcsec)),
+            (
+                "gaia-mirror",
+                lambda: self._gaia_sources_tap(ra, dec, radius_arcsec, self.MIRROR_GAIA_TAP_URL),
+            ),
+        )
 
-            coord = SkyCoord(ra=ra, dec=dec, unit=(u.deg, u.deg), frame="icrs")
-            radius_deg = u.Quantity(radius_arcsec / 3600.0, u.deg)
-            job = Gaia.cone_search_async(coord, radius=radius_deg, verbose=False)
-            table = job.get_results()
-
-            if table is not None and len(table) > 0:
-                astroquery_success = True
-                results["nearby_sources_count"] = len(table)
+        fallback: Optional[Tuple[str, List[Dict[str, Any]]]] = None
+        for backend_name, fetch in backends:
+            try:
+                sources = fetch()
+            except Exception:
                 sources = []
-                target_ruwe = None
-                min_sep = float("inf")
-
-                for row in table:
-                    source_id = (
-                        str(row["source_id"]) if "source_id" in row.colnames else "unknown"
-                    )
-                    sep_arcsec = float(row["dist"]) * 3600.0 if "dist" in row.colnames else 0.0
-                    ruwe_val = None
-                    if "ruwe" in row.colnames and not math.isnan(row["ruwe"]):
-                        ruwe_val = float(row["ruwe"])
-                    g_mag = None
-                    if "phot_g_mean_mag" in row.colnames and not math.isnan(row["phot_g_mean_mag"]):
-                        g_mag = float(row["phot_g_mean_mag"])
-
-                    source_dict = {
-                        "source_id": source_id,
-                        "separation_arcsec": round(sep_arcsec, 4),
-                        "ruwe": round(ruwe_val, 4) if ruwe_val is not None else None,
-                        "phot_g_mean_mag": round(g_mag, 4) if g_mag is not None else None,
-                    }
-                    sources.append(source_dict)
-
-                    if sep_arcsec < min_sep:
-                        min_sep = sep_arcsec
-                        target_ruwe = ruwe_val
-
-                results["sources"] = sources
-                if target_ruwe is not None:
-                    results["ruwe"] = round(target_ruwe, 4)
-                    results["suspected_binary"] = bool(target_ruwe > 1.4)
-        except Exception:
-            astroquery_success = False
-
-        if not astroquery_success:
-            tap_query = (
-                f"SELECT source_id, ra, dec, phot_g_mean_mag, ruwe, "
-                f"DISTANCE(POINT('ICRS', ra, dec), POINT('ICRS', {ra}, {dec}))*3600.0 AS sep_arcsec "
-                f"FROM gaiadr3.gaia_source "
-                f"WHERE 1=CONTAINS(POINT('ICRS', ra, dec), CIRCLE('ICRS', {ra}, {dec}, {radius_arcsec/3600.0})) "
-                f"ORDER BY sep_arcsec ASC"
+            if not sources:
+                continue
+            if fallback is None:
+                fallback = (backend_name, sources)
+            validated = any(
+                item["separation_arcsec"] <= self.TARGET_PRESENCE_ARCSEC for item in sources
             )
-            url = (
-                "https://gaia.gec.asiaa.sinica.edu.tw/tap-server/tap/sync?"
-                f"REQUEST=doQuery&LANG=ADQL&FORMAT=json&QUERY={urllib.parse.quote(tap_query)}"
-            )
-            data = self._http_get_json(url)
-            if data and isinstance(data, dict) and "data" in data:
-                rows = data.get("data", [])
-                results["nearby_sources_count"] = len(rows)
-                sources = []
-                target_ruwe = None
-                for i, row in enumerate(rows):
-                    sid = str(row[0]) if len(row) > 0 else "unknown"
-                    gmag = float(row[3]) if len(row) > 3 and row[3] is not None else None
-                    ruwe_val = float(row[4]) if len(row) > 4 and row[4] is not None else None
-                    sep_val = float(row[5]) if len(row) > 5 and row[5] is not None else 0.0
+            if validated:
+                self._apply_gaia_sources(results, sources, backend_name, validated=True)
+                return results
 
-                    sources.append(
-                        {
-                            "source_id": sid,
-                            "separation_arcsec": round(sep_val, 4),
-                            "ruwe": round(ruwe_val, 4) if ruwe_val is not None else None,
-                            "phot_g_mean_mag": round(gmag, 4) if gmag is not None else None,
-                        }
-                    )
-                    if i == 0 and ruwe_val is not None:
-                        target_ruwe = ruwe_val
-
-                results["sources"] = sources
-                if target_ruwe is not None:
-                    results["ruwe"] = round(target_ruwe, 4)
-                    results["suspected_binary"] = bool(target_ruwe > 1.4)
-
+        if fallback is not None:
+            self._apply_gaia_sources(results, fallback[1], fallback[0], validated=False)
         return results
+
+    @staticmethod
+    def _apply_gaia_sources(
+        results: Dict[str, Any],
+        sources: List[Dict[str, Any]],
+        backend_name: str,
+        validated: bool,
+    ) -> None:
+        """Populate the astrometry result dict from a resolved source list."""
+        results["nearby_sources_count"] = len(sources)
+        results["sources"] = sources
+        results["backend"] = backend_name
+        results["validated"] = bool(validated)
+        target_ruwe = sources[0]["ruwe"] if sources else None
+        if target_ruwe is not None:
+            results["ruwe"] = target_ruwe
+            results["suspected_binary"] = bool(target_ruwe > 1.4)
 
     def query_exofop_metadata(self, tic_id: str) -> Dict[str, Any]:
         """Query NASA ExoFOP JSON API for imaging and spectroscopy records for a target TIC.

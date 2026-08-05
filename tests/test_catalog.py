@@ -156,6 +156,74 @@ def test_fetch_tess_products_writes_fits_and_ingests(tmp_path, monkeypatch):
     assert len(record["sha256"]) == 64
 
 
+class _FakeTPF:
+    def __init__(self):
+        self._data = None
+
+    def download(self):
+        return self
+
+    def to_fits(self, path, overwrite=False):
+        from astropy.io import fits
+
+        hdul = fits.HDUList([fits.PrimaryHDU(data=np.zeros(8))])
+        hdul.writeto(path, overwrite=overwrite)
+        hdul.close()
+
+
+class _FakeTPFSearch:
+    def __init__(self, table):
+        self.table = table
+
+    def __len__(self):
+        return len(self.table)
+
+    def __getitem__(self, index):
+        return _FakeTPF()
+
+
+def test_fetch_tess_tpfs_stages_and_ingests_with_sidecars(tmp_path, monkeypatch):
+    import lightkurve as lk
+    from astropy.table import Table
+
+    from exonym.ingest import fetch_tess_tpfs, ingest_products
+
+    create_candidate(tmp_path, "candidate-tpf", tic="123456789")
+    candidate = [
+        c for c in discover_candidates(tmp_path) if c.candidate_id == "candidate-tpf"
+    ][0]
+
+    table = Table(
+        rows=[
+            ("s0047", "tess2021000000000-s0047-0000000123456789-0218-s.fits"),
+            ("s0053", "tess2021000000000-s0053-0000000123456789-0226-s.fits"),
+        ],
+        names=("sequence_number", "obs_id"),
+    )
+    fake_search = _FakeTPFSearch(table)
+
+    monkeypatch.setattr(lk, "search_targetpixelfile", lambda *args, **kwargs: fake_search)
+
+    products = fetch_tess_tpfs(candidate, exptime=120)
+    assert len(products) == 2
+    for staged, source_uri in products:
+        assert staged.is_file()
+        assert staged.stat().st_size > 0
+        assert staged.name.endswith("_tp.fits")
+        assert source_uri.startswith("https://mast.stsci.edu")
+
+    written = ingest_products(candidate, products)
+    raw = candidate.path / "data" / "raw"
+    for path in written:
+        assert path.is_file()
+        assert path.parent == raw
+        assert path.name.endswith("_tp.fits")
+        sidecar = path.with_name(path.stem + ".provenance.json")
+        assert sidecar.is_file(), "sidecar must follow <stem>.provenance.json convention"
+        record = json.loads(sidecar.read_text(encoding="utf-8"))
+        assert len(record["sha256"]) == 64
+
+
 def test_perryman_spectroscopic_and_atmospheric_calculations():
     from exonym.catalog import (
         calculate_astrometric_wobble_microarcsec,

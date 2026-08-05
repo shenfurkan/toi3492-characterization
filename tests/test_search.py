@@ -23,6 +23,32 @@ def test_find_transits_synthetic():
     assert res.snr > 0
 
 
+def test_find_transits_resolves_double_period_alias():
+    rng = np.random.default_rng(11)
+    period = 4.2608
+    epoch = 100.0
+    duration_days = 6.45 / 24.0
+
+    segments = []
+    for start in (0.0, 165.0, 357.0):
+        segments.append(np.arange(start, start + 26.0, 120.0 / 86400.0))
+    time = np.concatenate(segments)
+
+    flux = np.ones_like(time)
+    ph = ((time - epoch + 0.5 * period) % period) / period - 0.5
+    flux[np.abs(ph) < duration_days / period / 2.0] -= 0.003857
+    flux += rng.normal(0.0, 0.0035, time.size)
+
+    from exonym.search import _median_bin
+
+    time_b, flux_b = _median_bin(time, flux, n_bins=3500)
+
+    res = find_transits(time_b, flux_b, period_min=2.0, period_max=12.0)
+    assert abs(res.best_period - period) < 0.02, "fundamental period lost to 2x alias"
+    assert res.snr > 10.0
+    assert res.best_depth_ppm > 2000.0
+
+
 def test_find_transits_invalid():
     with pytest.raises(ValueError):
         find_transits([1.0, 2.0], [1.0, 1.0])

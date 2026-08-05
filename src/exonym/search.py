@@ -35,6 +35,35 @@ class BLSSearchResult:
         }
 
 
+def _epoch_score(
+    time: np.ndarray,
+    values: np.ndarray,
+    period: float,
+    epoch: float,
+    duration_hours: float,
+) -> Optional[Dict[str, float]]:
+    """Score one (period, epoch) trial; returns depth/snr counts or None."""
+    ph = phase_hours(time, period, epoch)
+    in_transit = np.abs(ph) <= 0.5 * duration_hours
+    out_transit = (np.abs(ph) > 1.0 * duration_hours) & (np.abs(ph) < 3.0 * duration_hours)
+
+    in_vals = values[in_transit]
+    out_vals = values[out_transit]
+    if in_vals.size < 1 or out_vals.size < 3:
+        return None
+
+    depth = float(np.median(out_vals) - np.median(in_vals))
+    std_out = np.std(out_vals) if np.std(out_vals) > 1e-8 else 1e-4
+    n_eff = (in_vals.size * out_vals.size) / (in_vals.size + out_vals.size)
+    snr = (depth * np.sqrt(n_eff)) / std_out
+    return {"depth": depth, "snr": snr, "n_in": int(in_vals.size), "n_out": int(out_vals.size)}
+
+
+def _epoch_trial_count(period: float, duration_hours: float, cap: int = 500) -> int:
+    """Trial epochs dense enough that spacing never exceeds half the duration."""
+    return max(8, min(int(np.ceil(period / (duration_hours / 48.0))), cap))
+
+
 def find_transits(
     time_btjd: Sequence[float],
     flux: Sequence[float],
@@ -46,6 +75,13 @@ def find_transits(
     """Run a target-neutral BLS periodogram search over a light curve.
 
     Returns the optimal (period, epoch, depth_ppm, duration_hours, snr).
+
+    The search is two-pass: a coarse period grid locates the strongest peak,
+    then a fine refinement re-scans around it so long baselines are not
+    smeared by grid quantization. Integer-multiple aliases are resolved by
+    testing for additional transits at fractional phase offsets: when a
+    folded period k*P shows transits at every j/k offset, the fundamental
+    period P is adopted instead.
     """
     time = np.asarray(time_btjd, dtype=float)
     values = np.asarray(flux, dtype=float)
@@ -59,48 +95,77 @@ def find_transits(
     if period_min <= 0 or period_max <= period_min:
         raise ValueError("invalid period search bounds")
 
-    periods = np.linspace(period_min, period_max, n_periods)
-    best_snr = -1.0
-    best_period = float(periods[0])
-    best_epoch = float(time[0])
-    best_depth_ppm = 0.0
+    t_min = float(np.min(time))
+    coarse_periods = np.linspace(period_min, period_max, n_periods)
+    grid_step = (period_max - period_min) / max(n_periods - 1, 1)
 
-    t_min, t_max = np.min(time), np.max(time)
+    def scan(period_values: np.ndarray) -> Optional[Dict[str, float]]:
+        best: Optional[Dict[str, float]] = None
+        for p in period_values:
+            n_epochs = _epoch_trial_count(p, duration_hours)
+            for trial_epoch in np.linspace(t_min, t_min + p, n_epochs):
+                scored = _epoch_score(time, values, float(p), float(trial_epoch), duration_hours)
+                if scored is None:
+                    continue
+                if best is None or scored["snr"] > best["snr"]:
+                    best = {"period": float(p), "epoch": float(trial_epoch), **scored}
+        return best
 
-    for p in periods:
-        # Epoch trial spacing must be at most half the transit duration so a
-        # signal is never completely missed between trial epochs. Capped to
-        # keep long-period searches tractable.
-        n_epochs = max(8, min(int(np.ceil(p / (duration_hours / 48.0))), 40))
-        for trial_epoch in np.linspace(t_min, t_min + p, n_epochs):
-            ph = phase_hours(time, p, trial_epoch)
-            in_transit = np.abs(ph) <= 0.5 * duration_hours
-            out_transit = (np.abs(ph) > 1.0 * duration_hours) & (np.abs(ph) < 3.0 * duration_hours)
+    best = scan(coarse_periods)
+    if best is None:
+        return BLSSearchResult(
+            best_period=round(period_min, 5),
+            best_epoch=round(t_min, 5),
+            best_depth_ppm=0.0,
+            best_duration_hours=round(duration_hours, 2),
+            snr=0.0,
+        )
 
-            in_vals = values[in_transit]
-            out_vals = values[out_transit]
+    def refine(center: float) -> Optional[Dict[str, float]]:
+        local = np.linspace(center - 2.0 * grid_step, center + 2.0 * grid_step, 241)
+        local = local[(local >= period_min) & (local <= period_max)]
+        if local.size == 0:
+            return None
+        return scan(local)
 
-            if in_vals.size >= 1 and out_vals.size >= 3:
-                depth = float(np.median(out_vals) - np.median(in_vals))
-                std_out = np.std(out_vals) if np.std(out_vals) > 1e-8 else 1e-4
-                # Effective SNR uses the harmonic-mean weighting of in/out
-                # sample counts so that a tiny in-transit group cannot
-                # artificially inflate the score.
-                n_eff = (in_vals.size * out_vals.size) / (in_vals.size + out_vals.size)
-                snr = (depth * np.sqrt(n_eff)) / std_out
+    refined = refine(best["period"])
+    if refined is not None and refined["snr"] >= best["snr"]:
+        best = refined
 
-                if snr > best_snr:
-                    best_snr = float(snr)
-                    best_period = float(p)
-                    best_epoch = float(trial_epoch)
-                    best_depth_ppm = float(depth * 1e6)
+    for _ in range(4):
+        divided = False
+        for divisor in (2, 3):
+            sub_period = best["period"] / divisor
+            if sub_period < period_min:
+                continue
+            offset_ok = True
+            for j in range(1, divisor):
+                offset_score = _epoch_score(
+                    time, values, best["period"], best["epoch"] + j * sub_period, duration_hours
+                )
+                if (
+                    offset_score is None
+                    or offset_score["depth"] <= 0.5 * best["depth"]
+                    or offset_score["snr"] < 5.0
+                ):
+                    offset_ok = False
+                    break
+            if not offset_ok:
+                continue
+            sub_refined = refine(sub_period)
+            if sub_refined is not None and sub_refined["snr"] >= 0.8 * best["snr"]:
+                best = sub_refined
+                divided = True
+                break
+        if not divided:
+            break
 
     return BLSSearchResult(
-        best_period=round(best_period, 5),
-        best_epoch=round(best_epoch, 5),
-        best_depth_ppm=round(best_depth_ppm, 2),
+        best_period=round(best["period"], 5),
+        best_epoch=round(best["epoch"], 5),
+        best_depth_ppm=round(best["depth"] * 1e6, 2),
         best_duration_hours=round(duration_hours, 2),
-        snr=round(max(best_snr, 0.0), 2),
+        snr=round(max(best["snr"], 0.0), 2),
     )
 
 
@@ -128,39 +193,21 @@ def load_candidate_light_curve(
     """Return (time_btjd, normalized_flux) from candidate FITS data, or None.
 
     Products are read from ``data/processed/`` first, then ``data/raw/``.
-    Returns None when no readable FITS light curve with at least 50 points
-    exists, so callers can fall back to a synthetic demonstration grid.
+    Multiple products are concatenated (per-sector binning) so multi-sector
+    baselines are searched jointly. Returns None when no readable FITS light
+    curve with at least 50 points exists, so callers can fall back to a
+    synthetic demonstration grid.
     """
-    roots = (
-        workspace.path / "data" / "processed",
-        workspace.path / "data" / "raw",
-    )
-    fits_files: List[Path] = []
-    for root in roots:
-        if not root.is_dir():
-            continue
-        for suffix in (".fits", ".fits.fz", ".fz"):
-            fits_files.extend(root.rglob("*" + suffix))
-    fits_files.sort()
-    if not fits_files:
-        return None
+    from .inputs import load_light_curve_table
 
-    try:
-        import lightkurve as lk
-    except ImportError:  # pragma: no cover - optional dependency
+    table = load_light_curve_table(workspace, max_points=max_points)
+    if table is None:
         return None
-
-    for path in fits_files:
-        try:
-            light_curve = lk.read(path).remove_nans().normalize()
-            time = np.asarray(light_curve.time.value, dtype=float)
-            flux = np.asarray(light_curve.flux.value, dtype=float)
-            if time.size < 50 or time.size != flux.size:
-                continue
-            return _median_bin(time, flux, n_bins=max_points)
-        except Exception:
-            continue
-    return None
+    time = np.asarray(table["time"], dtype=float)
+    flux = np.asarray(table["flux"], dtype=float)
+    if time.size < 50 or time.size != flux.size:
+        return None
+    return time, flux
 
 
 def run_bls_on_candidate(

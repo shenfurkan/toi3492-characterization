@@ -191,6 +191,39 @@ def seismic_mass_radius(
     }
 
 
+SEISMIC_MASS_BOUNDS_SOLAR = (0.05, 20.0)
+SEISMIC_RADIUS_BOUNDS_SOLAR = (0.05, 20.0)
+SEISMIC_PRIOR_RATIO_TOLERANCE = 2.0
+
+
+def seismic_sanity_check(
+    seismic: Dict[str, Any],
+    radius_prior_solar: Optional[float] = None,
+    prior_is_catalog: bool = False,
+) -> Dict[str, Any]:
+    """Flag scaling-relation results that are physically implausible.
+
+    Scaling relations applied to noise peaks can return absurd stellar
+    parameters (e.g., a 26 Msun A star from two 120-s sectors). Results outside
+    plausible bounds, or inconsistent with a catalog/SED radius prior by more
+    than the tolerance factor, are flagged so the caller can reject them.
+    """
+    reasons: List[str] = []
+    mass = float(seismic.get("mass_solar", 0.0))
+    radius = float(seismic.get("radius_solar", 0.0))
+    mass_lo, mass_hi = SEISMIC_MASS_BOUNDS_SOLAR
+    radius_lo, radius_hi = SEISMIC_RADIUS_BOUNDS_SOLAR
+    if not (mass_lo <= mass <= mass_hi):
+        reasons.append("mass outside plausible range")
+    if not (radius_lo <= radius <= radius_hi):
+        reasons.append("radius outside plausible range")
+    if prior_is_catalog and radius_prior_solar and radius_prior_solar > 0 and radius > 0:
+        ratio = radius / float(radius_prior_solar)
+        if not (1.0 / SEISMIC_PRIOR_RATIO_TOLERANCE <= ratio <= SEISMIC_PRIOR_RATIO_TOLERANCE):
+            reasons.append("scaling radius inconsistent with catalog radius prior")
+    return {"plausible": not reasons, "reasons": reasons}
+
+
 def _highpass_segments(
     time: np.ndarray,
     flux: np.ndarray,
@@ -340,6 +373,11 @@ def run_asteroseismology(
         mass_prior_solar=stellar_params["mass_solar"],
         radius_prior_solar=stellar_params["radius_solar"],
     )
+    sanity = seismic_sanity_check(
+        seismic,
+        radius_prior_solar=stellar_params["radius_solar"],
+        prior_is_catalog=stellar_params.get("source") == "candidate-data",
+    )
 
     pysyd_dir = outputs_dir / "pysyd"
     pysyd_result = _try_pysyd_crosscheck(
@@ -352,9 +390,13 @@ def run_asteroseismology(
         "generated_utc": datetime.now(timezone.utc).isoformat(),
         "source": source,
         "status": (
-            "oscillation_envelope_estimated"
-            if envelope["dnu_candidate_uhz"] is not None
-            else "envelope_estimated_dnu_undetermined"
+            "scaling_rejected_unphysical"
+            if not sanity["plausible"]
+            else (
+                "oscillation_envelope_estimated"
+                if envelope["dnu_candidate_uhz"] is not None
+                else "envelope_estimated_dnu_undetermined"
+            )
         ),
         "pipeline": "pysyd-crosscheck" if pysyd_result else "whitened-gls-psd",
         "search_range_uhz": [float(numax_min_uhz), float(numax_max_uhz)],
@@ -372,6 +414,7 @@ def run_asteroseismology(
             "teff_k_prior": stellar_params["teff_k"],
             "mass_prior_solar": stellar_params["mass_solar"],
             "radius_prior_solar": stellar_params["radius_solar"],
+            "validity": sanity,
         },
         "pysyd_crosscheck": pysyd_result,
         "caveat": (
