@@ -251,27 +251,27 @@ def _synthetic_timing_table(
     optionally with a sinusoidal per-epoch TTV shift.
     """
     rng = np.random.default_rng(seed=rng_seed)
-    period_days = 3.5
-    epoch_btjd = 2.0
+    demo_period_days = 3.5
+    demo_epoch_btjd = 2.0
     depth_ppm = 2500.0
     ttv_cycles = 6
     cadence_days = 20.0 / 1440.0
     time = np.arange(0.0, 35.0, cadence_days)
     rho_solar = 1.0
-    a_rs = stellar_density_a_rs(rho_solar, period_days)
+    a_rs = stellar_density_a_rs(rho_solar, demo_period_days)
     ephemeris = {
-        "period_days": period_days,
-        "epoch_btjd": epoch_btjd,
+        "period_days": demo_period_days,
+        "epoch_btjd": demo_epoch_btjd,
         "duration_days": 0.12,
         "depth_ppm": depth_ppm,
     }
     template = transit_template_parameters(ephemeris, a_rs)
     ttv_amplitude_days = ttv_amplitude_minutes / 1440.0
-    n_min = int(np.floor((np.min(time) - epoch_btjd) / period_days))
-    n_max = int(np.ceil((np.max(time) - epoch_btjd) / period_days))
+    n_min = int(np.floor((np.min(time) - demo_epoch_btjd) / demo_period_days))
+    n_max = int(np.ceil((np.max(time) - demo_epoch_btjd) / demo_period_days))
     flux = np.ones_like(time)
     for epoch in range(n_min, n_max + 1):
-        t0_epoch = epoch_btjd + epoch * period_days
+        t0_epoch = demo_epoch_btjd + epoch * demo_period_days
         shift = ttv_amplitude_days * math.sin(2.0 * np.pi * epoch / ttv_cycles)
         mask = (time > t0_epoch - 0.35) & (time < t0_epoch + 0.35)
         model = _template_flux(template, time[mask], t0_epoch + shift)
@@ -285,8 +285,8 @@ def _synthetic_timing_table(
         "flux": flux,
         "flux_err": flux_err,
         "sector": sector_values,
-        "_period_days": period_days,
-        "_epoch_btjd": epoch_btjd,
+        "_period_days": demo_period_days,
+        "_epoch_btjd": demo_epoch_btjd,
         "_duration_days": 0.12,
         "_depth_ppm": depth_ppm,
     }

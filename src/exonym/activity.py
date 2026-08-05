@@ -93,11 +93,11 @@ def weighted_period_summary(
 def _synthetic_rotation_table() -> Dict[str, np.ndarray]:
     """Deterministic demonstration light curve with an injected rotation signal."""
     rng = np.random.default_rng(seed=29)
-    period_days = 5.0
+    rotation_period_days = 5.0
     amplitude = 400e-6
     cadence_days = 120.0 / 86400.0
     time = np.arange(0.0, 27.0, cadence_days)
-    flux = 1.0 + amplitude * np.sin(2.0 * np.pi * time / period_days)
+    flux = 1.0 + amplitude * np.sin(2.0 * np.pi * time / rotation_period_days)
     flux = flux + rng.normal(0.0, 150e-6, size=time.shape)
     flux_err = np.full_like(flux, 150e-6)
     sector_values = np.ones(time.size, dtype=int)

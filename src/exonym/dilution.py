@@ -43,13 +43,21 @@ def aperture_depth_ppm(
     flux_1d: np.ndarray,
     ephemeris: Dict[str, Any],
 ) -> Optional[Dict[str, float]]:
-    """Median in/out transit depth for a one-dimensional aperture light curve."""
+    """Median in/out transit depth for a one-dimensional aperture light curve.
+
+    Aperture pixel sums are count-based, so the light curve is normalized to
+    its median before the fractional depth is computed.
+    """
     duration_hours = float(ephemeris["duration_days"]) * 24.0
     if duration_hours <= 0:
         return None
+    flux_1d = np.asarray(flux_1d, dtype=float)
+    median_flux = float(np.median(flux_1d))
+    if not np.isfinite(median_flux) or median_flux <= 0:
+        return None
     try:
         depth_ppm, uncertainty_ppm, n_in, n_out = robust_transit_depth(
-            time, flux_1d, ephemeris["period_days"], ephemeris["epoch_btjd"], duration_hours
+            time, flux_1d / median_flux, ephemeris["period_days"], ephemeris["epoch_btjd"], duration_hours
         )
     except ValueError:
         return None
@@ -84,8 +92,10 @@ def _extract_cube_light_curves(
     pipeline = (np.asarray(aperture) & 2) != 0
     if int(np.sum(pipeline)) == 0:
         pipeline = np.ones(shape, dtype=bool)
-    centroid_y, centroid_x = np.unravel_index(np.argmax(pipeline), shape)
-    boxes = _box_apertures(shape, float(centroid_x), float(centroid_y), APERTURE_HALF_SIZES)
+    yy, xx = np.indices(shape, dtype=float)
+    centroid_x = float(np.mean(xx[pipeline]))
+    centroid_y = float(np.mean(yy[pipeline]))
+    boxes = _box_apertures(shape, centroid_x, centroid_y, APERTURE_HALF_SIZES)
     light_curves: Dict[str, Any] = {}
     for name, mask in boxes.items():
         flux_1d = np.sum(flux[:, mask], axis=1)
@@ -175,13 +185,13 @@ def _synthetic_tpf_cube() -> Dict[str, Any]:
     base_image = 1800.0 + 1200.0 * target_psf / np.max(target_psf) + 24.0 * neighbor_psf
     deficit_psf = 60.0 * target_psf / np.max(target_psf)
 
-    period_days = 3.5
-    epoch_btjd = 2.0
-    duration_days = 0.12
+    demo_period_days = 3.5
+    demo_epoch_btjd = 2.0
+    demo_duration_days = 0.12
     cadence_days = 120.0 / 86400.0
     time = np.arange(0.0, 27.0, cadence_days)
-    hours = phase_hours(time, period_days, epoch_btjd)
-    in_transit = np.abs(hours) < 0.5 * duration_days * 24.0
+    hours = phase_hours(time, demo_period_days, demo_epoch_btjd)
+    in_transit = np.abs(hours) < 0.5 * demo_duration_days * 24.0
     flux_cube = np.zeros((time.size, *shape), dtype=float)
     for index in range(time.size):
         image = base_image + rng.normal(0.0, 1.0, size=shape)
@@ -206,9 +216,9 @@ def _synthetic_tpf_cube() -> Dict[str, Any]:
                 "is_target": False,
             }
         ],
-        "_period_days": period_days,
-        "_epoch_btjd": epoch_btjd,
-        "_duration_days": duration_days,
+        "_period_days": demo_period_days,
+        "_epoch_btjd": demo_epoch_btjd,
+        "_duration_days": demo_duration_days,
     }
 
 

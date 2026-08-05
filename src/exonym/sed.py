@@ -145,6 +145,7 @@ def _run_emcee(
     ndim = int(start.size)
     rng = np.random.default_rng(seed=seed)
     walkers = start + rng.normal(size=(n_walkers, ndim)) * 1e-3
+    np.random.seed(seed)
     sampler = emcee.EnsembleSampler(n_walkers, ndim, log_probability)
     state = sampler.run_mcmc(walkers, burn_in, progress=False)
     sampler.reset()

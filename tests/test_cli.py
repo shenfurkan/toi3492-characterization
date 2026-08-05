@@ -97,3 +97,115 @@ def test_cli_vet_command(tmp_path, capsys):
     output = capsys.readouterr().out
     assert "triceratops_report.json" in output
 
+
+def _init_alpha(repo):
+    return ["--root", str(repo)] + ["init", "candidate-alpha", "--toi", "1234.01", "--tic", "123456789"]
+
+
+def test_cli_asteroseismology_command(tmp_path, capsys):
+    repo = _repo(tmp_path)
+    root = ["--root", str(repo)]
+    main(_init_alpha(repo))
+    assert main(root + ["asteroseismology", "candidate-alpha"]) == 0
+    assert "asteroseismic_results.json" in capsys.readouterr().out
+
+
+def test_cli_asteroseismology_accepts_numax_bounds(tmp_path, capsys):
+    repo = _repo(tmp_path)
+    root = ["--root", str(repo)]
+    main(_init_alpha(repo))
+    assert main(root + ["asteroseismology", "candidate-alpha", "--numax-min", "50", "--numax-max", "900"]) == 0
+    assert "asteroseismic_results.json" in capsys.readouterr().out
+
+
+def test_cli_localization_command(tmp_path, capsys):
+    repo = _repo(tmp_path)
+    root = ["--root", str(repo)]
+    main(_init_alpha(repo))
+    assert main(root + ["localization", "candidate-alpha", "--search-radius", "30"]) == 0
+    assert "prf_localization_results.json" in capsys.readouterr().out
+
+
+def test_cli_sed_command(tmp_path, capsys):
+    repo = _repo(tmp_path)
+    root = ["--root", str(repo)]
+    main(_init_alpha(repo))
+    assert main(root + ["sed", "candidate-alpha"]) == 0
+    assert "sed_fit_results.json" in capsys.readouterr().out
+
+
+def test_cli_fit_command(tmp_path, capsys):
+    repo = _repo(tmp_path)
+    root = ["--root", str(repo)]
+    main(_init_alpha(repo))
+    assert main(root + ["fit", "candidate-alpha", "--n-samples", "200"]) == 0
+    assert "mcmc_transit_fit.json" in capsys.readouterr().out
+
+
+def test_cli_fit_eccentric_command(tmp_path, capsys):
+    repo = _repo(tmp_path)
+    root = ["--root", str(repo)]
+    main(_init_alpha(repo))
+    assert main(root + ["fit", "candidate-alpha", "--n-samples", "200", "--eccentric"]) == 0
+    assert "mcmc_transit_fit.json" in capsys.readouterr().out
+
+
+def test_cli_phasecurve_command(tmp_path, capsys):
+    repo = _repo(tmp_path)
+    root = ["--root", str(repo)]
+    main(_init_alpha(repo))
+    assert main(root + ["phasecurve", "candidate-alpha"]) == 0
+    assert "phase_curve_results.json" in capsys.readouterr().out
+
+
+def test_cli_ttv_command(tmp_path, capsys):
+    repo = _repo(tmp_path)
+    root = ["--root", str(repo)]
+    main(_init_alpha(repo))
+    assert main(root + ["ttv", "candidate-alpha"]) == 0
+    assert "ttv_analysis_results.json" in capsys.readouterr().out
+
+
+def test_cli_activity_command(tmp_path, capsys):
+    repo = _repo(tmp_path)
+    root = ["--root", str(repo)]
+    main(_init_alpha(repo))
+    assert main(root + ["activity", "candidate-alpha"]) == 0
+    assert "stellar_activity_results.json" in capsys.readouterr().out
+
+
+def test_cli_dilution_command(tmp_path, capsys):
+    repo = _repo(tmp_path)
+    root = ["--root", str(repo)]
+    main(_init_alpha(repo))
+    assert main(root + ["dilution", "candidate-alpha"]) == 0
+    assert "dilution_sensitivity_results.json" in capsys.readouterr().out
+
+
+def test_cli_science_outputs_exist_on_disk(tmp_path):
+    repo = _repo(tmp_path)
+    root = ["--root", str(repo)]
+    main(_init_alpha(repo))
+    commands = [
+        ["asteroseismology", "candidate-alpha"],
+        ["localization", "candidate-alpha"],
+        ["sed", "candidate-alpha"],
+        ["phasecurve", "candidate-alpha"],
+        ["ttv", "candidate-alpha"],
+        ["activity", "candidate-alpha"],
+        ["dilution", "candidate-alpha"],
+    ]
+    for command in commands:
+        assert main(root + command) == 0
+    outputs_dir = repo / "candidate" / "candidate-alpha" / "outputs"
+    for filename in (
+        "asteroseismic_results.json",
+        "prf_localization_results.json",
+        "sed_fit_results.json",
+        "phase_curve_results.json",
+        "ttv_analysis_results.json",
+        "stellar_activity_results.json",
+        "dilution_sensitivity_results.json",
+    ):
+        assert (outputs_dir / filename).is_file()
+

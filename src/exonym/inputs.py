@@ -149,6 +149,8 @@ def load_stellar_parameters(workspace: CandidateWorkspace) -> Dict[str, Any]:
     if payload is None:
         return result
     values = {
+        "ra_deg": _first_number(payload, ("ra_deg", "ra", "right_ascension")),
+        "dec_deg": _first_number(payload, ("dec_deg", "dec", "declination")),
         "teff_k": _first_number(payload, ("teff_k", "teff", "temperature_k")),
         "logg_cgs": _first_number(payload, ("logg_cgs", "logg", "log_g")),
         "feh": _first_number(payload, ("feh", "metallicity")),

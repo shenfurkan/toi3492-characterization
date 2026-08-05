@@ -21,6 +21,7 @@ Scientific analysis commands:
   ttv               Transit timing variation (O-C) analysis
   activity          Stellar rotation periodogram analysis
   dilution          Aperture robustness and dilution sensitivity
+  archive           Query Gaia EDR3 and NASA ExoFOP for archival vetting
 """
 
 from __future__ import annotations
@@ -189,6 +190,17 @@ def _build_parser() -> argparse.ArgumentParser:
         "dilution", help="Aperture robustness and dilution sensitivity."
     )
     dilution_parser.add_argument("candidate_id")
+
+    archive_parser = commands.add_parser(
+        "archive", help="Query Gaia EDR3 and NASA ExoFOP for candidate archival vetting."
+    )
+    archive_parser.add_argument("candidate_id")
+    archive_parser.add_argument(
+        "--radius-arcsec",
+        type=float,
+        default=10.0,
+        help="Gaia neighbor search radius in arcseconds.",
+    )
     return parser
 
 
@@ -363,6 +375,13 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
             from .dilution import run_dilution_sensitivity
 
             output = run_dilution_sensitivity(candidate)
+            print(output.relative_to(repository_root).as_posix())
+            return 0
+
+        if args.command == "archive":
+            from .archive import run_archival_vetting
+
+            output = run_archival_vetting(candidate, radius_arcsec=args.radius_arcsec)
             print(output.relative_to(repository_root).as_posix())
             return 0
     except (FileExistsError, FileNotFoundError, ValueError, GateError, RuntimeError) as exc:

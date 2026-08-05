@@ -182,13 +182,15 @@ def fit_phase_curve_components(
 def _synthetic_phase_curve_table() -> Dict[str, np.ndarray]:
     """Deterministic demonstration light curve with an injected reflection signal."""
     rng = np.random.default_rng(seed=13)
-    period_days = 3.5
-    epoch_btjd = 2.0
-    duration_days = 0.12
+    demo_period_days = 3.5
+    demo_epoch_btjd = 2.0
+    demo_duration_days = 0.12
     cadence_days = 120.0 / 86400.0
     time = np.arange(0.0, 27.0, cadence_days)
-    phase_days = ((time - epoch_btjd + 0.5 * period_days) % period_days) - 0.5 * period_days
-    angle = 2.0 * np.pi * phase_days / period_days
+    phase_days = (
+        (time - demo_epoch_btjd + 0.5 * demo_period_days) % demo_period_days
+    ) - 0.5 * demo_period_days
+    angle = 2.0 * np.pi * phase_days / demo_period_days
     reflection = 150e-6 * (-np.cos(angle))
     flux = 1.0 + reflection + rng.normal(0.0, 400e-6, size=time.shape)
     flux_err = np.full_like(flux, 400e-6)
@@ -198,9 +200,9 @@ def _synthetic_phase_curve_table() -> Dict[str, np.ndarray]:
         "flux": flux,
         "flux_err": flux_err,
         "sector": sector_values,
-        "_duration_days": duration_days,
-        "_epoch_btjd": epoch_btjd,
-        "_period_days": period_days,
+        "_duration_days": demo_duration_days,
+        "_epoch_btjd": demo_epoch_btjd,
+        "_period_days": demo_period_days,
     }
 
 

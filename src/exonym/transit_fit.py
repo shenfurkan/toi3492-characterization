@@ -217,7 +217,11 @@ def _neg_log_posterior(
     chi2 = float(np.sum(residual**2 * ivar))
     logdet = float(np.sum(np.log(2.0 * math.pi / ivar)))
     log_likelihood = -0.5 * (chi2 + logdet)
+    # Weak log-jitter prior anchored to the observed per-bin noise scale so
+    # the sampler cannot inflate the error budget to wash out the signal.
+    noise_scale = float(np.median(flux_err))
     log_prior = -0.5 * ((log_rho - math.log10(rho_prior_solar)) / 0.3) ** 2
+    log_prior += -0.5 * ((log_jitter - math.log(noise_scale)) / 1.0) ** 2
     return float(-log_likelihood - log_prior)
 
 
@@ -254,22 +258,25 @@ def _map_optimize(
             np.array([0.01, 0.2, -0.1, 0.0005, -0.5, 0.05, -0.05]),
             np.array([-0.01, -0.2, 0.1, -0.0005, 0.5, -0.05, 0.05]),
         ]
+    jitter_starts = np.array([0.0, -2.0, -4.0, -6.0, -8.0])
     best_objective = np.inf
     best_point = start
     for offset in offsets:
-        candidate = start + offset
-        result = minimize(
-            lambda x: _neg_log_posterior(
-                x, phase_days, flux, flux_err, ephemeris, rho_prior_solar, eccentric
-            ),
-            candidate,
-            method="L-BFGS-B",
-            bounds=bounds,
-            options={"maxiter": 400, "ftol": 1e-9},
-        )
-        if np.isfinite(result.fun) and result.fun < best_objective:
-            best_objective = float(result.fun)
-            best_point = np.asarray(result.x, dtype=float)
+        for jitter_delta in jitter_starts:
+            candidate = start + offset
+            candidate[4] = start[4] + jitter_delta
+            result = minimize(
+                lambda x: _neg_log_posterior(
+                    x, phase_days, flux, flux_err, ephemeris, rho_prior_solar, eccentric
+                ),
+                candidate,
+                method="L-BFGS-B",
+                bounds=bounds,
+                options={"maxiter": 400, "ftol": 1e-9},
+            )
+            if np.isfinite(result.fun) and result.fun < best_objective:
+                best_objective = float(result.fun)
+                best_point = np.asarray(result.x, dtype=float)
     return best_point
 
 
@@ -287,24 +294,29 @@ def _quantile_summary(chain: np.ndarray) -> Dict[str, float]:
 def _synthetic_transit_table(
     ephemeris: Dict[str, Any], rng_seed: int = 5
 ) -> Dict[str, np.ndarray]:
-    """Deterministic demonstration transit light curve."""
+    """Deterministic demonstration transit light curve.
+
+    The injected radius is derived from the ephemeris depth so the synthetic
+    signal is self-consistent with the fitter's initialization.
+    """
     rng = np.random.default_rng(seed=rng_seed)
     cadence_days = 120.0 / 86400.0
-    time = np.arange(0.0, 27.0, cadence_days)
+    time = np.arange(0.0, 54.0, cadence_days)
     phase_days = (
         (time - ephemeris["epoch_btjd"] + 0.5 * ephemeris["period_days"])
         % ephemeris["period_days"]
     ) - 0.5 * ephemeris["period_days"]
+    injected_rp = math.sqrt(max(float(ephemeris["depth_ppm"]) * 1e-6, 1e-8))
     rho_solar = 1.0
     a_rs = stellar_density_a_rs(rho_solar, ephemeris["period_days"])
     model = batman_transit_flux(
-        phase_days, ephemeris["period_days"], 0.05, a_rs, 0.3, 0.35, 0.3, 1.0
+        phase_days, ephemeris["period_days"], injected_rp, a_rs, 0.3, 0.35, 0.3, 1.0
     )
     flux = np.ones_like(time)
     if model is not None:
         flux = np.asarray(model)
-    flux = flux + rng.normal(0.0, 300e-6, size=time.shape)
-    flux_err = np.full_like(flux, 300e-6)
+    flux = flux + rng.normal(0.0, 80e-6, size=time.shape)
+    flux_err = np.full_like(flux, 80e-6)
     sector_values = np.ones(time.size, dtype=int)
     return {
         "time": time,
@@ -381,6 +393,7 @@ def run_mcmc_transit_fit(
         p0[:, 7] = np.clip(p0[:, 7], -1.0, 1.0)
         p0[:, 8] = np.clip(p0[:, 8], -1.0, 1.0)
 
+    np.random.seed(seed)
     sampler = emcee.EnsembleSampler(
         n_walkers,
         ndim,
@@ -450,11 +463,18 @@ def run_mcmc_transit_fit(
         posteriors["omega_deg"] = _quantile_summary(omega_samples)
 
     try:
+        import logging
         import warnings
 
+        emcee_logger = logging.getLogger("emcee")
+        previous_level = emcee_logger.level
+        emcee_logger.setLevel(logging.CRITICAL)
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
-            tau_values = sampler.get_autocorr_time(discard=burn_in // 2, quiet=True)
+            try:
+                tau_values = sampler.get_autocorr_time(discard=burn_in // 2, quiet=True)
+            finally:
+                emcee_logger.setLevel(previous_level)
         tau_dict = {
             names[index]: float(tau) if np.isfinite(tau) else None
             for index, tau in enumerate(tau_values)
