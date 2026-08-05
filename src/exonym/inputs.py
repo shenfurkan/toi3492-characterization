@@ -56,10 +56,14 @@ def _first_number(payload: Dict[str, Any], keys: Sequence[str]) -> Optional[floa
     return None
 
 
-def load_transit_ephemeris(workspace: CandidateWorkspace) -> Dict[str, Any]:
+def load_transit_ephemeris(
+    workspace: CandidateWorkspace, signal: Optional[str] = None
+) -> Dict[str, Any]:
     """Return the best-known transit ephemeris for a candidate workspace.
 
-    Probes ``config/`` JSON files (``transit`` or top-level keys) first, then
+    When ``signal`` is given (e.g. ``.01``) the per-signal config
+    ``config/signals/transit_config<signal>.json`` takes precedence. Otherwise
+    probes ``config/`` JSON files (``transit`` or top-level keys) first, then
     ``outputs/bls_search_results.json``. Falls back to a generic demonstration
     ephemeris labelled ``synthetic-demo`` when nothing readable exists.
     """
@@ -70,6 +74,42 @@ def load_transit_ephemeris(workspace: CandidateWorkspace) -> Dict[str, Any]:
         "depth_ppm": DEMO_DEPTH_PPM,
         "source": "synthetic-demo",
     }
+
+    if signal is not None:
+        config_path = (
+            workspace.path / "config" / "signals" / ("transit_config" + signal + ".json")
+        )
+        payload = _read_json(config_path)
+        if payload is not None:
+            transit = payload.get("transit")
+            if not isinstance(transit, dict):
+                transit = payload
+            period_value = _first_number(transit, ("period", "period_days", "p"))
+            epoch_value = _first_number(transit, ("t0", "epoch_btjd", "epoch", "t0_btjd"))
+            duration_hours_value = _first_number(
+                transit, ("duration_hrs", "duration_hours", "duration_h")
+            )
+            duration_days_value = _first_number(transit, ("duration_days",))
+            depth_value = _first_number(transit, ("depth_ppm", "depth"))
+            found = False
+            if period_value is not None and period_value > 0:
+                result["period_days"] = period_value
+                found = True
+            if epoch_value is not None:
+                result["epoch_btjd"] = epoch_value
+                found = True
+            if duration_hours_value is not None and duration_hours_value > 0:
+                result["duration_days"] = duration_hours_value / 24.0
+                found = True
+            if duration_days_value is not None and duration_days_value > 0:
+                result["duration_days"] = duration_days_value
+                found = True
+            if depth_value is not None and depth_value >= 0:
+                result["depth_ppm"] = depth_value
+                found = True
+            if found:
+                result["source"] = "candidate-config-signal"
+                return result
 
     for config_name in EPHEMERIS_CONFIG_NAMES:
         config_path = workspace.path / "config" / config_name
@@ -269,6 +309,7 @@ def load_light_curve_table(
         return None
 
     tables: List[Dict[str, np.ndarray]] = []
+    seen_sectors: set = set()
     for path in fits_files:
         try:
             light_curve = lk.read(path).remove_nans().normalize()
@@ -292,6 +333,13 @@ def load_light_curve_table(
                 sector_value = None
             if not sector_value or sector_value <= 0:
                 sector_value = len(tables) + 1
+            if sector_value in seen_sectors:
+                # Different products from the same TESS sector (e.g. SPOC and
+                # QLP copies) would otherwise double-count one sector and make
+                # the combined design matrix singular. The first product in
+                # sorted order wins (SPOC 2-min sorts before QLP for s30).
+                continue
+            seen_sectors.add(sector_value)
             sector_values = np.full(time.size, sector_value, dtype=int)
             binned = _median_bin(time, flux, flux_err, sector_values, n_bins=max_points)
             if binned[0].size >= 50:

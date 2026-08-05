@@ -38,10 +38,16 @@ def cluster_sandwich_covariance(
     sigma: np.ndarray,
     cluster: np.ndarray,
 ) -> Tuple[np.ndarray, int]:
-    """Return a finite-sample-corrected cluster-sandwich covariance."""
+    """Return a finite-sample-corrected cluster-sandwich covariance.
+
+    The bread matrix uses a pseudo-inverse so collinear design columns (e.g.
+    duplicate sector offsets when the same TESS sector appears in more than
+    one product) do not raise a singular-matrix error. With fewer than two
+    clusters the finite-sample correction degrades to the HC1 form.
+    """
     weighted_design = design / sigma[:, None]
     weighted_residual = residual / sigma
-    bread = np.linalg.inv(weighted_design.T @ weighted_design)
+    bread = np.linalg.pinv(weighted_design.T @ weighted_design)
     meat = np.zeros((design.shape[1], design.shape[1]))
     groups = np.unique(cluster)
     for group in groups:
@@ -49,8 +55,12 @@ def cluster_sandwich_covariance(
         score = weighted_design[mask].T @ weighted_residual[mask]
         meat += np.outer(score, score)
     n_points, n_params = design.shape
-    correction = len(groups) / (len(groups) - 1.0) * (n_points - 1.0) / (n_points - n_params)
-    return correction * bread @ meat @ bread, len(groups)
+    n_groups = len(groups)
+    if n_groups < 2 or n_points <= n_params:
+        correction = float(n_points) / max(n_points - n_params, 1)
+    else:
+        correction = n_groups / (n_groups - 1.0) * (n_points - 1.0) / (n_points - n_params)
+    return correction * bread @ meat @ bread, n_groups
 
 
 def build_design_matrix(

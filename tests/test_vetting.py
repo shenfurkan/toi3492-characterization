@@ -55,6 +55,114 @@ def test_fpp_missing_value_raises(tmp_path):
         fpp_gate(load_fpp_report(path))
 
 
+def _vet_workspace_stub(tmp_path, candidate_id="vet-stub", tic=None):
+    import types
+
+    outputs = tmp_path / "outputs"
+    claims = tmp_path / "claims"
+    outputs.mkdir(parents=True, exist_ok=True)
+    stub = types.SimpleNamespace(
+        path=tmp_path,
+        candidate_id=candidate_id,
+        metadata={"identifiers": {"tic": tic}} if tic else {"identifiers": {}},
+    )
+    return stub, outputs
+
+
+def test_run_triceratops_prefers_signal_config_over_bls(tmp_path):
+    from exonym.vetting.tricera_parse import run_triceratops_simulation
+
+    stub, _ = _vet_workspace_stub(tmp_path)
+    signal_dir = tmp_path / "config" / "signals"
+    signal_dir.mkdir(parents=True)
+    (signal_dir / "transit_config.01.json").write_text(
+        json.dumps(
+            {
+                "signal": ".01",
+                "transit": {
+                    "depth_ppm": 341.4,
+                    "duration_days": 0.0925,
+                    "duration_hours": 2.22,
+                    "period": 4.5701356,
+                    "t0_btjd": 2117.193359,
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    (tmp_path / "outputs" / "bls_search_results.json").write_text(
+        json.dumps({"best_period": 14.97546, "best_depth_ppm": 4234.08, "best_duration_hours": 3.0}),
+        encoding="utf-8",
+    )
+
+    report_path = run_triceratops_simulation(stub, signal=".01")
+    report = json.loads(report_path.read_text(encoding="utf-8"))
+    assert report["signal"] == ".01"
+    assert report["ephemeris"]["period_days"] == pytest.approx(4.5701356)
+    assert report["ephemeris"]["depth_ppm"] == pytest.approx(341.4)
+    assert report["ephemeris"]["duration_hours"] == pytest.approx(2.22)
+    assert report["ephemeris"]["source"] == "candidate-config-signal"
+
+
+def test_run_triceratops_defaults_to_bls_without_signal(tmp_path):
+    from exonym.vetting.tricera_parse import run_triceratops_simulation
+
+    stub, _ = _vet_workspace_stub(tmp_path)
+    (tmp_path / "outputs" / "bls_search_results.json").write_text(
+        json.dumps({"best_period": 7.5, "best_depth_ppm": 900.0, "best_duration_hours": 2.0}),
+        encoding="utf-8",
+    )
+
+    report_path = run_triceratops_simulation(stub, signal=None)
+    report = json.loads(report_path.read_text(encoding="utf-8"))
+    assert report["signal"] is None
+    assert report["ephemeris"]["period_days"] == pytest.approx(7.5)
+    assert report["ephemeris"]["source"] == "bls-search"
+
+
+def test_run_triceratops_falls_back_when_signal_config_missing(tmp_path):
+    from exonym.vetting.tricera_parse import run_triceratops_simulation
+
+    stub, _ = _vet_workspace_stub(tmp_path)
+    report_path = run_triceratops_simulation(stub, signal=".99")
+    report = json.loads(report_path.read_text(encoding="utf-8"))
+    assert report["ephemeris"]["source"] == "defaults"
+    assert report["ephemeris"]["period_days"] == pytest.approx(2.5)
+
+
+def test_load_transit_ephemeris_signal_takes_precedence(tmp_path):
+    from exonym.inputs import load_transit_ephemeris
+    from exonym.workspace import create_candidate
+
+    workspace = create_candidate(tmp_path, "ephemeris-signal-test")
+    signal_dir = workspace.path / "config" / "signals"
+    signal_dir.mkdir(parents=True)
+    (signal_dir / "transit_config.02.json").write_text(
+        json.dumps(
+            {
+                "transit": {
+                    "period": 14.7157672,
+                    "t0_btjd": 2124.779194,
+                    "duration_days": 0.125,
+                    "depth_ppm": 560.7,
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    per_signal = load_transit_ephemeris(workspace, signal=".02")
+    assert per_signal["period_days"] == pytest.approx(14.7157672)
+    assert per_signal["depth_ppm"] == pytest.approx(560.7)
+    assert per_signal["source"] == "candidate-config-signal"
+
+    fallback = load_transit_ephemeris(workspace, signal=".99")
+    assert fallback["source"] == "synthetic-demo"
+
+    default = load_transit_ephemeris(workspace)
+    assert default["source"] == "synthetic-demo"
+
+
 # ---------------------------------------------------------------------------
 # Scientific analysis modules: asteroseismology
 # ---------------------------------------------------------------------------
@@ -275,6 +383,138 @@ def test_phase_curve_cluster_covariance_shapes():
     covariance, n_clusters = cluster_sandwich_covariance(design, residual, sigma, cluster)
     assert covariance.shape == (4, 4)
     assert n_clusters == 20
+
+
+def test_cluster_sandwich_covariance_rank_deficient_design():
+    from exonym.phasecurve import cluster_sandwich_covariance
+
+    rng = np.random.default_rng(seed=11)
+    col = rng.normal(size=200)
+    design = np.column_stack([col, col, rng.normal(size=200)])
+    residual = rng.normal(size=200)
+    sigma = np.full(200, 0.001)
+    cluster = np.repeat(np.arange(20), 10)
+    covariance, n_clusters = cluster_sandwich_covariance(design, residual, sigma, cluster)
+    assert covariance.shape == (3, 3)
+    assert np.all(np.isfinite(covariance))
+    assert n_clusters == 20
+
+
+def test_cluster_sandwich_covariance_single_cluster_guard():
+    from exonym.phasecurve import cluster_sandwich_covariance
+
+    rng = np.random.default_rng(seed=5)
+    design = rng.normal(size=(100, 3))
+    residual = rng.normal(size=100)
+    sigma = np.full(100, 0.001)
+    cluster = np.zeros(100, dtype=int)
+    covariance, n_clusters = cluster_sandwich_covariance(design, residual, sigma, cluster)
+    assert covariance.shape == (3, 3)
+    assert np.all(np.isfinite(covariance))
+    assert n_clusters == 1
+
+
+def test_phase_curve_multi_sector_duplicate_sector_no_singular():
+    from exonym.lightcurve import phase_hours
+    from exonym.phasecurve import fit_phase_curve_components
+
+    rng = np.random.default_rng(seed=7)
+    time = np.concatenate(
+        [
+            np.linspace(2459000.0, 2459030.0, 500),
+            np.linspace(2459000.0, 2459030.0, 500),
+            np.linspace(2459100.0, 2459130.0, 500),
+        ]
+    )
+    period_days = 4.57
+    epoch_btjd = 2459010.0
+    phase_days = phase_hours(time, period_days, epoch_btjd) / 24.0
+    flux = 1.0 + 50e-6 * (-np.cos(2.0 * np.pi * phase_days / period_days))
+    flux += rng.normal(0.0, 0.001, time.size)
+    flux_err = np.full(time.size, 0.001)
+    sector_values = np.array([30] * 500 + [30] * 500 + [70] * 500)
+    ephemeris = {"period_days": period_days, "epoch_btjd": epoch_btjd, "duration_days": 0.09}
+    result = fit_phase_curve_components(time, flux, flux_err, sector_values, ephemeris)
+    assert "components" in result
+    assert result["n_sectors"] == 2
+    assert result["components"]["secondary_eclipse_depth"]["block_robust_error_ppm"] > 0
+
+
+def _write_test_lightcurve(path, sector, n_points=400, seed=1):
+    from astropy.io import fits as fitsio
+    from astropy.table import Table
+
+    rng = np.random.default_rng(seed)
+    table = Table()
+    table["TIME"] = np.linspace(2459000.0, 2459030.0, n_points)
+    table["FLUX"] = 1.0 + rng.normal(0.0, 0.001, n_points)
+    table["FLUX_ERR"] = np.full(n_points, 0.001)
+    table["QUALITY"] = np.zeros(n_points, dtype=np.int32)
+    extension = fitsio.BinTableHDU(table)
+    extension.header["SECTOR"] = sector
+    extension.header["TIMEDEL"] = 120.0 / 86400.0
+    extension.header["BJDREFI"] = 2457000
+    extension.header["BJDREFF"] = 0.0
+    primary = fitsio.PrimaryHDU()
+    primary.header["MISSION"] = "TESS"
+    primary.header["TELESCOP"] = "TESS"
+    fitsio.HDUList([primary, extension]).writeto(path, overwrite=True)
+
+
+def test_light_curve_table_prefers_processed_over_raw(tmp_path):
+    from exonym.inputs import load_light_curve_table
+    from exonym.workspace import create_candidate
+
+    workspace = create_candidate(tmp_path, "dedup-test")
+    proc = workspace.path / "data" / "processed"
+    raw = workspace.path / "data" / "raw"
+    proc.mkdir(parents=True, exist_ok=True)
+    raw.mkdir(parents=True, exist_ok=True)
+    _write_test_lightcurve(proc / "s0001_lc.fits", sector=1, n_points=400, seed=1)
+    _write_test_lightcurve(raw / "s0001_lc.fits", sector=1, n_points=700, seed=2)
+
+    table = load_light_curve_table(workspace)
+    assert table is not None
+    assert len(table["time"]) == 400
+    assert np.all(table["sector"] == 1)
+
+
+def test_light_curve_table_dedupes_duplicate_sectors(tmp_path):
+    from exonym.inputs import load_light_curve_table
+    from exonym.workspace import create_candidate
+
+    workspace = create_candidate(tmp_path, "dedup-sector-test")
+    proc = workspace.path / "data" / "processed"
+    proc.mkdir(parents=True, exist_ok=True)
+    _write_test_lightcurve(proc / "s0030_lc.fits", sector=30, n_points=400, seed=1)
+    _write_test_lightcurve(proc / "s0030_qlp_lc.fits", sector=30, n_points=300, seed=2)
+    _write_test_lightcurve(proc / "s0070_qlp_lc.fits", sector=70, n_points=300, seed=3)
+
+    table = load_light_curve_table(workspace)
+    assert table is not None
+    assert set(np.unique(table["sector"])) == {30, 70}
+    assert len(table["time"]) == 700
+
+
+def test_load_gaia_neighbors_parses_csv(tmp_path):
+    from exonym.localization import _load_gaia_neighbors
+    from exonym.workspace import create_candidate
+
+    workspace = create_candidate(tmp_path, "gaia-csv-test")
+    ext = workspace.path / "data" / "external"
+    ext.mkdir(parents=True, exist_ok=True)
+    (ext / "gaia_neighbors.csv").write_text(
+        "source_id,ra,dec,phot_g_mean_mag,separation_arcsec,flux_ratio_vs_target,is_target_match\n"
+        "123,25.9281,-2.6281,10.28,0.7,1.0,true\n"
+        "456,25.9242,-2.6270,20.28,11.5,0.0001,false\n",
+        encoding="utf-8",
+    )
+    rows = _load_gaia_neighbors(workspace)
+    assert len(rows) == 2
+    assert rows[0]["is_target"] is True
+    assert rows[0]["source_id"] == "123"
+    assert rows[1]["separation_arcsec"] == pytest.approx(11.5)
+    assert rows[1]["flux_ratio"] == pytest.approx(0.0001)
 
 
 # ---------------------------------------------------------------------------

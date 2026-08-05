@@ -147,6 +147,11 @@ def _build_parser() -> argparse.ArgumentParser:
     vet_parser.add_argument(
         "--n-draws", type=int, default=2000, help="Number of Monte Carlo draws."
     )
+    vet_parser.add_argument(
+        "--signal",
+        default=None,
+        help="Per-signal transit config name (e.g. .01 -> config/signals/transit_config.01.json).",
+    )
 
     asteroseismology_parser = commands.add_parser(
         "asteroseismology", help="Estimate stellar oscillation envelope and seismic M*/R*."
@@ -183,6 +188,11 @@ def _build_parser() -> argparse.ArgumentParser:
     fit_parser.add_argument(
         "--eccentric", action="store_true", help="Sample eccentric orbit parameters."
     )
+    fit_parser.add_argument(
+        "--signal",
+        default=None,
+        help="Per-signal transit config name (e.g. .01 -> config/signals/transit_config.01.json).",
+    )
 
     phasecurve_parser = commands.add_parser(
         "phasecurve", help="Phase curve and secondary eclipse harmonic search."
@@ -193,6 +203,11 @@ def _build_parser() -> argparse.ArgumentParser:
         "ttv", help="Transit timing variation (O-C) analysis."
     )
     ttv_parser.add_argument("candidate_id")
+    ttv_parser.add_argument(
+        "--signal",
+        default=None,
+        help="Per-signal transit config name (e.g. .01 -> config/signals/transit_config.01.json).",
+    )
 
     activity_parser = commands.add_parser(
         "activity", help="Stellar rotation GLS periodogram analysis."
@@ -341,7 +356,9 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         if args.command == "vet":
             from .vetting.tricera_parse import run_triceratops_simulation
 
-            output = run_triceratops_simulation(candidate, n_draws=args.n_draws)
+            output = run_triceratops_simulation(
+                candidate, n_draws=args.n_draws, signal=args.signal
+            )
             print(output.relative_to(repository_root).as_posix())
             return 0
 
@@ -372,7 +389,10 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
             from .transit_fit import run_mcmc_transit_fit
 
             output = run_mcmc_transit_fit(
-                candidate, n_samples=args.n_samples, eccentric=args.eccentric
+                candidate,
+                n_samples=args.n_samples,
+                eccentric=args.eccentric,
+                signal=args.signal,
             )
             print(output.relative_to(repository_root).as_posix())
             return 0
@@ -387,7 +407,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         if args.command == "ttv":
             from .ttv import run_ttv_analysis
 
-            output = run_ttv_analysis(candidate)
+            output = run_ttv_analysis(candidate, signal=args.signal)
             print(output.relative_to(repository_root).as_posix())
             return 0
 

@@ -292,7 +292,7 @@ def _synthetic_timing_table(
     }
 
 
-def run_ttv_analysis(workspace: CandidateWorkspace) -> Path:
+def run_ttv_analysis(workspace: CandidateWorkspace, signal: Optional[str] = None) -> Path:
     """Run the TTV analysis and write outputs/ttv_analysis_results.json."""
     outputs_dir = workspace.path / "outputs"
     figures_dir = workspace.path / "figures"
@@ -312,7 +312,7 @@ def run_ttv_analysis(workspace: CandidateWorkspace) -> Path:
         }
     else:
         source = "candidate-data"
-        ephemeris = load_transit_ephemeris(workspace)
+        ephemeris = load_transit_ephemeris(workspace, signal=signal)
 
     stellar = load_stellar_parameters(workspace)
     rho_prior_solar = float(stellar["mass_solar"]) / float(stellar["radius_solar"]) ** 3

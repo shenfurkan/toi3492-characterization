@@ -333,13 +333,14 @@ def run_mcmc_transit_fit(
     n_walkers: Optional[int] = None,
     burn_in: Optional[int] = None,
     seed: int = 5,
+    signal: Optional[str] = None,
 ) -> Path:
     """Run the MCMC transit fit and write outputs/mcmc_transit_fit.json."""
     import emcee
 
     outputs_dir = workspace.path / "outputs"
     outputs_dir.mkdir(parents=True, exist_ok=True)
-    ephemeris = load_transit_ephemeris(workspace)
+    ephemeris = load_transit_ephemeris(workspace, signal=signal)
     stellar = load_stellar_parameters(workspace)
     rho_prior_solar = float(stellar["mass_solar"]) / float(stellar["radius_solar"]) ** 3
 
