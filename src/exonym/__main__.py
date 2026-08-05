@@ -11,6 +11,16 @@ Commands:
   search   Run a BLS transit search on candidate light curve data
   plot     Generate diagnostic vetting figures for a candidate
   verify   Run the repository isolation audit
+
+Scientific analysis commands:
+  asteroseismology  Oscillation envelope, Delta-nu, and seismic M*/R*
+  localization      Sub-pixel PRF transit source localization
+  sed               SED stellar atmosphere posterior fit
+  fit               MCMC transit fit with free limb darkening
+  phasecurve        Phase curve and secondary eclipse search
+  ttv               Transit timing variation (O-C) analysis
+  activity          Stellar rotation periodogram analysis
+  dilution          Aperture robustness and dilution sensitivity
 """
 
 from __future__ import annotations
@@ -115,6 +125,70 @@ def _build_parser() -> argparse.ArgumentParser:
 
     plot_parser = commands.add_parser("plot", help="Generate diagnostic vetting plots.")
     plot_parser.add_argument("candidate_id")
+
+    vet_parser = commands.add_parser(
+        "vet", help="Run TRICERATOPS Monte Carlo FPP simulation on candidate."
+    )
+    vet_parser.add_argument("candidate_id")
+    vet_parser.add_argument(
+        "--n-draws", type=int, default=2000, help="Number of Monte Carlo draws."
+    )
+
+    asteroseismology_parser = commands.add_parser(
+        "asteroseismology", help="Estimate stellar oscillation envelope and seismic M*/R*."
+    )
+    asteroseismology_parser.add_argument("candidate_id")
+    asteroseismology_parser.add_argument(
+        "--numax-min", type=float, default=100.0, help="Minimum nu_max search bound in microHz."
+    )
+    asteroseismology_parser.add_argument(
+        "--numax-max", type=float, default=1600.0, help="Maximum nu_max search bound in microHz."
+    )
+
+    localization_parser = commands.add_parser(
+        "localization", help="Sub-pixel PRF transit source localization on TPFs."
+    )
+    localization_parser.add_argument("candidate_id")
+    localization_parser.add_argument(
+        "--search-radius", type=float, default=60.0,
+        help="Gaia neighbor search radius in arcseconds.",
+    )
+
+    sed_parser = commands.add_parser(
+        "sed", help="Fit stellar atmosphere posterior to broadband photometry."
+    )
+    sed_parser.add_argument("candidate_id")
+
+    fit_parser = commands.add_parser(
+        "fit", help="MCMC transit fit with free limb darkening and density locking."
+    )
+    fit_parser.add_argument("candidate_id")
+    fit_parser.add_argument(
+        "--n-samples", type=int, default=5000, help="MCMC production steps per walker."
+    )
+    fit_parser.add_argument(
+        "--eccentric", action="store_true", help="Sample eccentric orbit parameters."
+    )
+
+    phasecurve_parser = commands.add_parser(
+        "phasecurve", help="Phase curve and secondary eclipse harmonic search."
+    )
+    phasecurve_parser.add_argument("candidate_id")
+
+    ttv_parser = commands.add_parser(
+        "ttv", help="Transit timing variation (O-C) analysis."
+    )
+    ttv_parser.add_argument("candidate_id")
+
+    activity_parser = commands.add_parser(
+        "activity", help="Stellar rotation GLS periodogram analysis."
+    )
+    activity_parser.add_argument("candidate_id")
+
+    dilution_parser = commands.add_parser(
+        "dilution", help="Aperture robustness and dilution sensitivity."
+    )
+    dilution_parser.add_argument("candidate_id")
     return parser
 
 
@@ -223,6 +297,73 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
 
             generated = generate_candidate_plots(candidate)
             _print_json([str(path.relative_to(repository_root)).replace("\\", "/") for path in generated])
+            return 0
+
+        if args.command == "vet":
+            from .vetting.tricera_parse import run_triceratops_simulation
+
+            output = run_triceratops_simulation(candidate, n_draws=args.n_draws)
+            print(output.relative_to(repository_root).as_posix())
+            return 0
+
+        if args.command == "asteroseismology":
+            from .asteroseismology import run_asteroseismology
+
+            output = run_asteroseismology(
+                candidate, numax_min_uhz=args.numax_min, numax_max_uhz=args.numax_max
+            )
+            print(output.relative_to(repository_root).as_posix())
+            return 0
+
+        if args.command == "localization":
+            from .localization import run_prf_localization
+
+            output = run_prf_localization(candidate, search_radius_arcsec=args.search_radius)
+            print(output.relative_to(repository_root).as_posix())
+            return 0
+
+        if args.command == "sed":
+            from .sed import run_sed_fit
+
+            output = run_sed_fit(candidate)
+            print(output.relative_to(repository_root).as_posix())
+            return 0
+
+        if args.command == "fit":
+            from .transit_fit import run_mcmc_transit_fit
+
+            output = run_mcmc_transit_fit(
+                candidate, n_samples=args.n_samples, eccentric=args.eccentric
+            )
+            print(output.relative_to(repository_root).as_posix())
+            return 0
+
+        if args.command == "phasecurve":
+            from .phasecurve import run_phase_curve_search
+
+            output = run_phase_curve_search(candidate)
+            print(output.relative_to(repository_root).as_posix())
+            return 0
+
+        if args.command == "ttv":
+            from .ttv import run_ttv_analysis
+
+            output = run_ttv_analysis(candidate)
+            print(output.relative_to(repository_root).as_posix())
+            return 0
+
+        if args.command == "activity":
+            from .activity import run_stellar_activity
+
+            output = run_stellar_activity(candidate)
+            print(output.relative_to(repository_root).as_posix())
+            return 0
+
+        if args.command == "dilution":
+            from .dilution import run_dilution_sensitivity
+
+            output = run_dilution_sensitivity(candidate)
+            print(output.relative_to(repository_root).as_posix())
             return 0
     except (FileExistsError, FileNotFoundError, ValueError, GateError, RuntimeError) as exc:
         parser.exit(2, "error: {0}\n".format(exc))

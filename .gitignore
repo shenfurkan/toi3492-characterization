@@ -19,51 +19,47 @@ htmlcov/
 .hypothesis/
 .ipynb_checkpoints/
 
-# Ingestion Staging & Temporary Downloads
+# Heavy Astronomy Data Formats (Global Guard)
+*.fits
+*.fit
+*.fts
+*.h5
+*.hdf5
+*.parquet
+*.feather
+
+# Candidate Workspaces & Research Payloads (Keep local on your machine)
+candidate/*
+!candidate/.gitkeep
+
+# Personal Literature Notes, Methods & Research Scratchpad (Keep local)
+methods/
+literature/
+resources/
+
+# Ingestion Staging, Temp & Log Files
 exonym-ingest-*/
 .ingest-staging/
 *.tmp
 *.log
+*.bak
 
-# OS & Editor Artifacts
+# OS & Editors
 .DS_Store
 Thumbs.db
 desktop.ini
 .directory
 .idea/
 .vscode/
-.gemini/
-.opencode/
 *.swp
 *.swo
 
-# Candidate Workspaces: heavy or generated research artifacts stay local.
-# Identity records, protocols, decisions, and code remain tracked.
-# Legacy frozen projects honor their own ignore rules inside
-# candidate/<id>/legacy-project/.
-candidate/*/data/raw/*
-candidate/*/data/external/*
-candidate/*/data/interim/*
-candidate/*/data/processed/*
-candidate/*/outputs/*
-candidate/*/figures/*
-candidate/*/scratch/*
-candidate/*/literature/fulltext/*
-candidate/*/releases/*/build/**
-candidate/*/.cache/*
-candidate/*/__pycache__/*
-candidate/*/.pytest_cache/*
+# AI Assistant & Local Environment Artifacts
+.gemini/
+.antigravity/
+.cursor/
+.opencode/
 
-# Candidate research markdown notes, drafts, and manuscripts stay local.
-# Candidate identity (candidate.json) and candidate workspace README.md remain tracked.
-candidate/*/*.md
-candidate/*/**/*.md
-!candidate/*/README.md
-
-!candidate/**/.gitkeep
-EXONYM_FACTORY_PLAN.txt
-
+# Local Policy & Planning Documents (Stay local)
 AGENTS.md
-
-# All Markdown documents
-*.md
+EXONYM_FACTORY_PLAN.txt

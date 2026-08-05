@@ -87,3 +87,13 @@ def test_cli_ingest_requires_tic(tmp_path):
     with pytest.raises(SystemExit) as exc_info:
         main(root + ["ingest", "candidate-alpha", "--sectors", "37"])
     assert exc_info.value.code == 2
+
+
+def test_cli_vet_command(tmp_path, capsys):
+    repo = _repo(tmp_path)
+    root = ["--root", str(repo)]
+    main(root + ["init", "candidate-alpha", "--toi", "1234.01", "--tic", "123456789"])
+    assert main(root + ["vet", "candidate-alpha", "--n-draws", "100"]) == 0
+    output = capsys.readouterr().out
+    assert "triceratops_report.json" in output
+
