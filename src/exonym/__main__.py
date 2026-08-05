@@ -41,7 +41,7 @@ def _default_repository_root() -> Path:
 def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="exonym",
-        description="EXONYM candidate factory: provision, gate, track, and freeze "
+        description="EXONYM candidate framework: provision, gate, track, and freeze "
         "exoplanet candidate research workspaces.",
     )
     parser.add_argument("--version", action="version", version="exonym " + __version__)

@@ -1,6 +1,6 @@
 # Documentation
 
-Target-neutral documentation and record templates for the candidate factory.
+Target-neutral documentation and record templates.
 
 | Path | Purpose |
 | --- | --- |

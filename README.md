@@ -1,8 +1,8 @@
 # EXONYM
 
-**Candidate-Isolated Factory for Reproducible TESS & Multi-Mission Exoplanet Research**
+**Candidate-Isolated Framework for Reproducible TESS & Multi-Mission Exoplanet Research**
 
-`EXONYM` (v0.3.0) is a factory-style, evidence-first research workspace and command-line system designed for exoplanet candidate management, automated data acquisition, vetting, quality verification gating, statistical validation, and reproducible release packaging.
+`EXONYM` (v1.0.0) is an evidence-first research workspace and command-line system designed for exoplanet candidate management, automated data acquisition, vetting, quality verification gating, statistical validation, and reproducible release packaging.
 
 ---
 

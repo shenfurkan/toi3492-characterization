@@ -83,7 +83,11 @@ def find_transits(
             if in_vals.size >= 1 and out_vals.size >= 3:
                 depth = float(np.median(out_vals) - np.median(in_vals))
                 std_out = np.std(out_vals) if np.std(out_vals) > 1e-8 else 1e-4
-                snr = (depth * np.sqrt(in_vals.size)) / std_out
+                # Effective SNR uses the harmonic-mean weighting of in/out
+                # sample counts so that a tiny in-transit group cannot
+                # artificially inflate the score.
+                n_eff = (in_vals.size * out_vals.size) / (in_vals.size + out_vals.size)
+                snr = (depth * np.sqrt(n_eff)) / std_out
 
                 if snr > best_snr:
                     best_snr = float(snr)

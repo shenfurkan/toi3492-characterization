@@ -12,7 +12,7 @@ import json
 import shutil
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 from .workspace import CandidateWorkspace, METADATA_FILENAME
 
