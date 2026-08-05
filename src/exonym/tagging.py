@@ -59,3 +59,14 @@ def filter_candidates(
             continue
         filtered.append(candidate)
     return filtered
+
+
+def evaluate_habitable_zone_tag(insolation_earth: float) -> Optional[str]:
+    """Return 'HabitableZoneCandidate' tag if insolation falls within Kopparapu HZ limits [0.32, 1.11]."""
+    if insolation_earth <= 0:
+        raise ValueError("insolation_earth must be positive")
+    if 0.32 <= insolation_earth <= 1.11:
+        return "HabitableZoneCandidate"
+    return None
+
+

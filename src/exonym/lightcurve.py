@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
+import math
 import re
-from typing import Optional, Sequence, Tuple
+from typing import Dict, Optional, Sequence, Tuple
 
 import numpy as np
 
@@ -108,3 +109,88 @@ def bin_phase_folded_flux(
             error[index] = 1.253 * np.std(samples) / np.sqrt(samples.size)
 
     return centers, median, error
+
+
+def calculate_contact_durations(
+    period_days: float,
+    r_star_solar: float,
+    m_star_solar: float,
+    r_planet_earth: float,
+    impact_parameter_b: float,
+    eccentricity: float = 0.0,
+    omega_deg: float = 90.0,
+) -> Dict[str, float]:
+    """Return dict of contact durations T_14, T_23, T_12 in hours and grazing status."""
+    if period_days <= 0 or r_star_solar <= 0 or m_star_solar <= 0 or r_planet_earth <= 0:
+        raise ValueError("physical parameters must be positive")
+    if not (0.0 <= eccentricity < 1.0):
+        raise ValueError("eccentricity must satisfy 0 <= e < 1")
+    if impact_parameter_b < 0:
+        raise ValueError("impact_parameter_b must be non-negative")
+
+    k = (r_planet_earth * 0.0091577) / r_star_solar
+    if impact_parameter_b >= 1.0 + k:
+        return {
+            "T14_hr": 0.0,
+            "T23_hr": 0.0,
+            "T12_hr": 0.0,
+            "grazing": 1.0,
+            "v_stat": 1.0,
+        }
+
+    rho_solar_gcm3 = 1.408
+    rho_star_gcm3 = m_star_solar / (r_star_solar**3) * rho_solar_gcm3
+    g_cgs = 6.67430e-8
+    period_sec = period_days * 86400.0
+    a_over_r = ((g_cgs * (period_sec**2) * rho_star_gcm3) / (3.0 * math.pi)) ** (1.0 / 3.0)
+
+    ecc_factor = math.sqrt(1.0 - eccentricity**2) / (
+        1.0 + eccentricity * math.sin(math.radians(omega_deg))
+    )
+
+    t14_sec = (
+        (period_sec / math.pi)
+        * (1.0 / a_over_r)
+        * math.sqrt(max(0.0, (1.0 + k) ** 2 - impact_parameter_b**2))
+        * ecc_factor
+    )
+    grazing = impact_parameter_b > (1.0 - k)
+    t23_sec = 0.0
+    if not grazing:
+        t23_sec = (
+            (period_sec / math.pi)
+            * (1.0 / a_over_r)
+            * math.sqrt(max(0.0, (1.0 - k) ** 2 - impact_parameter_b**2))
+            * ecc_factor
+        )
+
+    t12_sec = 0.5 * (t14_sec - t23_sec)
+    v_stat = (2.0 * t12_sec / t14_sec) if t14_sec > 0 else 1.0
+
+    return {
+        "T14_hr": round(t14_sec / 3600.0, 4),
+        "T23_hr": round(t23_sec / 3600.0, 4),
+        "T12_hr": round(t12_sec / 3600.0, 4),
+        "grazing": 1.0 if grazing else 0.0,
+        "v_stat": round(v_stat, 4),
+    }
+
+
+def kipping_to_quadratic_limb_darkening(q1: float, q2: float) -> Tuple[float, float]:
+    """Convert Kipping (2013) hyper-cube parameters (q1, q2) to quadratic (u1, u2)."""
+    if not (0.0 <= q1 <= 1.0 and 0.0 <= q2 <= 1.0):
+        raise ValueError("q1 and q2 must be in [0, 1]")
+    sqrt_q1 = math.sqrt(q1)
+    u1 = 2.0 * sqrt_q1 * q2
+    u2 = sqrt_q1 * (1.0 - 2.0 * q2)
+    return u1, u2
+
+
+def quadratic_to_kipping_limb_darkening(u1: float, u2: float) -> Tuple[float, float]:
+    """Convert quadratic limb darkening parameters (u1, u2) to Kipping (q1, q2)."""
+    q1 = (u1 + u2) ** 2
+    if q1 == 0:
+        return 0.0, 0.0
+    q2 = u1 / (2.0 * (u1 + u2))
+    return q1, q2
+

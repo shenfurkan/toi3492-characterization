@@ -154,3 +154,84 @@ def test_fetch_tess_products_writes_fits_and_ingests(tmp_path, monkeypatch):
     record = json.loads(sidecar.read_text(encoding="utf-8"))
     assert record["source_uri"] == source_uri
     assert len(record["sha256"]) == 64
+
+
+def test_perryman_spectroscopic_and_atmospheric_calculations():
+    from exonym.catalog import (
+        calculate_astrometric_wobble_microarcsec,
+        calculate_atmospheric_scale_height_km,
+        calculate_radial_velocity_semi_amplitude,
+        calculate_transmission_signal_ppm,
+    )
+    from exonym.lightcurve import (
+        calculate_contact_durations,
+        kipping_to_quadratic_limb_darkening,
+        quadratic_to_kipping_limb_darkening,
+    )
+    from exonym.search import (
+        calculate_ttv_super_period,
+        compute_linear_ephemeris_residuals,
+    )
+    from exonym.tagging import evaluate_habitable_zone_tag
+    from exonym.vetting import (
+        centroid_offset_pvalue,
+        ellipsoidal_gate,
+        ellipsoidal_variation_amplitude_ppm,
+    )
+
+    k = calculate_radial_velocity_semi_amplitude(
+        m_planet_earth=1.0, m_star_solar=1.0, period_days=1.0, inclination_deg=90.0
+    )
+    assert k == pytest.approx(0.0895, rel=1e-3)
+
+    wobble = calculate_astrometric_wobble_microarcsec(
+        m_planet_earth=317.83, m_star_solar=1.0, semi_major_axis_au=5.2, distance_pc=10.0
+    )
+    assert wobble > 0
+
+    h_km = calculate_atmospheric_scale_height_km(
+        t_eq_kelvin=300.0, m_planet_earth=1.0, r_planet_earth=1.0
+    )
+    assert h_km > 0
+
+    delta_ppm = calculate_transmission_signal_ppm(
+        r_star_solar=1.0, r_planet_earth=1.0, scale_height_km=h_km
+    )
+    assert delta_ppm > 0
+
+    durations = calculate_contact_durations(
+        period_days=3.0,
+        r_star_solar=1.0,
+        m_star_solar=1.0,
+        r_planet_earth=1.0,
+        impact_parameter_b=0.2,
+    )
+    assert durations["T14_hr"] > 0
+    assert durations["grazing"] == 0.0
+
+    u1, u2 = kipping_to_quadratic_limb_darkening(0.25, 0.5)
+    q1, q2 = quadratic_to_kipping_limb_darkening(u1, u2)
+    assert q1 == pytest.approx(0.25, abs=1e-5)
+    assert q2 == pytest.approx(0.5, abs=1e-5)
+
+    p_ttv = calculate_ttv_super_period(
+        period_inner_days=10.0, period_outer_days=20.1, j_resonance=2
+    )
+    assert p_ttv > 0
+
+    residuals = compute_linear_ephemeris_residuals(
+        transit_times_btjd=[10.0, 20.001, 30.0], period_days=10.0, epoch_btjd=10.0
+    )
+    assert len(residuals) == 3
+
+    p_val = centroid_offset_pvalue(2.0)
+    assert p_val == pytest.approx(np.exp(-2.0), rel=1e-4)
+
+    amp_ppm = ellipsoidal_variation_amplitude_ppm(
+        m_companion_solar=0.001, m_host_solar=1.0, r_host_solar=1.0, semi_major_axis_au=0.05
+    )
+    passed, _ = ellipsoidal_gate(amp_ppm)
+    assert passed
+
+    assert evaluate_habitable_zone_tag(0.5) == "HabitableZoneCandidate"
+

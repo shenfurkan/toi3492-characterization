@@ -42,3 +42,11 @@ def centroid_gate(
     """Return (pass, Z). Pass means the signal is consistent with on-target."""
     z = centroid_offset_z(ra_offset_arcsec, dec_offset_arcsec, dec_deg, sigma_arcsec)
     return z < threshold, z
+
+
+def centroid_offset_pvalue(z: float) -> float:
+    """Return Rayleigh p-value for 2D centroid offset Z score: p = exp(-z^2 / 2)."""
+    if z < 0:
+        raise ValueError("Z score must be non-negative")
+    return math.exp(-0.5 * (z**2))
+

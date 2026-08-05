@@ -193,3 +193,39 @@ def run_bls_on_candidate(
     output_path = outputs_dir / "bls_search_results.json"
     output_path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
     return output_path
+
+
+def calculate_ttv_super_period(
+    period_inner_days: float,
+    period_outer_days: float,
+    j_resonance: int = 2,
+) -> float:
+    """Return TTV super-period P_ttv in days for a j:j-1 resonance."""
+    if period_inner_days <= 0 or period_outer_days <= period_inner_days:
+        raise ValueError("periods must satisfy 0 < P_inner < P_outer")
+    if j_resonance <= 1:
+        raise ValueError("j_resonance must be an integer >= 2")
+    freq_inner = j_resonance / period_outer_days
+    freq_outer = (j_resonance - 1) / period_inner_days
+    delta_freq = abs(freq_inner - freq_outer)
+    if delta_freq == 0:
+        return float("inf")
+    return 1.0 / delta_freq
+
+
+def compute_linear_ephemeris_residuals(
+    transit_times_btjd: Sequence[float],
+    period_days: float,
+    epoch_btjd: float,
+) -> List[float]:
+    """Return list of (O - C) TTV timing residuals in minutes."""
+    if period_days <= 0:
+        raise ValueError("period_days must be positive")
+    residuals_min = []
+    for t_obs in transit_times_btjd:
+        n_epoch = round((float(t_obs) - float(epoch_btjd)) / float(period_days))
+        t_calc = float(epoch_btjd) + n_epoch * float(period_days)
+        omc_days = float(t_obs) - t_calc
+        residuals_min.append(round(omc_days * 1440.0, 4))
+    return residuals_min
+

@@ -64,3 +64,6 @@ candidate/*/**/*.md
 EXONYM_FACTORY_PLAN.txt
 
 AGENTS.md
+
+# All Markdown documents
+*.md
