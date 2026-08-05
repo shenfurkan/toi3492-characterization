@@ -242,17 +242,22 @@ def _map_optimize(
             (0.001, 0.3), (-2.0, 1.5), (0.0, 1.19), (0.99, 1.01),
             (-12.0, -2.0), (0.01, 0.99), (0.01, 0.99),
         ]
-    offsets = [
-        np.zeros_like(start),
-        np.array([0.01, 0.2, -0.1, 0.0005, -0.5, 0.05, -0.05, 0.1, 0.1]),
-        np.array([-0.01, -0.2, 0.1, -0.0005, 0.5, -0.05, 0.05, -0.1, -0.1]),
-    ]
+    if eccentric:
+        offsets = [
+            np.zeros_like(start),
+            np.array([0.01, 0.2, -0.1, 0.0005, -0.5, 0.05, -0.05, 0.1, 0.1]),
+            np.array([-0.01, -0.2, 0.1, -0.0005, 0.5, -0.05, 0.05, -0.1, -0.1]),
+        ]
+    else:
+        offsets = [
+            np.zeros_like(start),
+            np.array([0.01, 0.2, -0.1, 0.0005, -0.5, 0.05, -0.05]),
+            np.array([-0.01, -0.2, 0.1, -0.0005, 0.5, -0.05, 0.05]),
+        ]
     best_objective = np.inf
     best_point = start
     for offset in offsets:
         candidate = start + offset
-        if not eccentric:
-            candidate = candidate[:7]
         result = minimize(
             lambda x: _neg_log_posterior(
                 x, phase_days, flux, flux_err, ephemeris, rho_prior_solar, eccentric
@@ -364,7 +369,8 @@ def run_mcmc_transit_fit(
 
     ndim = int(map_point.size)
     if n_walkers is None:
-        n_walkers = max(8, min(48, n_samples // 20))
+        n_walkers = max(2 * ndim, min(48, n_samples // 20))
+    n_walkers = max(n_walkers, 2 * ndim)
     if burn_in is None:
         burn_in = max(50, n_samples // 5)
     rng = np.random.default_rng(seed=seed)
@@ -444,7 +450,11 @@ def run_mcmc_transit_fit(
         posteriors["omega_deg"] = _quantile_summary(omega_samples)
 
     try:
-        tau_values = sampler.get_autocorr_time(discard=burn_in // 2, quiet=True)
+        import warnings
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            tau_values = sampler.get_autocorr_time(discard=burn_in // 2, quiet=True)
         tau_dict = {
             names[index]: float(tau) if np.isfinite(tau) else None
             for index, tau in enumerate(tau_values)
