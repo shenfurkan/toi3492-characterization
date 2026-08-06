@@ -24,34 +24,29 @@ from __future__ import annotations
 import argparse
 import ast
 import ctypes
+from datetime import date
 import json
 import os
 import re
 import sys
 from dataclasses import dataclass, field
-from pathlib import Path
-from typing import Any, Dict, Iterable, List, Optional, Sequence
+from pathlib import Path, PurePosixPath
+from typing import Any, Dict, Iterable, List, Optional, Sequence, Set, Tuple
 
 from .workspace import discover_candidates
 
 CANDIDATE_DIRECTORY = "candidate"
 
-NEUTRAL_TOP_LEVEL_EXTENSIONS = {".md", ".toml", ".txt", ".yaml", ".yml", ".gitignore", ""}
-NEUTRAL_DIRECTORIES = (
-    "src",
-    "tests",
-    "docs",
-    "protocols",
-    "methods",
-    "resources",
-    "schemas",
-    "policy",
-    "templates",
-    ".github",
-)
 NEUTRAL_EXTENSIONS = {
     ".py", ".md", ".toml", ".txt", ".json", ".yaml", ".yml", ".gitignore", ".cff", "",
 }
+
+# `.agents` and `.opencode` are host-injected tool state, not Exonym repository
+# content; their nested third-party repositories and dependencies are excluded
+# explicitly. Every other non-candidate directory is audited. Do not turn this
+# into an allowlist of project source folders.
+EXCLUDED_TOP_LEVEL_DIRECTORIES = {".agents", ".opencode"}
+EXCLUDED_DIRECTORY_NAMES = {".git", "__pycache__", ".pytest_cache"}
 
 RESEARCH_PAYLOAD_EXTENSIONS = {
     ".fits", ".fit", ".fz", ".csv", ".tsv", ".parquet",
@@ -80,6 +75,12 @@ EPHEMERIS_KEYWORDS = {
 TRIVIAL_VALUES = {0.0, 1.0, -1.0, 0.5, -0.5}
 
 EXCEPTIONS_PATH = Path("policy") / "isolation-exceptions.json"
+EXCEPTION_ENTRY_FIELDS = {"path", "line", "rule", "reason", "expires"}
+EXCEPTION_REGISTRY_RULES = {
+    "invalid-isolation-exception-registry",
+    "invalid-isolation-exception",
+    "expired-isolation-exception",
+}
 
 
 @dataclass(frozen=True)
@@ -211,108 +212,347 @@ def _scan_ast(report: IsolationReport, path: Path) -> None:
                         )
 
 
-def _load_exceptions(root: Path) -> Dict[str, Any]:
-    path = root / EXCEPTIONS_PATH
-    if not path.is_file():
-        return {"entries": []}
+def _add_exception_violation(
+    report: IsolationReport,
+    path: Path,
+    rule: str,
+    detail: str,
+) -> None:
+    """Record a registry error that cannot itself be excepted."""
+    report.add(path, rule, detail)
+
+
+def _validate_exception_entry(
+    entry: Any,
+    index: int,
+    path: Path,
+    report: IsolationReport,
+) -> Optional[Tuple[str, Optional[int], str]]:
+    """Return a safe exception key, or report why the entry is unusable."""
+    prefix = f"entry {index}"
+    if not isinstance(entry, dict):
+        _add_exception_violation(
+            report,
+            path,
+            "invalid-isolation-exception",
+            f"{prefix} must be an object",
+        )
+        return None
+
+    entry_fields = set(entry)
+    if entry_fields != EXCEPTION_ENTRY_FIELDS:
+        missing = sorted(EXCEPTION_ENTRY_FIELDS - entry_fields)
+        unexpected = sorted(entry_fields - EXCEPTION_ENTRY_FIELDS)
+        details: List[str] = []
+        if missing:
+            details.append(f"missing fields: {', '.join(missing)}")
+        if unexpected:
+            details.append(f"unexpected fields: {', '.join(unexpected)}")
+        _add_exception_violation(
+            report,
+            path,
+            "invalid-isolation-exception",
+            f"{prefix} has invalid shape ({'; '.join(details)})",
+        )
+        return None
+
+    exception_path = entry["path"]
+    if not isinstance(exception_path, str) or not exception_path.strip():
+        _add_exception_violation(
+            report,
+            path,
+            "invalid-isolation-exception",
+            f"{prefix} path must be a non-empty relative POSIX path",
+        )
+        return None
+    if "\\" in exception_path:
+        _add_exception_violation(
+            report,
+            path,
+            "invalid-isolation-exception",
+            f"{prefix} path must use POSIX separators",
+        )
+        return None
+    posix_path = PurePosixPath(exception_path)
+    if posix_path.is_absolute() or ".." in posix_path.parts or exception_path == ".":
+        _add_exception_violation(
+            report,
+            path,
+            "invalid-isolation-exception",
+            f"{prefix} path must remain inside the repository",
+        )
+        return None
+
+    line = entry["line"]
+    if line is not None and (isinstance(line, bool) or not isinstance(line, int) or line < 1):
+        _add_exception_violation(
+            report,
+            path,
+            "invalid-isolation-exception",
+            f"{prefix} line must be a positive integer or null",
+        )
+        return None
+
+    rule = entry["rule"]
+    if not isinstance(rule, str) or not rule.strip():
+        _add_exception_violation(
+            report,
+            path,
+            "invalid-isolation-exception",
+            f"{prefix} rule must be a non-empty string",
+        )
+        return None
+
+    reason = entry["reason"]
+    if not isinstance(reason, str) or not reason.strip():
+        _add_exception_violation(
+            report,
+            path,
+            "invalid-isolation-exception",
+            f"{prefix} reason must be a non-empty string",
+        )
+        return None
+
+    expires = entry["expires"]
+    if not isinstance(expires, str) or not re.fullmatch(r"\d{4}-\d{2}-\d{2}", expires):
+        _add_exception_violation(
+            report,
+            path,
+            "invalid-isolation-exception",
+            f"{prefix} expires must be an ISO date (YYYY-MM-DD)",
+        )
+        return None
     try:
-        return json.loads(path.read_text(encoding="utf-8"))
-    except (json.JSONDecodeError, OSError):
-        return {"entries": []}
+        expiry_date = date.fromisoformat(expires)
+    except ValueError:
+        _add_exception_violation(
+            report,
+            path,
+            "invalid-isolation-exception",
+            f"{prefix} expires must be a valid ISO date",
+        )
+        return None
+    if expiry_date < date.today():
+        _add_exception_violation(
+            report,
+            path,
+            "expired-isolation-exception",
+            f"{prefix} expired on {expires}",
+        )
+        return None
+
+    return (posix_path.as_posix(), line, rule)
+
+
+def _load_exceptions(
+    root: Path,
+    report: IsolationReport,
+) -> Set[Tuple[str, Optional[int], str]]:
+    """Load only well-formed, unexpired, repository-relative exceptions."""
+    path = root / EXCEPTIONS_PATH
+    if not path.exists() and not path.is_symlink():
+        return set()
+    if is_reparse_point(path):
+        _add_exception_violation(
+            report,
+            path,
+            "invalid-isolation-exception-registry",
+            "registry must not be a symlink or reparse point",
+        )
+        return set()
+    if not path.is_file():
+        _add_exception_violation(
+            report,
+            path,
+            "invalid-isolation-exception-registry",
+            "registry must be a JSON file",
+        )
+        return set()
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError) as exc:
+        _add_exception_violation(
+            report,
+            path,
+            "invalid-isolation-exception-registry",
+            f"could not parse registry: {exc}",
+        )
+        return set()
+    if not isinstance(payload, dict) or set(payload) != {"entries"}:
+        _add_exception_violation(
+            report,
+            path,
+            "invalid-isolation-exception-registry",
+            "registry must be an object with exactly one 'entries' field",
+        )
+        return set()
+    entries = payload["entries"]
+    if not isinstance(entries, list):
+        _add_exception_violation(
+            report,
+            path,
+            "invalid-isolation-exception-registry",
+            "registry entries must be a list",
+        )
+        return set()
+
+    exception_paths: Set[Tuple[str, Optional[int], str]] = set()
+    for index, entry in enumerate(entries, start=1):
+        key = _validate_exception_entry(entry, index, path, report)
+        if key is not None:
+            exception_paths.add(key)
+    return exception_paths
+
+
+def _is_excluded_neutral_directory(relative: Path) -> bool:
+    """Return whether a path belongs to host/VCS state outside the repository."""
+    parts = relative.parts
+    return bool(
+        parts
+        and (
+            parts[0] in EXCLUDED_TOP_LEVEL_DIRECTORIES
+            or any(part in EXCLUDED_DIRECTORY_NAMES for part in parts)
+        )
+    )
+
+
+def _iter_neutral_entries(root: Path) -> Iterable[Path]:
+    """Yield every auditable entry outside candidate/ without following links."""
+    for current, directory_names, file_names in os.walk(
+        str(root), topdown=True, followlinks=False
+    ):
+        directory = Path(current)
+        next_directories: List[str] = []
+        for name in sorted(directory_names):
+            path = directory / name
+            relative = path.relative_to(root)
+            if relative.parts[0] == CANDIDATE_DIRECTORY or _is_excluded_neutral_directory(relative):
+                continue
+            yield path
+            if not is_reparse_point(path):
+                next_directories.append(name)
+        directory_names[:] = next_directories
+
+        for name in sorted(file_names):
+            path = directory / name
+            relative = path.relative_to(root)
+            if not _is_excluded_neutral_directory(relative):
+                yield path
+
+
+def _scan_candidate_reparse_points(report: IsolationReport, candidate_root: Path) -> None:
+    """Reject links in candidate workspaces without inspecting their payload."""
+    if not candidate_root.exists() and not candidate_root.is_symlink():
+        return
+    if is_reparse_point(candidate_root):
+        report.add(
+            candidate_root,
+            "symlink-or-reparse-point",
+            "candidate workspaces must not be linked",
+        )
+        return
+
+    for current, directory_names, file_names in os.walk(
+        str(candidate_root), topdown=True, followlinks=False
+    ):
+        directory = Path(current)
+        next_directories: List[str] = []
+        for name in sorted(directory_names):
+            path = directory / name
+            if is_reparse_point(path):
+                report.add(path, "symlink-or-reparse-point", "not permitted in candidate workspaces")
+                continue
+            next_directories.append(name)
+        directory_names[:] = next_directories
+        for name in sorted(file_names):
+            path = directory / name
+            if is_reparse_point(path):
+                report.add(path, "symlink-or-reparse-point", "not permitted in candidate workspaces")
 
 
 def check_repository(root: Path) -> IsolationReport:
     """Run the full isolation check over a repository tree."""
-    root = Path(root).resolve()
+    requested_root = Path(root)
     report = IsolationReport()
-    exceptions = _load_exceptions(root)
-    exception_paths = {
-        (entry.get("path"), entry.get("line"), entry.get("rule"))
-        for entry in exceptions.get("entries", [])
-    }
+    if is_reparse_point(requested_root):
+        report.add(
+            requested_root,
+            "symlink-or-reparse-point",
+            "repository root must not be linked",
+        )
+    root = requested_root.resolve()
+    exception_paths = _load_exceptions(root, report)
     alias_tokens = _alias_tokens(root / CANDIDATE_DIRECTORY)
 
-    if (root / "archive").exists():
+    archive_root = root / "archive"
+    if archive_root.exists() or archive_root.is_symlink():
         report.add(
-            root / "archive",
+            archive_root,
             "top-level-archive-forbidden",
             "archived targets must remain under candidate/<candidate-id>/",
         )
-    if (root / "data").exists():
+    data_root = root / "data"
+    if data_root.exists() or data_root.is_symlink():
         report.add(
-            root / "data",
+            data_root,
             "top-level-data-forbidden",
             "target data must live under candidate/<candidate-id>/data/",
         )
 
-    for directory in NEUTRAL_DIRECTORIES:
-        neutral_root = root / directory
-        if not neutral_root.is_dir():
-            continue
-        for path in sorted(neutral_root.rglob("*")):
-            if not path.is_file():
-                continue
-            if any(part in {"__pycache__", ".pytest_cache", ".git"} for part in path.parts):
-                continue
-            if is_reparse_point(path):
-                report.add(path, "symlink-or-reparse-point", "not permitted in neutral zone")
-                continue
-            relative = path.relative_to(root)
-            if path.suffix.lower() not in NEUTRAL_EXTENSIONS:
-                report.add(
-                    path,
-                    "research-payload-outside-candidate",
-                    f"format {path.suffix or '(none)'} is only allowed under candidate/",
-                )
-                continue
-            content = _text_payload(path)
-            if content is not None:
-                # Shared tests necessarily exercise ID-detection fixtures, so
-                # generic catalog patterns are skipped there; real registered
-                # aliases are still scanned everywhere.
-                _scan_text_for_ids(
-                    report,
-                    path,
-                    content,
-                    alias_tokens,
-                    scan_catalog_patterns=not (relative.parts and relative.parts[0] == "tests"),
-                )
-            if path.suffix.lower() == ".py" and relative.parts and relative.parts[0] == "src":
-                _scan_ast(report, path)
-
-    neutral_files: List[Path] = []
-    for path in sorted(root.iterdir()):
-        if not path.is_file():
-            continue
+    for path in _iter_neutral_entries(root):
         if is_reparse_point(path):
-            report.add(path, "symlink-or-reparse-point", "root files must be plain files")
+            report.add(path, "symlink-or-reparse-point", "not permitted outside candidate/")
             continue
-        if path.name in {"LICENSE"}:
+        if path.is_dir():
             continue
-        if path.suffix.lower() not in NEUTRAL_TOP_LEVEL_EXTENSIONS:
+        if not path.is_file():
+            report.add(
+                path,
+                "unsupported-neutral-entry",
+                "neutral-zone entries must be regular files or directories",
+            )
+            continue
+        relative = path.relative_to(root)
+        if path.suffix.lower() not in NEUTRAL_EXTENSIONS:
             report.add(
                 path,
                 "research-payload-outside-candidate",
-                f"root format {path.suffix or '(none)'} is only allowed under candidate/",
+                f"format {path.suffix or '(none)'} is only allowed under candidate/",
             )
             continue
-        neutral_files.append(path)
-    for path in neutral_files:
         content = _text_payload(path)
-        if content is not None:
-            _scan_text_for_ids(report, path, content, alias_tokens)
+        if content is None:
+            report.add(
+                path,
+                "unreadable-neutral-content",
+                "neutral-zone files must be UTF-8 text",
+            )
+            continue
+        # Shared tests necessarily exercise ID-detection fixtures, so generic
+        # catalog patterns are skipped there; real registered aliases are
+        # still scanned everywhere.
+        _scan_text_for_ids(
+            report,
+            path,
+            content,
+            alias_tokens,
+            scan_catalog_patterns=not (relative.parts and relative.parts[0] == "tests"),
+        )
+        if path.suffix.lower() == ".py" and relative.parts and relative.parts[0] == "src":
+            _scan_ast(report, path)
 
     candidate_root = root / CANDIDATE_DIRECTORY
-    if candidate_root.is_dir():
-        for path in sorted(candidate_root.rglob("*")):
-            if path.is_file() and is_reparse_point(path):
-                report.add(path, "symlink-or-reparse-point", "not permitted in candidate workspaces")
+    _scan_candidate_reparse_points(report, candidate_root)
 
     if exception_paths:
         kept: List[Violation] = []
         for violation in report.violations:
-            key = (violation.path, violation.line, violation.rule)
-            if key in exception_paths:
+            try:
+                relative_path = Path(violation.path).relative_to(root).as_posix()
+            except ValueError:
+                relative_path = None
+            key = (relative_path, violation.line, violation.rule)
+            if violation.rule not in EXCEPTION_REGISTRY_RULES and key in exception_paths:
                 continue
             kept.append(violation)
         report.violations = kept

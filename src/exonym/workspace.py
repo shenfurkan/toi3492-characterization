@@ -12,14 +12,14 @@ import re
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Sequence
+from typing import Any, Dict, List, Optional, Sequence, Tuple
+
+from .resources import iter_template_texts
 
 
 CANDIDATE_DIRECTORY = "candidate"
 METADATA_FILENAME = "candidate.json"
 SCHEMA_VERSION = 2
-TEMPLATE_DIRECTORY = "templates"
-
 WORKSPACE_DIRECTORIES = (
     "config",
     "data/raw",
@@ -116,27 +116,28 @@ def _placeholder_bindings(metadata: Dict[str, Any]) -> Dict[str, str]:
     }
 
 
-def mirror_templates(repository_root: Path, workspace: CandidateWorkspace) -> List[Path]:
+def mirror_templates(
+    repository_root: Path,
+    workspace: CandidateWorkspace,
+    template_texts: Optional[Sequence[Tuple[Path, str]]] = None,
+) -> List[Path]:
     """Clone the global template tree into a candidate workspace.
 
     Template files are copied into their target directories (docs/, protocols/,
     decisions/, tracking/) and placeholder tokens are bound to the candidate
-    identity record. Existing files are never overwritten.
+    identity record. Existing files are never overwritten.  Source checkouts
+    use their editable root ``templates/`` directory; installed wheels use the
+    bundled target-neutral template copy.
     """
-    template_root = repository_root.resolve() / TEMPLATE_DIRECTORY
-    if not template_root.is_dir():
-        return []
+    if template_texts is None:
+        template_texts = list(iter_template_texts(repository_root))
     bindings = _placeholder_bindings(workspace.metadata)
     written: List[Path] = []
-    for template in sorted(template_root.rglob("*")):
-        if not template.is_file():
-            continue
-        relative = template.relative_to(template_root)
+    for relative, content in template_texts:
         destination = workspace.path / relative
         if destination.exists():
             continue
         destination.parent.mkdir(parents=True, exist_ok=True)
-        content = template.read_text(encoding="utf-8")
         for token, value in bindings.items():
             content = content.replace(token, value)
         destination.write_text(content, encoding="utf-8")
@@ -273,6 +274,10 @@ def create_candidate(
     if any(other.casefold() == normalized_id.casefold() for other in existing):
         raise FileExistsError("candidate ID collides with an existing workspace")
 
+    # Resolve templates before mutating the candidate tree.  A missing or empty
+    # template source must not leave behind a partial workspace.
+    template_texts = list(iter_template_texts(repository_root))
+
     metadata = new_candidate_metadata(normalized_id, toi=toi, tic=tic, tags=tags, mission=mission)
     path.mkdir(parents=True)
     for relative_path in WORKSPACE_DIRECTORIES:
@@ -282,7 +287,7 @@ def create_candidate(
     )
     (path / "README.md").write_text(_candidate_readme(metadata), encoding="utf-8")
     workspace = CandidateWorkspace(repository_root, normalized_id, path, metadata)
-    mirror_templates(repository_root, workspace)
+    mirror_templates(repository_root, workspace, template_texts=template_texts)
     return workspace
 
 

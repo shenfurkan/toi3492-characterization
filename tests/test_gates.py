@@ -3,7 +3,7 @@ import json
 import pytest
 
 from exonym.freeze import freeze
-from exonym.gatekeeper import GateError, advance, gate_errors, next_phase
+from exonym.gatekeeper import GateError, advance, gate_errors, next_phase, set_lifecycle_state
 from exonym.tagging import add_tags, filter_candidates, has_tag
 from exonym.tracking import candidate_telemetry, overall_progress, parse_checklist
 from exonym.workspace import create_candidate, discover_candidates, load_candidate
@@ -19,6 +19,34 @@ def _check(path, text, checked=True, mandatory=False):
 
 def _reload(tmp_path):
     return load_candidate(tmp_path, "candidate-alpha")
+
+
+def _novelty_audit_payload(candidate_id="candidate-alpha", status="eligible", expires_at=None):
+    return {
+        "schema_version": 1,
+        "candidate_id": candidate_id,
+        "retrieved_at": "2000-01-01T00:00:00Z",
+        "freshness": {"expires_at": expires_at or "2099-01-01T00:00:00Z"},
+        "status": status,
+        "decision_basis": "A documented novelty assessment supports this workflow decision.",
+        "evidence": [
+            {
+                "source_uri": "https://example.invalid/novelty-evidence",
+                "retrieved_at": "2000-01-01T00:00:00Z",
+                "finding": "The source was assessed under the recorded novelty protocol.",
+                "evidence_sha256": "a" * 64,
+            }
+        ],
+    }
+
+
+def _write_novelty_audit(candidate, **overrides):
+    expires_at = overrides.pop("expires_at", None)
+    payload = _novelty_audit_payload(candidate.candidate_id, expires_at=expires_at)
+    payload.update(overrides)
+    path = candidate.path / "decisions" / "novelty_audit.json"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(payload), encoding="utf-8")
 
 
 def _templated_repo(tmp_path):
@@ -66,6 +94,31 @@ def test_advance_blocks_on_unchecked_mandatory(tmp_path):
         advance(candidate)
 
 
+def test_gate_document_requires_a_mandatory_item(tmp_path):
+    candidate = create_candidate(_templated_repo(tmp_path), "candidate-alpha")
+    document = candidate.path / "docs" / "01_intake_manifest.md"
+    document.write_text("- [x] non-gating note\n", encoding="utf-8")
+
+    errors = gate_errors(candidate)
+    assert any("contains no mandatory checklist items" in error for error in errors)
+    with pytest.raises(GateError, match="contains no mandatory checklist items"):
+        advance(candidate)
+
+
+def test_stopped_candidate_blocks_gate_errors_and_advance(tmp_path):
+    candidate = create_candidate(_templated_repo(tmp_path), "candidate-alpha")
+    set_lifecycle_state(candidate, "stopped", reason="scientific eligibility withdrawn")
+    stopped = _reload(tmp_path)
+
+    with pytest.raises(GateError, match="reason is required"):
+        set_lifecycle_state(stopped, "active")
+    with pytest.raises(GateError, match="reason is required"):
+        set_lifecycle_state(stopped, "active", reason="   ")
+    assert any("lifecycle is stopped" in error for error in gate_errors(stopped))
+    with pytest.raises(GateError, match="lifecycle is stopped"):
+        advance(stopped)
+
+
 def test_advance_promotes_phase_and_writes_gate_record(tmp_path):
     candidate = create_candidate(_templated_repo(tmp_path), "candidate-alpha")
     doc = candidate.path / "docs" / "01_intake_manifest.md"
@@ -101,6 +154,8 @@ def test_acquisition_gate_requires_provenance_sidecars(tmp_path):
     _check(candidate.path / "docs" / "02_feasibility_report.md", "b", checked=True, mandatory=True)
     _check(candidate.path / "docs" / "02_feasibility_report.md", "c", checked=True, mandatory=True)
     _check(candidate.path / "docs" / "02_feasibility_report.md", "d", checked=True, mandatory=True)
+    assert any("missing novelty audit" in error for error in gate_errors(candidate))
+    _write_novelty_audit(candidate)
     advance(candidate)
     candidate = _reload(tmp_path)
     assert candidate.metadata["workflow"]["phase"] == "acquisition"
@@ -153,6 +208,7 @@ def test_analysis_gate_requires_fpp_claim(tmp_path):
         encoding="utf-8",
     )
     advance(candidate)
+    _write_novelty_audit(candidate)
     advance(candidate)
     candidate = _reload(tmp_path)
     (candidate.path / "data" / "raw" / "lc.fits").write_bytes(b"fits")
@@ -247,6 +303,7 @@ def _to_review_phase(tmp_path):
     _checked_doc(candidate.path / "docs" / "01_intake_manifest.md")
     advance(candidate)
     _checked_doc(candidate.path / "docs" / "02_feasibility_report.md")
+    _write_novelty_audit(candidate)
     advance(candidate)
     raw = candidate.path / "data" / "raw"
     raw.mkdir(parents=True, exist_ok=True)
@@ -286,6 +343,30 @@ def _to_review_phase(tmp_path):
     reloaded = _reload(tmp_path)
     assert reloaded.metadata["workflow"]["phase"] == "review"
     return reloaded
+
+
+def test_feasibility_gate_rejects_nonconforming_or_ineligible_novelty_audit(tmp_path):
+    candidate = create_candidate(_templated_repo(tmp_path), "candidate-alpha")
+    _checked_doc(candidate.path / "docs" / "01_intake_manifest.md")
+    advance(candidate)
+    candidate = _reload(tmp_path)
+    _checked_doc(candidate.path / "docs" / "02_feasibility_report.md")
+
+    _write_novelty_audit(candidate, evidence=[])
+    assert any("violates schema" in error for error in gate_errors(candidate))
+
+    _write_novelty_audit(candidate, status="ineligible")
+    assert any("status is not eligible" in error for error in gate_errors(candidate))
+
+
+def test_review_gate_requires_a_current_novelty_audit(tmp_path):
+    candidate = _to_review_phase(tmp_path)
+    _checked_doc(candidate.path / "decisions" / "review_gate.md")
+    _write_novelty_audit(candidate, expires_at="2001-01-01T00:00:00Z")
+
+    assert any("novelty audit is stale" in error for error in gate_errors(candidate))
+    with pytest.raises(GateError, match="novelty audit is stale"):
+        advance(candidate)
 
 
 def test_advance_review_phase_locks_lifecycle(tmp_path):

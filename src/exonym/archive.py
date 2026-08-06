@@ -23,6 +23,16 @@ from .inputs import load_stellar_parameters, load_tpf_cubes
 from .workspace import CandidateWorkspace
 
 
+def _utc_timestamp() -> str:
+    """Return a compact, timezone-aware timestamp for archival evidence."""
+    return (
+        datetime.now(timezone.utc)
+        .replace(microsecond=0)
+        .isoformat()
+        .replace("+00:00", "Z")
+    )
+
+
 class ArchivalVettingService:
     """Service for querying astronomical archives (Gaia, ExoFOP) and evaluating candidate vetting metrics."""
 
@@ -201,9 +211,12 @@ class ArchivalVettingService:
             "source": "gaia-dr3",
             "backend": None,
             "validated": False,
+            "query_status": "unavailable",
+            "query_errors": [],
         }
 
-        if ra == 0.0 and dec == 0.0:
+        if not (math.isfinite(ra) and math.isfinite(dec)):
+            results["query_errors"].append("target coordinates are not finite")
             return results
 
         backends = (
@@ -220,7 +233,10 @@ class ArchivalVettingService:
         for backend_name, fetch in backends:
             try:
                 sources = fetch()
-            except Exception:
+            except Exception as exc:
+                results["query_errors"].append(
+                    "{0}: {1}".format(backend_name, type(exc).__name__)
+                )
                 sources = []
             if not sources:
                 continue
@@ -231,10 +247,12 @@ class ArchivalVettingService:
             )
             if validated:
                 self._apply_gaia_sources(results, sources, backend_name, validated=True)
+                results["query_status"] = "ok"
                 return results
 
         if fallback is not None:
             self._apply_gaia_sources(results, fallback[1], fallback[0], validated=False)
+            results["query_status"] = "unvalidated"
         return results
 
     @staticmethod
@@ -249,7 +267,12 @@ class ArchivalVettingService:
         results["sources"] = sources
         results["backend"] = backend_name
         results["validated"] = bool(validated)
-        target_ruwe = sources[0]["ruwe"] if sources else None
+        target_sources = [
+            source
+            for source in sources
+            if source["separation_arcsec"] <= ArchivalVettingService.TARGET_PRESENCE_ARCSEC
+        ]
+        target_ruwe = target_sources[0]["ruwe"] if target_sources else None
         if target_ruwe is not None:
             results["ruwe"] = target_ruwe
             results["suspected_binary"] = bool(target_ruwe > 1.4)
@@ -264,28 +287,35 @@ class ArchivalVettingService:
         tic_clean = str(tic_id).strip().lstrip("TIC").strip()
         results: Dict[str, Any] = {
             "tic_id": tic_clean,
-            "has_imaging": False,
-            "has_spectroscopy": False,
+            "has_imaging": None,
+            "has_spectroscopy": None,
             "imaging_records_count": 0,
             "spectroscopy_records_count": 0,
             "imaging_types": [],
             "spectroscopy_types": [],
             "target_coordinates": None,
             "source": "nasa-exofop",
+            "query_status": "not_requested",
+            "queried_endpoints": [],
+            "retrieved_at_utc": None,
         }
 
         if not tic_clean:
             return results
 
-        # Try target.php first (primary JSON endpoint)
+        # A failed or malformed archive query must remain distinct from a
+        # successful query with no follow-up records.
         url_target = f"https://exofop.ipac.caltech.edu/tess/target.php?id={tic_clean}&json"
+        results["queried_endpoints"].append(url_target)
         payload = self._http_get_json(url_target)
 
         if not payload or not isinstance(payload, dict):
             url_api = f"https://exofop.ipac.caltech.edu/tess/api.php?target={tic_clean}&json"
+            results["queried_endpoints"].append(url_api)
             payload = self._http_get_json(url_api)
 
         if payload and isinstance(payload, dict):
+            results["retrieved_at_utc"] = _utc_timestamp()
             coords = payload.get("coordinates") or payload.get("target_coordinates")
             if isinstance(coords, dict):
                 ra_val = coords.get("ra") or coords.get("ra_deg")
@@ -299,10 +329,12 @@ class ArchivalVettingService:
                     except (TypeError, ValueError):
                         pass
 
+            imaging_present = "imaging" in payload or "high_res_imaging" in payload
             imaging = payload.get("imaging") or payload.get("high_res_imaging") or []
             if isinstance(imaging, list):
                 results["imaging_records_count"] = len(imaging)
-                results["has_imaging"] = len(imaging) > 0
+                if imaging_present:
+                    results["has_imaging"] = len(imaging) > 0
                 types = set()
                 for rec in imaging:
                     if isinstance(rec, dict):
@@ -317,6 +349,10 @@ class ArchivalVettingService:
                             types.add(str(itype).strip())
                 results["imaging_types"] = sorted(list(types))
 
+            spectroscopy_present = any(
+                key in payload
+                for key in ("spectroscopy", "high_res_spectroscopy", "spectra")
+            )
             spectroscopy = (
                 payload.get("spectroscopy")
                 or payload.get("high_res_spectroscopy")
@@ -325,7 +361,8 @@ class ArchivalVettingService:
             )
             if isinstance(spectroscopy, list):
                 results["spectroscopy_records_count"] = len(spectroscopy)
-                results["has_spectroscopy"] = len(spectroscopy) > 0
+                if spectroscopy_present:
+                    results["has_spectroscopy"] = len(spectroscopy) > 0
                 stypes = set()
                 for rec in spectroscopy:
                     if isinstance(rec, dict):
@@ -340,6 +377,12 @@ class ArchivalVettingService:
                         if stype:
                             stypes.add(str(stype).strip())
                 results["spectroscopy_types"] = sorted(list(stypes))
+
+            results["query_status"] = (
+                "ok" if imaging_present or spectroscopy_present else "incomplete"
+            )
+        else:
+            results["query_status"] = "unavailable"
 
         return results
 
@@ -382,31 +425,67 @@ class ArchivalVettingService:
             dec_deg = coords.get("dec_deg")
 
         if ra_deg is None or dec_deg is None:
-            ra_deg = 0.0
-            dec_deg = 0.0
-
-        gaia_data = self.query_gaia_astrometry(ra_deg, dec_deg, radius_arcsec=radius_arcsec)
+            gaia_data: Dict[str, Any] = {
+                "target_ra_deg": None,
+                "target_dec_deg": None,
+                "search_radius_arcsec": float(radius_arcsec),
+                "ruwe": None,
+                "suspected_binary": None,
+                "nearby_sources_count": None,
+                "sources": [],
+                "source": "gaia-dr3",
+                "backend": None,
+                "validated": False,
+                "query_status": "unavailable",
+                "query_errors": ["target coordinates unavailable"],
+            }
+        else:
+            gaia_data = self.query_gaia_astrometry(
+                ra_deg, dec_deg, radius_arcsec=radius_arcsec
+            )
 
         ruwe_val = gaia_data.get("ruwe")
-        is_hidden_binary = bool(gaia_data.get("suspected_binary", False))
-        nearby_count = gaia_data.get("nearby_sources_count", 0)
-        has_nearby_contaminants = bool(nearby_count > 1)
-        has_imaging = bool(exofop_data.get("has_imaging", False))
-        has_spectroscopy = bool(exofop_data.get("has_spectroscopy", False))
-        has_ground_based_followup = bool(has_imaging or has_spectroscopy)
+        gaia_status = gaia_data.get("query_status", "ok")
+        exofop_status = exofop_data.get("query_status", "ok") if exofop_data else "not_requested"
+        gaia_available = gaia_status == "ok"
+        exofop_available = exofop_status == "ok"
+        is_hidden_binary = (
+            bool(gaia_data.get("suspected_binary", False)) if gaia_available else None
+        )
+        nearby_count = gaia_data.get("nearby_sources_count")
+        has_nearby_contaminants = (
+            bool(nearby_count > 1)
+            if gaia_available and isinstance(nearby_count, int)
+            else None
+        )
+        has_imaging = exofop_data.get("has_imaging") if exofop_available else None
+        has_spectroscopy = exofop_data.get("has_spectroscopy") if exofop_available else None
+        has_ground_based_followup = (
+            bool(has_imaging or has_spectroscopy) if exofop_available else None
+        )
 
         ruwe_str = f"{ruwe_val:.4f}" if isinstance(ruwe_val, float) else "N/A"
-        evidence_binary = (
-            f"Gaia RUWE ({ruwe_str}) > 1.4 indicates suspected unresolved binary / astrometric wobble"
-            if is_hidden_binary
-            else f"Gaia RUWE ({ruwe_str}) <= 1.4 indicates consistent single-star astrometry"
-        )
+        if is_hidden_binary is None:
+            evidence_binary = "Gaia astrometry unavailable or unvalidated; binarity status is unknown"
+        elif is_hidden_binary:
+            evidence_binary = (
+                f"Gaia RUWE ({ruwe_str}) > 1.4 flags possible unresolved multiplicity or astrometric mismatch"
+            )
+        else:
+            evidence_binary = (
+                f"Gaia RUWE ({ruwe_str}) does not exceed 1.4; this does not exclude companions"
+            )
 
-        evidence_crowding = (
-            f"{nearby_count} celestial sources detected within {radius_arcsec}\" radius (visual crowding/contamination)"
-            if has_nearby_contaminants
-            else f"Single star detected within {radius_arcsec}\" radius"
-        )
+        if has_nearby_contaminants is None:
+            evidence_crowding = "Gaia astrometry unavailable or unvalidated; crowding status is unknown"
+        elif has_nearby_contaminants:
+            evidence_crowding = (
+                f"{nearby_count} celestial sources detected within {radius_arcsec}\" radius"
+            )
+        else:
+            evidence_crowding = (
+                f"No additional Gaia sources were detected within {radius_arcsec}\" radius"
+            )
 
         imaging_types_str = ", ".join(exofop_data.get("imaging_types", [])) or "Registered"
         spectroscopy_types_str = ", ".join(exofop_data.get("spectroscopy_types", [])) or "Registered"
@@ -415,50 +494,49 @@ class ArchivalVettingService:
             followup_parts.append(f"High-res imaging ({imaging_types_str})")
         if has_spectroscopy:
             followup_parts.append(f"Spectroscopy ({spectroscopy_types_str})")
-        evidence_followup = (
-            "Ground-based follow-up on ExoFOP: " + "; ".join(followup_parts)
-            if has_ground_based_followup
-            else "No high-resolution ground-based follow-up registered on ExoFOP"
-        )
-
-        timestamp_utc = (
-            datetime.now(timezone.utc)
-            .replace(microsecond=0)
-            .isoformat()
-            .replace("+00:00", "Z")
-        )
+        if has_ground_based_followup is None:
+            evidence_followup = (
+                "ExoFOP follow-up query was unavailable or incomplete; follow-up status is unknown"
+            )
+        elif has_ground_based_followup:
+            evidence_followup = "Ground-based follow-up on ExoFOP: " + "; ".join(followup_parts)
+        else:
+            evidence_followup = "No high-resolution follow-up records were returned by ExoFOP"
 
         return {
             "candidate_id": candidate_id,
             "tic_id": str(tic_id) if tic_id else None,
             "toi_id": str(toi_id) if toi_id else None,
             "target_coordinates": {
-                "ra_deg": round(ra_deg, 6),
-                "dec_deg": round(dec_deg, 6),
+                "ra_deg": round(ra_deg, 6) if ra_deg is not None else None,
+                "dec_deg": round(dec_deg, 6) if dec_deg is not None else None,
             },
             "scientific_assessment": {
                 "1_is_hidden_binary": {
                     "answer": is_hidden_binary,
                     "ruwe": ruwe_val,
                     "threshold": 1.4,
+                    "availability": gaia_status,
                     "evidence": evidence_binary,
                 },
                 "2_has_nearby_contaminants": {
                     "answer": has_nearby_contaminants,
                     "search_radius_arcsec": float(radius_arcsec),
                     "nearby_sources_count": nearby_count,
+                    "availability": gaia_status,
                     "evidence": evidence_crowding,
                 },
                 "3_has_ground_based_followup": {
                     "answer": has_ground_based_followup,
                     "has_high_res_imaging": has_imaging,
                     "has_spectroscopy": has_spectroscopy,
+                    "availability": exofop_status,
                     "evidence": evidence_followup,
                 },
             },
             "gaia_astrometry": gaia_data,
             "exofop_metadata": exofop_data,
-            "timestamp_utc": timestamp_utc,
+            "timestamp_utc": _utc_timestamp(),
         }
 
 

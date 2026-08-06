@@ -47,7 +47,11 @@ from .workspace import (
 
 
 def _default_repository_root() -> Path:
-    return Path(__file__).resolve().parents[2]
+    """Choose the source checkout root, or the caller's workspace when installed."""
+    source_root = Path(__file__).resolve().parents[2]
+    if (source_root / "pyproject.toml").is_file():
+        return source_root
+    return Path.cwd().resolve()
 
 
 def _build_parser() -> argparse.ArgumentParser:

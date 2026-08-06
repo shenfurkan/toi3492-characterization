@@ -186,19 +186,6 @@ def run_triceratops_simulation(
             import numpy as np
             import triceratops.triceratops as triceratops_module
 
-            for t_name, t_type in [("int", int), ("float", float), ("bool", bool)]:
-                if not hasattr(np, t_name):
-                    setattr(np, t_name, t_type)
-
-            # The TRILEGAL form server (stev.oapd.inaf.it) serves a broken
-            # certificate chain; run the real query with verification off.
-            _original_trilegal = triceratops_module.query_TRILEGAL
-            triceratops_module.query_TRILEGAL = (
-                lambda ra, dec, verbose=1, verify_ssl=True: _original_trilegal(
-                    ra, dec, verbose=verbose, verify_ssl=False
-                )
-            )
-
             target_cls = triceratops_module.target
             sectors = _observed_sectors(workspace)
             # TRICERATOPS writes the TRILEGAL CSV (and other scratch files)

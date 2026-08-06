@@ -13,6 +13,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Dict, List, Optional, Sequence, Tuple
 
+from .resources import ResourceUnavailableError, read_schema_text
+from .schemas import NOVELTY_AUDIT_SCHEMA
 from .tracking import phase_document_path, parse_checklist
 from .workspace import (
     CandidateWorkspace,
@@ -21,6 +23,10 @@ from .workspace import (
     load_candidate,
     validate_metadata,
 )
+
+
+NOVELTY_AUDIT_RELATIVE_PATH = Path("decisions") / "novelty_audit.json"
+NOVELTY_AUDIT_ELIGIBLE_STATUS = "eligible"
 
 
 class GateError(RuntimeError):
@@ -88,11 +94,81 @@ def _gate_fpp_claim(workspace: CandidateWorkspace, threshold: float = 0.01) -> T
     return False, "no FPP claim below threshold {0:.2f} found in claims/".format(threshold)
 
 
+def _parse_utc_timestamp(value: object) -> Optional[datetime]:
+    """Parse an ISO-8601 timestamp with an explicit timezone as UTC."""
+    if not isinstance(value, str):
+        return None
+    normalized = value[:-1] + "+00:00" if value.endswith("Z") else value
+    try:
+        parsed = datetime.fromisoformat(normalized)
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        return None
+    return parsed.astimezone(timezone.utc)
+
+
+def _gate_novelty_audit(workspace: CandidateWorkspace) -> Tuple[bool, str]:
+    """Require a current, schema-valid, eligible candidate novelty audit."""
+    audit_path = workspace.path / NOVELTY_AUDIT_RELATIVE_PATH
+    if not audit_path.is_file():
+        return False, "missing novelty audit: {0}".format(NOVELTY_AUDIT_RELATIVE_PATH)
+    try:
+        audit = json.loads(audit_path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError) as exc:
+        return False, "invalid novelty audit JSON: {0}".format(exc)
+
+    try:
+        schema = json.loads(read_schema_text(workspace.repository_root, NOVELTY_AUDIT_SCHEMA))
+    except FileNotFoundError:
+        return False, "novelty audit schema is unavailable: {0}".format(NOVELTY_AUDIT_SCHEMA)
+    except ResourceUnavailableError as exc:
+        return False, "novelty audit schema is unavailable: {0}".format(exc)
+    except (json.JSONDecodeError, OSError, UnicodeError) as exc:
+        return False, "invalid novelty audit schema: {0}".format(exc)
+    try:
+        import jsonschema
+    except ImportError:
+        return False, "novelty audit schema validation is unavailable: jsonschema is not installed"
+    try:
+        jsonschema.validate(audit, schema, format_checker=jsonschema.FormatChecker())
+    except jsonschema.ValidationError as exc:
+        return False, "novelty audit violates schema: {0}".format(exc.message)
+    except jsonschema.SchemaError as exc:
+        return False, "invalid novelty audit schema: {0}".format(exc.message)
+
+    if audit.get("candidate_id") != workspace.candidate_id:
+        return False, "novelty audit candidate_id does not match the workspace"
+    if audit.get("status") != NOVELTY_AUDIT_ELIGIBLE_STATUS:
+        return False, "novelty audit status is not eligible: {0}".format(audit.get("status"))
+
+    retrieved_at = _parse_utc_timestamp(audit.get("retrieved_at"))
+    freshness = audit.get("freshness")
+    expires_at = _parse_utc_timestamp(
+        freshness.get("expires_at") if isinstance(freshness, dict) else None
+    )
+    now = datetime.now(timezone.utc)
+    if retrieved_at is None or expires_at is None:
+        return False, "novelty audit contains an invalid retrieval or freshness timestamp"
+    if retrieved_at > now:
+        return False, "novelty audit retrieval date is in the future"
+    if expires_at <= retrieved_at:
+        return False, "novelty audit freshness expiry must be later than retrieval date"
+    if expires_at <= now:
+        return False, "novelty audit is stale: freshness.expires_at has passed"
+    return True, "novelty audit is eligible and current through {0}".format(
+        audit["freshness"]["expires_at"]
+    )
+
+
 def gate_errors(workspace: CandidateWorkspace) -> List[str]:
     """Return a list of gate failures blocking the current phase."""
     metadata = workspace.metadata
     phase = metadata["workflow"]["phase"]
     errors: List[str] = []
+
+    if metadata["lifecycle"]["state"] == "stopped":
+        errors.append("candidate lifecycle is stopped; workflow advancement is disabled")
 
     document = phase_document_path(workspace, phase)
     if document is not None:
@@ -100,6 +176,12 @@ def gate_errors(workspace: CandidateWorkspace) -> List[str]:
         if not telemetry.exists:
             errors.append("missing gate document: {0}".format(document.relative_to(workspace.path)))
         else:
+            if telemetry.mandatory_total == 0:
+                errors.append(
+                    "gate document contains no mandatory checklist items: {0}".format(
+                        document.relative_to(workspace.path)
+                    )
+                )
             for item in telemetry.items:
                 if item.mandatory and not item.checked:
                     errors.append(
@@ -108,6 +190,10 @@ def gate_errors(workspace: CandidateWorkspace) -> List[str]:
                         )
                     )
 
+    if phase in ("feasibility", "review"):
+        ok, detail = _gate_novelty_audit(workspace)
+        if not ok:
+            errors.append(detail)
     if phase == "acquisition":
         ok, detail = _gate_provenance_ready(workspace)
         if not ok:
@@ -131,8 +217,9 @@ def set_lifecycle_state(
     """Set the lifecycle state of a candidate, recording the change as an event.
 
     ``state`` must be one of the registered lifecycle states. Changing the state
-    of a locked candidate (``published``/``archived``) requires a ``reason`` so
-    audit history always explains why a locked workspace was reopened.
+    of a stopped or locked candidate (``stopped``, ``published``, or
+    ``archived``) requires a non-empty ``reason`` so audit history always
+    explains why the workspace was reopened.
     """
     from .workspace import LIFECYCLE_STATES
 
@@ -144,9 +231,10 @@ def set_lifecycle_state(
     old_state = lifecycle["state"]
     if old_state == state:
         raise GateError("lifecycle state unchanged: {0}".format(state))
-    if old_state in ("published", "archived") and not reason:
+    has_reason = isinstance(reason, str) and bool(reason.strip())
+    if old_state in ("stopped", "published", "archived") and not has_reason:
         raise GateError(
-            "a reason is required to change the state of a locked candidate "
+            "a reason is required to change the state of a stopped or locked candidate "
             "({0} -> {1})".format(old_state, state)
         )
     lifecycle["state"] = state
@@ -182,6 +270,8 @@ def advance(workspace: CandidateWorkspace) -> Dict:
     workspace = load_candidate(workspace.repository_root, workspace.candidate_id)
     metadata = dict(workspace.metadata)
     phase = metadata["workflow"]["phase"]
+    if metadata["lifecycle"]["state"] == "stopped":
+        raise GateError("candidate lifecycle is stopped; workflow advancement is disabled")
     errors = gate_errors(workspace)
     if errors:
         raise GateError("; ".join(errors))

@@ -1,9 +1,11 @@
 import json
+from pathlib import Path
 
 import pytest
 
+import exonym.isolation as isolation
 from exonym.isolation import check_repository, format_report
-from exonym.workspace import create_candidate
+from exonym.workspace import new_candidate_metadata
 
 
 def _write(root, relative, content):
@@ -13,9 +15,23 @@ def _write(root, relative, content):
     return path
 
 
+def _create_candidate(root, candidate_id, toi=None, tic=None):
+    """Create only the metadata needed by the isolation unit tests."""
+    metadata = new_candidate_metadata(
+        candidate_id,
+        toi=toi,
+        tic=tic,
+        mission="tess",
+    )
+    path = root / "candidate" / candidate_id
+    path.mkdir(parents=True)
+    _write(path, "candidate.json", json.dumps(metadata, indent=2))
+    return path
+
+
 def _make_repo(tmp_path, with_candidate=True):
     if with_candidate:
-        create_candidate(tmp_path, "candidate-alpha", toi="1234.01", tic="123456789")
+        _create_candidate(tmp_path, "candidate-alpha", toi="1234.01", tic="123456789")
         _write(
             tmp_path,
             "candidate/candidate-alpha/docs/note.md",
@@ -52,7 +68,7 @@ def test_catalog_identifier_inside_candidate_passes(tmp_path):
 
 def test_registered_alias_leak_outside_candidate_fails(tmp_path):
     repo = _make_repo(tmp_path)
-    create_candidate(tmp_path, "candidate-beta")
+    _create_candidate(tmp_path, "candidate-beta")
     metadata_path = tmp_path / "candidate" / "candidate-beta" / "candidate.json"
     metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
     metadata["identifiers"]["aliases"] = ["HD 99999"]
@@ -153,7 +169,7 @@ def test_exception_registry_suppresses_matching_violation(tmp_path):
 
     target = violations_before[0]
     exception = {
-        "path": target.path,
+        "path": Path(target.path).relative_to(repo.resolve()).as_posix(),
         "line": target.line,
         "rule": target.rule,
         "reason": "test fixture",
@@ -168,6 +184,76 @@ def test_exception_registry_suppresses_matching_violation(tmp_path):
     assert check_repository(repo).ok
 
 
+def test_unlisted_neutral_directory_is_scanned(tmp_path):
+    # Arrange: `scratch/` is not a project source directory allowlist entry.
+    repo = _make_repo(tmp_path)
+    _write(repo, "scratch/intake.md", "Plan: study TOI-99999.01 next.\n")
+    _write(repo, "scratch/measurement.csv", "time,flux\n")
+
+    # Act
+    report = check_repository(repo)
+
+    # Assert
+    rules = {violation.rule for violation in report.violations}
+    assert "target-id-in-neutral-zone" in rules
+    assert "research-payload-outside-candidate" in rules
+
+
+def test_expired_exception_does_not_suppress_a_violation(tmp_path):
+    # Arrange
+    repo = _make_repo(tmp_path)
+    _write(repo, "README.md", "Plan: study TOI-99999.01 next.\n")
+    target = check_repository(repo).violations[0]
+    exception = {
+        "path": Path(target.path).relative_to(repo.resolve()).as_posix(),
+        "line": target.line,
+        "rule": target.rule,
+        "reason": "expired test fixture",
+        "expires": "2000-01-01",
+    }
+    _write(repo, "policy/isolation-exceptions.json", json.dumps({"entries": [exception]}))
+
+    # Act
+    report = check_repository(repo)
+
+    # Assert
+    rules = {violation.rule for violation in report.violations}
+    assert "expired-isolation-exception" in rules
+    assert target.rule in rules
+
+
+@pytest.mark.parametrize(
+    "entry_updates",
+    [
+        {"reason": ""},
+        {"expires": "2099/01/01"},
+        {"line": True},
+    ],
+)
+def test_malformed_exception_does_not_suppress_a_violation(tmp_path, entry_updates):
+    # Arrange
+    repo = _make_repo(tmp_path)
+    _write(repo, "README.md", "Plan: study TOI-99999.01 next.\n")
+    target = check_repository(repo).violations[0]
+    exception = {
+        "path": Path(target.path).relative_to(repo.resolve()).as_posix(),
+        "line": target.line,
+        "rule": target.rule,
+        "reason": "test fixture",
+        "expires": "2099-01-01",
+    }
+    exception.update(entry_updates)
+    _write(repo, "policy/isolation-exceptions.json", json.dumps({"entries": [exception]}))
+
+    # Act
+    report = check_repository(repo)
+
+    # Assert
+    rules = {violation.rule for violation in report.violations}
+    assert "invalid-isolation-exception" in rules
+    assert target.rule in rules
+
+
 def test_symlink_or_reparse_point_rejected(tmp_path):
     repo = _make_repo(tmp_path)
     _write(repo, "src/target.txt", "neutral")
@@ -179,6 +265,58 @@ def test_symlink_or_reparse_point_rejected(tmp_path):
 
     report = check_repository(repo)
     assert not report.ok
+    assert any(v.rule == "symlink-or-reparse-point" for v in report.violations)
+
+
+def test_directory_symlink_or_reparse_point_rejected(tmp_path):
+    # Arrange
+    repo = _make_repo(tmp_path)
+    _write(repo, "scratch/plain/note.md", "neutral\n")
+    link = repo / "scratch" / "linked"
+    try:
+        link.symlink_to(repo / "scratch" / "plain", target_is_directory=True)
+    except (OSError, NotImplementedError):
+        pytest.skip("directory symlinks unavailable on this platform")
+
+    # Act
+    report = check_repository(repo)
+
+    # Assert
+    assert any(v.rule == "symlink-or-reparse-point" for v in report.violations)
+
+
+def test_detected_directory_reparse_point_is_rejected(tmp_path, monkeypatch):
+    # Arrange
+    repo = _make_repo(tmp_path)
+    reparse_directory = repo / "scratch" / "linked-directory"
+    reparse_directory.mkdir(parents=True)
+    monkeypatch.setattr(
+        isolation,
+        "is_reparse_point",
+        lambda path: Path(path) == reparse_directory,
+    )
+
+    # Act
+    report = check_repository(repo)
+
+    # Assert
+    assert any(v.rule == "symlink-or-reparse-point" for v in report.violations)
+
+
+def test_candidate_directory_symlink_or_reparse_point_rejected(tmp_path):
+    # Arrange
+    repo = _make_repo(tmp_path)
+    source = repo / "candidate" / "candidate-alpha" / "docs"
+    link = repo / "candidate" / "candidate-alpha" / "linked-docs"
+    try:
+        link.symlink_to(source, target_is_directory=True)
+    except (OSError, NotImplementedError):
+        pytest.skip("directory symlinks unavailable on this platform")
+
+    # Act
+    report = check_repository(repo)
+
+    # Assert
     assert any(v.rule == "symlink-or-reparse-point" for v in report.violations)
 
 

@@ -28,7 +28,12 @@ def _setup_repo(tmp_path):
     (tmp_path / "templates/protocols").mkdir(parents=True, exist_ok=True)
     (tmp_path / "templates/tracking").mkdir(parents=True, exist_ok=True)
     (tmp_path / "schemas").mkdir(parents=True, exist_ok=True)
-    for name in ("candidate.schema.json", "provenance.schema.json", "claim.schema.json"):
+    for name in (
+        "candidate.schema.json",
+        "provenance.schema.json",
+        "claim.schema.json",
+        "novelty-audit.schema.json",
+    ):
         shutil.copy2("schemas/{0}".format(name), tmp_path / "schemas" / name)
     (tmp_path / "requirements-lock.txt").write_text(
         "numpy==1.26.4\nscipy==1.13.1\n", encoding="utf-8"
@@ -99,6 +104,8 @@ def test_query_gaia_flags_unvalidated_when_no_backend_sees_target():
     assert res["validated"] is False
     assert res["backend"] == "esa-tap"
     assert res["nearby_sources_count"] == 1
+    assert res["query_status"] == "unvalidated"
+    assert res["ruwe"] is None
 
 
 def test_query_exofop_metadata_mock():
@@ -120,6 +127,21 @@ def test_query_exofop_metadata_mock():
         assert res["has_spectroscopy"] is True
         assert res["spectroscopy_records_count"] == 1
         assert "AO" in res["imaging_types"]
+        assert res["query_status"] == "ok"
+
+
+def test_query_exofop_marks_unavailable_response_unknown():
+    # Arrange
+    service = ArchivalVettingService()
+
+    # Act
+    with patch.object(service, "_http_get_json", return_value=None):
+        result = service.query_exofop_metadata("123456789")
+
+    # Assert
+    assert result["query_status"] == "unavailable"
+    assert result["has_imaging"] is None
+    assert result["has_spectroscopy"] is None
 
 
 def test_synthesize_archival_report(tmp_path):
@@ -141,6 +163,7 @@ def test_synthesize_archival_report(tmp_path):
     }
     mock_exofop = {
         "tic_id": "987654321",
+        "target_coordinates": {"ra_deg": 10.0, "dec_deg": 20.0},
         "has_imaging": True,
         "has_spectroscopy": False,
         "imaging_records_count": 1,
@@ -159,6 +182,33 @@ def test_synthesize_archival_report(tmp_path):
         assert assessment["2_has_nearby_contaminants"]["answer"] is True
         assert assessment["3_has_ground_based_followup"]["answer"] is True
         assert report["tic_id"] == "987654321"
+
+
+def test_synthesize_archival_report_fails_closed_without_coordinates(tmp_path):
+    # Arrange
+    repo = _setup_repo(tmp_path)
+    root = ["--root", str(repo)]
+    assert main(root + ["init", "unknown-archive", "--toi", "321.01", "--tic", "123456789"]) == 0
+    workspace = load_candidate(repo, "unknown-archive")
+    service = ArchivalVettingService()
+    unavailable_exofop = {
+        "query_status": "unavailable",
+        "has_imaging": None,
+        "has_spectroscopy": None,
+        "imaging_types": [],
+        "spectroscopy_types": [],
+    }
+
+    # Act
+    with patch.object(service, "query_exofop_metadata", return_value=unavailable_exofop):
+        report = service.synthesize_archival_report(workspace)
+
+    # Assert
+    assessment = report["scientific_assessment"]
+    assert report["target_coordinates"] == {"ra_deg": None, "dec_deg": None}
+    assert assessment["1_is_hidden_binary"]["answer"] is None
+    assert assessment["2_has_nearby_contaminants"]["answer"] is None
+    assert assessment["3_has_ground_based_followup"]["answer"] is None
 
 
 def test_cli_archive_command(tmp_path, capsys):

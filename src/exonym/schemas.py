@@ -17,24 +17,33 @@ from pathlib import Path
 from typing import Callable, Dict
 
 from .isolation import IsolationReport
+from .resources import ResourceUnavailableError, read_schema_text
 
 SCHEMA_DIRECTORY = "schemas"
 CANDIDATE_SCHEMA = "candidate.schema.json"
 PROVENANCE_SCHEMA = "provenance.schema.json"
 CLAIM_SCHEMA = "claim.schema.json"
+NOVELTY_AUDIT_SCHEMA = "novelty-audit.schema.json"
 LEGACY_SUBTREE = "legacy-project"
 
 
 def _load_schemas(root: Path, report: IsolationReport) -> Dict[str, object]:
-    schema_dir = root / SCHEMA_DIRECTORY
     loaded: Dict[str, object] = {}
-    for name in (CANDIDATE_SCHEMA, PROVENANCE_SCHEMA, CLAIM_SCHEMA):
-        path = schema_dir / name
-        if not path.is_file():
+    for name in (CANDIDATE_SCHEMA, PROVENANCE_SCHEMA, CLAIM_SCHEMA, NOVELTY_AUDIT_SCHEMA):
+        path = root / SCHEMA_DIRECTORY / name
+        try:
+            content = read_schema_text(root, name)
+        except FileNotFoundError:
             report.add(path, "schema-file-missing", "schema file not found")
             continue
+        except ResourceUnavailableError as exc:
+            report.add(path, "schema-resource-unavailable", str(exc))
+            continue
+        except (OSError, UnicodeError) as exc:
+            report.add(path, "schema-file-unreadable", str(exc))
+            continue
         try:
-            loaded[name] = json.loads(path.read_text(encoding="utf-8"))
+            loaded[name] = json.loads(content)
         except json.JSONDecodeError as exc:
             report.add(path, "schema-file-invalid", "invalid JSON: {0}".format(exc))
     return loaded
@@ -107,3 +116,13 @@ def validate_schemas(root: Path, report: IsolationReport) -> None:
                         report.add(path, "schema-violation", "invalid JSON: {0}".format(exc))
                         continue
                     _validate(report, path, instance, claim_schema, validate_func)
+
+        novelty_audit_schema = schemas.get(NOVELTY_AUDIT_SCHEMA)
+        novelty_audit_path = workspace_dir / "decisions" / "novelty_audit.json"
+        if novelty_audit_schema is not None and novelty_audit_path.is_file():
+            try:
+                instance = json.loads(novelty_audit_path.read_text(encoding="utf-8"))
+            except json.JSONDecodeError as exc:
+                report.add(novelty_audit_path, "schema-violation", "invalid JSON: {0}".format(exc))
+            else:
+                _validate(report, novelty_audit_path, instance, novelty_audit_schema, validate_func)

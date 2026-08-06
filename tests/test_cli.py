@@ -22,7 +22,12 @@ def _repo(tmp_path):
     (tmp_path / "templates/protocols").mkdir(parents=True, exist_ok=True)
     (tmp_path / "templates/tracking").mkdir(parents=True, exist_ok=True)
     (tmp_path / "schemas").mkdir(parents=True, exist_ok=True)
-    for name in ("candidate.schema.json", "provenance.schema.json", "claim.schema.json"):
+    for name in (
+        "candidate.schema.json",
+        "provenance.schema.json",
+        "claim.schema.json",
+        "novelty-audit.schema.json",
+    ):
         shutil.copy2("schemas/{0}".format(name), tmp_path / "schemas" / name)
     (tmp_path / "requirements-lock.txt").write_text(
         "numpy==1.26.4\nscipy==1.13.1\n", encoding="utf-8"

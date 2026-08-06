@@ -150,6 +150,46 @@ def test_run_triceratops_no_tic_raises_without_allow_fallback(tmp_path):
         run_triceratops_simulation(stub, allow_fallback=False)
 
 
+def test_run_triceratops_does_not_monkeypatch_tls_client(tmp_path, monkeypatch):
+    # Arrange
+    import sys
+    import types
+
+    from exonym.vetting.tricera_parse import run_triceratops_simulation
+
+    stub, _ = _vet_workspace_stub(tmp_path, tic="123456789")
+    package = types.ModuleType("triceratops")
+    package.__path__ = []
+    module = types.ModuleType("triceratops.triceratops")
+
+    def query_trilegal(*args, **kwargs):
+        return None
+
+    class FakeTarget:
+        def __init__(self, **kwargs):
+            self.FPP = 0.02
+            self.NFPP = 0.0
+
+        def calc_depths(self, depth):
+            return None
+
+        def calc_probs(self, **kwargs):
+            return None
+
+    module.query_TRILEGAL = query_trilegal
+    module.target = FakeTarget
+    monkeypatch.setitem(sys.modules, "triceratops", package)
+    monkeypatch.setitem(sys.modules, "triceratops.triceratops", module)
+
+    # Act
+    report_path = run_triceratops_simulation(stub, allow_fallback=False)
+
+    # Assert
+    report = json.loads(report_path.read_text(encoding="utf-8"))
+    assert report["source"] == "triceratops-monte-carlo"
+    assert module.query_TRILEGAL is query_trilegal
+
+
 def test_run_triceratops_allow_fallback_writes_null_fpp(tmp_path):
     """allow_fallback=True writes a report and sentinel claim with FPP=null
     rather than a passing numeric value that would satisfy the gate.

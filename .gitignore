@@ -39,16 +39,16 @@ candidate/*
 !candidate/.gitkeep
 
 # -----------------------------------------------------------------------------
-# 4. MARKDOWN & DOCUMENTATION FILES
+# 4. DOCUMENTATION AND HOST-LOCAL ARTIFACTS
 # -----------------------------------------------------------------------------
-# Ignore all Markdown files (AGENTS, templates, docs, etc.) EXCEPT README.md
+# Keep project-local documentation private; the public README and the bundled
+# runtime templates required by installed wheels are deliberate exceptions.
 *.md
-!README.md
-!README/*.md
-EXONYM_FACTORY_PLAN.txt
+!/README.md
+.txt
 
 # -----------------------------------------------------------------------------
-# 5. LOCAL WORKSPACE, METHODS & AI SKILLS
+# 5. LOCAL WORKSPACE & AI SKILLS
 # -----------------------------------------------------------------------------
 methods/
 literature/
