@@ -1,4 +1,6 @@
-# Python Caches & Build Artifacts
+# -----------------------------------------------------------------------------
+# 1. PYTHON CACHES & BUILD ARTIFACTS
+# -----------------------------------------------------------------------------
 __pycache__/
 *.py[cod]
 *$py.class
@@ -19,7 +21,9 @@ htmlcov/
 .hypothesis/
 .ipynb_checkpoints/
 
-# Heavy Astronomy Data Formats (Global Guard)
+# -----------------------------------------------------------------------------
+# 2. HEAVY ASTRONOMY DATA FORMATS (GLOBAL GUARD)
+# -----------------------------------------------------------------------------
 *.fits
 *.fit
 *.fts
@@ -28,23 +32,41 @@ htmlcov/
 *.parquet
 *.feather
 
-# Candidate Workspaces & Research Payloads (Keep local on your machine)
+# -----------------------------------------------------------------------------
+# 3. CANDIDATE WORKSPACES & LOCAL PAYLOADS
+# -----------------------------------------------------------------------------
 candidate/*
 !candidate/.gitkeep
 
-# Personal Literature Notes, Methods & Research Scratchpad (Keep local)
+# -----------------------------------------------------------------------------
+# 4. MARKDOWN & DOCUMENTATION FILES
+# -----------------------------------------------------------------------------
+# Ignore all Markdown files (AGENTS, templates, docs, etc.) EXCEPT README.md
+*.md
+!README.md
+!README/*.md
+EXONYM_FACTORY_PLAN.txt
+
+# -----------------------------------------------------------------------------
+# 5. LOCAL WORKSPACE, METHODS & AI SKILLS
+# -----------------------------------------------------------------------------
 methods/
 literature/
 resources/
+.agents/
 
-# Ingestion Staging, Temp & Log Files
+# -----------------------------------------------------------------------------
+# 6. INGESTION STAGING, TEMP & LOG FILES
+# -----------------------------------------------------------------------------
 exonym-ingest-*/
 .ingest-staging/
 *.tmp
 *.log
 *.bak
 
-# OS & Editors
+# -----------------------------------------------------------------------------
+# 7. OS, EDITORS & AI AGENT ARTIFACTS
+# -----------------------------------------------------------------------------
 .DS_Store
 Thumbs.db
 desktop.ini
@@ -53,13 +75,7 @@ desktop.ini
 .vscode/
 *.swp
 *.swo
-
-# AI Assistant & Local Environment Artifacts
 .gemini/
 .antigravity/
 .cursor/
 .opencode/
-
-# Local Policy & Planning Documents (Stay local)
-AGENTS.md
-EXONYM_FACTORY_PLAN.txt

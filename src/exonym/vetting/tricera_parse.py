@@ -66,6 +66,21 @@ def extract_fpp(report: Dict[str, Any]) -> float:
     raise ValueError("no FPP value found in report")
 
 
+def _first_config_number(transit: Dict[str, Any], names: Tuple[str, ...]) -> Optional[float]:
+    """Return the first numeric transit-config value found under ``names``."""
+    for name in names:
+        value = transit.get(name)
+        if isinstance(value, dict):
+            value = value.get("value")
+        if value is None or isinstance(value, bool):
+            continue
+        try:
+            return float(value)
+        except (TypeError, ValueError):
+            continue
+    return None
+
+
 def fpp_gate(
     report_or_value: Dict[str, Any],
     threshold: float = FPP_THRESHOLD,
@@ -88,7 +103,7 @@ def run_triceratops_simulation(
     """Run TRICERATOPS Monte Carlo Bayesian false positive probability sampling target-neutrally.
 
     Reads candidate target metadata and either a per-signal transit config
-    (``config/signals/transit_config.<signal>.json`` when ``signal`` is given)
+    (``config/signals/transit_config<signal>.json`` when ``signal`` is given)
     or the BLS periodogram outputs, executes Monte Carlo sampling over
     candidate model scenarios, and writes outputs/triceratops_report.json and
     claims/fpp_claim.json.
@@ -116,14 +131,26 @@ def run_triceratops_simulation(
         try:
             payload = json.loads(config_path.read_text(encoding="utf-8"))
             transit = payload.get("transit", payload)
-            period = float(transit.get("period", period))
-            depth_ppm = float(transit.get("depth_ppm", depth_ppm))
-            duration_hours = float(transit.get("duration_hours", transit.get("duration_hrs", 0.0)))
-            duration_days = float(transit.get("duration_days", 0.0))
-            if duration_hours > 0:
-                duration_hrs = duration_hours
-            elif duration_days > 0:
-                duration_hrs = duration_days * 24.0
+            if not isinstance(transit, dict):
+                raise ValueError("signal transit config must contain an object")
+
+            period_value = _first_config_number(transit, ("period_days", "period", "p"))
+            if period_value is None or period_value <= 0:
+                raise ValueError("signal transit config has no positive period")
+            period = period_value
+
+            depth_value = _first_config_number(transit, ("depth_ppm", "depth"))
+            if depth_value is not None and depth_value >= 0:
+                depth_ppm = depth_value
+
+            duration_hours_value = _first_config_number(
+                transit, ("duration_hours", "duration_hrs", "duration_h")
+            )
+            duration_days_value = _first_config_number(transit, ("duration_days",))
+            if duration_hours_value is not None and duration_hours_value > 0:
+                duration_hrs = duration_hours_value
+            elif duration_days_value is not None and duration_days_value > 0:
+                duration_hrs = duration_days_value * 24.0
             ephemeris_source = "candidate-config-signal"
         except (json.JSONDecodeError, OSError, KeyError, ValueError, TypeError) as exc:
             warnings.warn(
@@ -286,4 +313,3 @@ def run_triceratops_simulation(
         claim_path.write_text(json.dumps(claim_payload, indent=2) + "\n", encoding="utf-8")
 
     return report_path
-

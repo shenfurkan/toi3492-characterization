@@ -89,13 +89,48 @@ def test_cli_ingest_requires_tic(tmp_path):
     assert exc_info.value.code == 2
 
 
-def test_cli_vet_command(tmp_path, capsys):
+def test_cli_vet_command(tmp_path, capsys, monkeypatch):
     repo = _repo(tmp_path)
     root = ["--root", str(repo)]
     main(root + ["init", "candidate-alpha", "--toi", "1234.01", "--tic", "123456789"])
+
+    calls = []
+
+    def fake_run_triceratops(candidate, n_draws=2000, signal=None):
+        calls.append({"candidate": candidate.candidate_id, "n_draws": n_draws, "signal": signal})
+        output = candidate.path / "outputs" / "triceratops_report.json"
+        output.parent.mkdir(parents=True, exist_ok=True)
+        output.write_text('{"source": "test-stub"}\n', encoding="utf-8")
+        return output
+
+    monkeypatch.setattr(
+        "exonym.vetting.tricera_parse.run_triceratops_simulation", fake_run_triceratops
+    )
+
     assert main(root + ["vet", "candidate-alpha", "--n-draws", "100"]) == 0
+    assert calls == [{"candidate": "candidate-alpha", "n_draws": 100, "signal": None}]
     output = capsys.readouterr().out
     assert "triceratops_report.json" in output
+
+
+def test_cli_fetch_priors_command(tmp_path, capsys, monkeypatch):
+    repo = _repo(tmp_path)
+    root = ["--root", str(repo)]
+    main(root + ["init", "candidate-alpha", "--toi", "1234.01", "--tic", "123456789"])
+    calls = []
+
+    def fake_fetch_priors(candidate):
+        calls.append(candidate.candidate_id)
+        output = candidate.path / "config" / "signals" / "transit_config.01.json"
+        output.parent.mkdir(parents=True, exist_ok=True)
+        output.write_text("{}\n", encoding="utf-8")
+        return [output]
+
+    monkeypatch.setattr("exonym.priors.fetch_exofop_priors", fake_fetch_priors)
+
+    assert main(root + ["fetch-priors", "candidate-alpha"]) == 0
+    assert calls == ["candidate-alpha"]
+    assert "config/signals/transit_config.01.json" in capsys.readouterr().out
 
 
 def _init_alpha(repo):
@@ -208,4 +243,3 @@ def test_cli_science_outputs_exist_on_disk(tmp_path):
         "dilution_sensitivity_results.json",
     ):
         assert (outputs_dir / filename).is_file()
-

@@ -6,7 +6,7 @@ import numpy as np
 import pytest
 
 from exonym.lightcurve import phase_hours
-from exonym.search import find_transits, run_bls_on_candidate
+from exonym.search import BLSSearchResult, find_transits, run_bls_on_candidate
 from exonym.workspace import create_candidate
 
 
@@ -65,6 +65,90 @@ def test_run_bls_on_candidate_synthetic_fallback(tmp_path):
     payload = json.loads(out.read_text(encoding="utf-8"))
     assert payload["source"] == "synthetic-demo"
     assert payload["n_points"] > 0
+
+
+def test_run_bls_signal_uses_prior_duration_and_preserves_each_signal_output(tmp_path, monkeypatch):
+    """Targeted searches use their own prior and cannot overwrite another signal."""
+    workspace = create_candidate(tmp_path, "candidate-targeted-bls")
+    signals = workspace.path / "config" / "signals"
+    signals.mkdir(parents=True)
+    (signals / "transit_config.01.json").write_text(
+        json.dumps(
+            {
+                "transit": {
+                    "period_days": 4.2,
+                    "epoch_btjd": 11.0,
+                    "duration_hours": 2.4,
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+    (signals / "transit_config.02.json").write_text(
+        json.dumps(
+            {
+                "transit": {
+                    "period_days": 8.6,
+                    "epoch_btjd": 12.0,
+                    "duration_hours": 4.8,
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    time = np.linspace(0.0, 30.0, 100)
+    flux = np.ones_like(time)
+    calls = []
+
+    def fake_find_transits(time_btjd, flux_values, **kwargs):
+        calls.append(kwargs)
+        return BLSSearchResult(
+            best_period=kwargs["period_min"],
+            best_epoch=1.0,
+            best_depth_ppm=100.0,
+            best_duration_hours=kwargs["duration_hours"],
+            snr=5.0,
+        )
+
+    monkeypatch.setattr("exonym.search.load_candidate_light_curve", lambda _: (time, flux))
+    monkeypatch.setattr("exonym.search.find_transits", fake_find_transits)
+
+    first_output = run_bls_on_candidate(workspace, signal=".01")
+    second_output = run_bls_on_candidate(workspace, signal=".02")
+
+    assert first_output.name == "bls_search_results.01.json"
+    assert second_output.name == "bls_search_results.02.json"
+    assert first_output != second_output
+    assert not (workspace.path / "outputs" / "bls_search_results.json").exists()
+
+    first_payload = json.loads(first_output.read_text(encoding="utf-8"))
+    second_payload = json.loads(second_output.read_text(encoding="utf-8"))
+    assert first_payload["signal"] == ".01"
+    assert first_payload["search_provenance"] == {
+        "mode": "targeted-prior",
+        "signal": ".01",
+        "prior_path": "config/signals/transit_config.01.json",
+        "prior_source": "candidate-config-signal",
+        "prior_period_days": 4.2,
+        "prior_epoch_btjd": 11.0,
+        "prior_duration_hours": 2.4,
+        "period_min_days": pytest.approx(4.1),
+        "period_max_days": pytest.approx(4.3),
+    }
+    assert second_payload["signal"] == ".02"
+    assert second_payload["search_provenance"]["prior_period_days"] == 8.6
+    assert calls[0]["duration_hours"] == pytest.approx(2.4)
+    assert calls[0]["period_min"] == pytest.approx(4.1)
+    assert calls[0]["period_max"] == pytest.approx(4.3)
+    assert calls[1]["duration_hours"] == pytest.approx(4.8)
+
+
+def test_run_bls_signal_requires_a_readable_signal_prior(tmp_path):
+    workspace = create_candidate(tmp_path, "candidate-missing-prior")
+
+    with pytest.raises(ValueError, match="no readable signal prior"):
+        run_bls_on_candidate(workspace, signal=".01")
 
 
 def test_run_bls_on_candidate_with_real_data(tmp_path):

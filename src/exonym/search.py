@@ -7,6 +7,7 @@ hardcoding target designations or ephemerides.
 from __future__ import annotations
 
 import json
+import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Sequence, Tuple
@@ -214,14 +215,61 @@ def run_bls_on_candidate(
     workspace: CandidateWorkspace,
     period_min: float = 0.5,
     period_max: float = 15.0,
+    signal: Optional[str] = None,
 ) -> Path:
     """Run BLS transit search on candidate data and save JSON summary to outputs/.
+
+    If ``signal`` is provided, the search reads the matching per-signal prior,
+    uses its duration, and restricts the period grid to +/- 0.1 days around
+    its period. Targeted runs are written to
+    ``outputs/bls_search_results<signal>.json`` so independent signals cannot
+    overwrite one another. A run without ``signal`` retains the historical
+    ``outputs/bls_search_results.json`` path and behavior.
 
     Real candidate light curves are used when present; otherwise a synthetic
     demonstration grid is analyzed and the payload is marked ``source``.
     """
     outputs_dir = workspace.path / "outputs"
     outputs_dir.mkdir(parents=True, exist_ok=True)
+
+    duration_hours: Optional[float] = None
+    signal_provenance: Optional[Dict[str, Any]] = None
+    if signal is not None:
+        if not re.fullmatch(r"\.\d+", signal):
+            raise ValueError("signal must use the .NN format")
+
+        from .inputs import load_transit_ephemeris
+
+        ephem = load_transit_ephemeris(workspace, signal=signal)
+        if ephem.get("source") != "candidate-config-signal":
+            raise ValueError(
+                "no readable signal prior at config/signals/transit_config{0}.json".format(
+                    signal
+                )
+            )
+
+        prior_p = float(ephem["period_days"])
+        duration_hours = float(ephem["duration_days"]) * 24.0
+        if not np.isfinite(prior_p) or prior_p <= 0:
+            raise ValueError("signal prior period_days must be positive and finite")
+        if not np.isfinite(duration_hours) or duration_hours <= 0:
+            raise ValueError("signal prior duration must be positive and finite")
+
+        period_min = max(0.5, prior_p - 0.1)
+        period_max = prior_p + 0.1
+        if period_max <= period_min:
+            raise ValueError("signal prior period is below the supported BLS range")
+        signal_provenance = {
+            "mode": "targeted-prior",
+            "signal": signal,
+            "prior_path": "config/signals/transit_config{0}.json".format(signal),
+            "prior_source": ephem["source"],
+            "prior_period_days": prior_p,
+            "prior_epoch_btjd": float(ephem["epoch_btjd"]),
+            "prior_duration_hours": duration_hours,
+            "period_min_days": period_min,
+            "period_max_days": period_max,
+        }
 
     loaded = load_candidate_light_curve(workspace)
     if loaded is None:
@@ -232,12 +280,22 @@ def run_bls_on_candidate(
         time, flux = loaded
         source = "candidate-data"
 
-    result = find_transits(time, flux, period_min=period_min, period_max=period_max)
+    search_kwargs: Dict[str, float] = {
+        "period_min": period_min,
+        "period_max": period_max,
+    }
+    if duration_hours is not None:
+        search_kwargs["duration_hours"] = duration_hours
+    result = find_transits(time, flux, **search_kwargs)
     payload = result.to_dict()
     payload["source"] = source
     payload["n_points"] = int(time.size)
+    if signal_provenance is not None:
+        payload["signal"] = signal
+        payload["search_provenance"] = signal_provenance
 
-    output_path = outputs_dir / "bls_search_results.json"
+    output_name = "bls_search_results{0}.json".format(signal or "")
+    output_path = outputs_dir / output_name
     output_path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
     return output_path
 
@@ -275,4 +333,3 @@ def compute_linear_ephemeris_residuals(
         omc_days = float(t_obs) - t_calc
         residuals_min.append(round(omc_days * 1440.0, 4))
     return residuals_min
-

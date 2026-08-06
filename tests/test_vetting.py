@@ -69,7 +69,8 @@ def _vet_workspace_stub(tmp_path, candidate_id="vet-stub", tic=None):
     return stub, outputs
 
 
-def test_run_triceratops_prefers_signal_config_over_bls(tmp_path):
+@pytest.mark.parametrize("period_key", ("period_days", "period", "p"))
+def test_run_triceratops_prefers_signal_config_over_bls(tmp_path, period_key):
     from exonym.vetting.tricera_parse import run_triceratops_simulation
 
     stub, _ = _vet_workspace_stub(tmp_path)
@@ -83,7 +84,7 @@ def test_run_triceratops_prefers_signal_config_over_bls(tmp_path):
                     "depth_ppm": 341.4,
                     "duration_days": 0.0925,
                     "duration_hours": 2.22,
-                    "period": 4.5701356,
+                    period_key: 4.5701356,
                     "t0_btjd": 2117.193359,
                 },
             }

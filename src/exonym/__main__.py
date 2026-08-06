@@ -10,6 +10,7 @@ Commands:
   freeze   Build a reproducibility bundle under releases/<version>/
   search   Run a BLS transit search on candidate light curve data
   plot     Generate diagnostic vetting figures for a candidate
+  fetch-priors Fetch catalog parameters from ExoFOP and save to transit config
   verify   Run the repository isolation audit
 
 Scientific analysis commands:
@@ -136,9 +137,17 @@ def _build_parser() -> argparse.ArgumentParser:
     search_parser.add_argument("candidate_id")
     search_parser.add_argument("--period-min", type=float, default=0.5, help="Minimum orbital period.")
     search_parser.add_argument("--period-max", type=float, default=15.0, help="Maximum orbital period.")
+    search_parser.add_argument(
+        "--signal",
+        default=None,
+        help="Targeted search using prior from config/signals/transit_config<signal>.json",
+    )
 
     plot_parser = commands.add_parser("plot", help="Generate diagnostic vetting plots.")
     plot_parser.add_argument("candidate_id")
+
+    fetch_parser = commands.add_parser("fetch-priors", help="Fetch ExoFOP transit priors.")
+    fetch_parser.add_argument("candidate_id")
 
     vet_parser = commands.add_parser(
         "vet", help="Run TRICERATOPS Monte Carlo FPP simulation on candidate."
@@ -337,11 +346,21 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
             )
             return 0
 
+        if args.command == "fetch-priors":
+            from .priors import fetch_exofop_priors
+
+            written = fetch_exofop_priors(candidate)
+            _print_json([str(path.relative_to(candidate.path)).replace("\\", "/") for path in written])
+            return 0
+
         if args.command == "search":
             from .search import run_bls_on_candidate
 
             output = run_bls_on_candidate(
-                candidate, period_min=args.period_min, period_max=args.period_max
+                candidate,
+                period_min=args.period_min,
+                period_max=args.period_max,
+                signal=args.signal,
             )
             print(output.relative_to(repository_root).as_posix())
             return 0

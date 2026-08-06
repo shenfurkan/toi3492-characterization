@@ -189,7 +189,8 @@ pip install -e ".[test,screening,asteroseismology]"
 | `advance` | `exonym advance <id>` | Audit current gate requirements and promote workflow phase |
 | `tag` | `exonym tag <id> <tag...>` | Attach metadata tags to a candidate record |
 | `freeze` | `exonym freeze <id> [--version <v>]` | Build a sealed reproducibility bundle under `releases/<version>/` |
-| `search` | `exonym search <id> [--period-min <d>] [--period-max <d>]` | Run a BLS transit search and save `outputs/bls_search_results.json` |
+| `fetch-priors` | `exonym fetch-priors <id>` | Fetch ExoFOP catalog transit priors into per-signal configuration files |
+| `search` | `exonym search <id> [--period-min <d>] [--period-max <d>] [--signal .NN]` | Run a BLS search; targeted runs retain a separate per-signal result and prior provenance |
 | `plot` | `exonym plot <id>` | Generate diagnostic figures under `figures/` (uses BLS result when present) |
 | `verify` | `exonym verify [--schemas-only]` | Run the repository target-isolation scan & JSON schema validation |
 
@@ -326,13 +327,14 @@ Generates:
 
 ### `exonym search`
 
-Run a Box Least Squares (BLS) transit period search over the candidate's light curve data and save the winning signal to `candidate/<id>/outputs/bls_search_results.json`.
+Run a Box Least Squares (BLS) transit period search over the candidate's light curve data. A blind search writes its winning signal to `candidate/<id>/outputs/bls_search_results.json`.
 
 ```powershell
 exonym search candidate-alpha --period-min 1.0 --period-max 10.0
 ```
 
 - **Data source**: FITS products under `data/processed/` (preferred) or `data/raw/` are median-binned and normalized before the search. When no readable light curve exists, a synthetic demonstration grid is analyzed and the payload is explicitly marked `"source": "synthetic-demo"`; real-data runs are marked `"source": "candidate-data"`.
+- **Targeted search**: First fetch or review the per-signal prior, then run `exonym search candidate-alpha --signal .01`. The command requires `config/signals/transit_config.01.json`, uses the prior period and duration, searches within +/- 0.1 days of the prior period, and writes `outputs/bls_search_results.01.json`. Each signal has its own output, so a later `.02` run cannot overwrite the `.01` result. Targeted payloads include the signal, prior source/path, prior ephemeris, and effective period bounds under `search_provenance`.
 
 Output schema:
 
@@ -347,6 +349,18 @@ Output schema:
   "n_points": 4000
 }
 ```
+
+---
+
+### `exonym fetch-priors`
+
+Fetch catalog transit priors from ExoFOP for all signals associated with the workspace TIC identifier and write them under `candidate/<id>/config/signals/`.
+
+```powershell
+exonym fetch-priors candidate-alpha
+```
+
+Each returned signal is saved as `transit_config.NN.json` and contains the catalog period, epoch, depth, duration, and source label. Review the retrieved configuration before using it for a targeted BLS search or signal-specific vetting.
 
 ---
 
@@ -665,5 +679,4 @@ exonym verify
 ## License
 
 `EXONYM` is released under the **GNU General Public License v3.0**. See the [`LICENSE`](file:///d:/Exonym/LICENSE) file for details.
-
 
