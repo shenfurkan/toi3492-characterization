@@ -95,7 +95,9 @@ def test_run_triceratops_prefers_signal_config_over_bls(tmp_path):
         encoding="utf-8",
     )
 
-    report_path = run_triceratops_simulation(stub, signal=".01")
+    # No TIC in stub → Monte Carlo cannot run; allow_fallback=True to test
+    # ephemeris routing (signal config takes priority over BLS).
+    report_path = run_triceratops_simulation(stub, signal=".01", allow_fallback=True)
     report = json.loads(report_path.read_text(encoding="utf-8"))
     assert report["signal"] == ".01"
     assert report["ephemeris"]["period_days"] == pytest.approx(4.5701356)
@@ -113,7 +115,9 @@ def test_run_triceratops_defaults_to_bls_without_signal(tmp_path):
         encoding="utf-8",
     )
 
-    report_path = run_triceratops_simulation(stub, signal=None)
+    # No TIC in stub → Monte Carlo cannot run; allow_fallback=True to test
+    # ephemeris routing (BLS results used when no signal is given).
+    report_path = run_triceratops_simulation(stub, signal=None, allow_fallback=True)
     report = json.loads(report_path.read_text(encoding="utf-8"))
     assert report["signal"] is None
     assert report["ephemeris"]["period_days"] == pytest.approx(7.5)
@@ -124,10 +128,65 @@ def test_run_triceratops_falls_back_when_signal_config_missing(tmp_path):
     from exonym.vetting.tricera_parse import run_triceratops_simulation
 
     stub, _ = _vet_workspace_stub(tmp_path)
-    report_path = run_triceratops_simulation(stub, signal=".99")
+    # No TIC → Monte Carlo cannot run; allow_fallback=True required.
+    report_path = run_triceratops_simulation(stub, signal=".99", allow_fallback=True)
     report = json.loads(report_path.read_text(encoding="utf-8"))
     assert report["ephemeris"]["source"] == "defaults"
     assert report["ephemeris"]["period_days"] == pytest.approx(2.5)
+
+
+def test_run_triceratops_no_tic_raises_without_allow_fallback(tmp_path):
+    """When TIC is absent the Monte Carlo cannot run.
+
+    Without allow_fallback=True, run_triceratops_simulation must raise a
+    RuntimeError rather than writing a claim with a hardcoded placeholder FPP.
+    This prevents the analysis gate from being silently satisfied.
+    """
+    from exonym.vetting.tricera_parse import run_triceratops_simulation
+
+    stub, _ = _vet_workspace_stub(tmp_path)  # no TIC
+    with pytest.raises(RuntimeError, match="TRICERATOPS Monte Carlo did not run"):
+        run_triceratops_simulation(stub, allow_fallback=False)
+
+
+def test_run_triceratops_allow_fallback_writes_null_fpp(tmp_path):
+    """allow_fallback=True writes a report and sentinel claim with FPP=null
+    rather than a passing numeric value that would satisfy the gate.
+    """
+    from exonym.vetting.tricera_parse import run_triceratops_simulation
+
+    stub, outputs = _vet_workspace_stub(tmp_path)  # no TIC
+    report_path = run_triceratops_simulation(stub, allow_fallback=True)
+    report = json.loads(report_path.read_text(encoding="utf-8"))
+    assert report["FPP"] is None, "FPP must be null, not a hardcoded passing value"
+    assert report["source"] in ("not-run",), f"unexpected source: {report['source']}"
+    assert report["triceratops_error"] is None  # no error — just no TIC
+
+    claim_path = tmp_path / "claims" / "fpp_claim.json"
+    claim = json.loads(claim_path.read_text(encoding="utf-8"))
+    assert claim["value"] is None, "claim value must be null, not a hardcoded 0.0012"
+    assert "error" in claim
+
+
+def test_run_triceratops_config_parse_error_emits_warning(tmp_path):
+    """A malformed transit config file must emit a UserWarning and fall back
+    to default ephemeris values rather than silently using stale data.
+    """
+    import warnings as _w
+    from exonym.vetting.tricera_parse import run_triceratops_simulation
+
+    stub, _ = _vet_workspace_stub(tmp_path)
+    signal_dir = tmp_path / "config" / "signals"
+    signal_dir.mkdir(parents=True)
+    (signal_dir / "transit_config.01.json").write_text(
+        "NOT VALID JSON {{{", encoding="utf-8"
+    )
+    with _w.catch_warnings(record=True) as caught:
+        _w.simplefilter("always")
+        run_triceratops_simulation(stub, signal=".01", allow_fallback=True)
+    assert any("transit_config.01.json" in str(w.message) for w in caught), (
+        "expected a warning mentioning the config filename"
+    )
 
 
 def test_load_transit_ephemeris_signal_takes_precedence(tmp_path):

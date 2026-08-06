@@ -96,3 +96,57 @@ def test_run_bls_on_candidate_with_real_data(tmp_path):
     assert payload["source"] == "candidate-data"
     assert payload["n_points"] == 600
     assert payload["best_period"] > 0
+
+
+def test_quality_flag_masking_excludes_bad_cadences(tmp_path):
+    """Quality-flagged cadences must be removed before BLS.
+
+    Injects a cluster of flagged cadences that carry a strong artificial dip
+    (simulating a momentum dump plus scattered-light artefact). After the
+    quality mask the dip is absent and BLS must NOT recover a period near
+    the spacing of the bad-cadence cluster (which would be ~1 day here).
+    """
+    import lightkurve as lk
+    from astropy.io import fits as fitsio
+    from astropy.table import Table
+
+    workspace = create_candidate(tmp_path, "quality-mask-test")
+    raw = workspace.path / "data" / "raw"
+    raw.mkdir(parents=True, exist_ok=True)
+
+    rng = np.random.default_rng(42)
+    n = 800
+    time = np.linspace(2459000.0, 2459030.0, n)
+    flux = 1.0 + rng.normal(0.0, 0.0008, n)
+    quality = np.zeros(n, dtype=np.int32)
+
+    # Inject 16 consecutive cadences with quality flag=2048 (scattered light)
+    # and a strong artificial dip — these must be excluded by the quality mask.
+    bad_start = 300
+    quality[bad_start : bad_start + 16] = 2048
+    flux[bad_start : bad_start + 16] = 0.98  # 2% dip — far deeper than any real planet
+
+    table = Table()
+    table["TIME"] = time
+    table["FLUX"] = flux
+    table["FLUX_ERR"] = np.full(n, 0.001)
+    table["QUALITY"] = quality
+    ext = fitsio.BinTableHDU(table)
+    ext.header["SECTOR"] = 30
+    ext.header["TIMEDEL"] = 120.0 / 86400.0
+    ext.header["BJDREFI"] = 2457000
+    ext.header["BJDREFF"] = 0.0
+    primary = fitsio.PrimaryHDU()
+    primary.header["MISSION"] = "TESS"
+    primary.header["TELESCOP"] = "TESS"
+    fitsio.HDUList([primary, ext]).writeto(raw / "s0030_lc.fits", overwrite=True)
+
+    out = run_bls_on_candidate(workspace, period_min=0.5, period_max=10.0)
+    payload = json.loads(out.read_text(encoding="utf-8"))
+    # The loader uses quality==0 masking; the dip should be absent so BLS
+    # should not lock onto the ~1-day spurious period of the bad cluster.
+    # We assert SNR is low, meaning no strong periodic signal was detected.
+    assert payload["snr"] < 50.0, (
+        "BLS SNR is suspiciously high — quality masking may not have removed the bad cadences. "
+        f"Recovered period={payload['best_period']:.3f} d, SNR={payload['snr']:.1f}"
+    )

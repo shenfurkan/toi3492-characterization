@@ -308,11 +308,23 @@ def load_light_curve_table(
     except ImportError:  # pragma: no cover - optional dependency
         return None
 
+    import warnings as _warnings
+
     tables: List[Dict[str, np.ndarray]] = []
     seen_sectors: set = set()
     for path in fits_files:
         try:
-            light_curve = lk.read(path).remove_nans().normalize()
+            _lc = lk.read(path)
+            # Apply the TESS quality bitmask so that momentum-dump, scattered-
+            # light, and other flagged cadences are excluded before any
+            # analysis.  The mask is a no-op for synthetic test data that
+            # carries no quality column.
+            if hasattr(_lc, "quality"):
+                try:
+                    _lc = _lc[_lc.quality.value == 0]
+                except Exception:
+                    pass  # quality attribute present but not filterable; proceed
+            light_curve = _lc.remove_nans().normalize()
             time = np.asarray(light_curve.time.value, dtype=float)
             flux = np.asarray(light_curve.flux.value, dtype=float)
             if time.size < 50 or time.size != flux.size:
@@ -322,7 +334,13 @@ def load_light_curve_table(
                 flux_err = np.asarray(light_curve.flux_err.value, dtype=float)
                 if flux_err.shape != flux.shape:
                     flux_err = None
-            except Exception:
+            except (AttributeError, TypeError, ValueError) as exc:
+                _warnings.warn(
+                    "flux_err unavailable for {0}: {1!r} — using MAD estimate".format(
+                        path.name, exc
+                    ),
+                    stacklevel=2,
+                )
                 flux_err = None
             if flux_err is None:
                 flux_err = np.full_like(flux, _mad_flux_error(flux))
@@ -351,7 +369,11 @@ def load_light_curve_table(
                         "sector": binned[3],
                     }
                 )
-        except Exception:
+        except Exception as exc:
+            _warnings.warn(
+                "skipped {0}: {1!r}".format(path.name, exc),
+                stacklevel=2,
+            )
             continue
     if not tables:
         return None

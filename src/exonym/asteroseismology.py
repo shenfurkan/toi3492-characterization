@@ -154,6 +154,7 @@ def seismic_mass_radius(
     teff_k: float,
     mass_prior_solar: Optional[float] = None,
     radius_prior_solar: Optional[float] = None,
+    dnu_correction_factor: float = 1.0,
 ) -> Dict[str, Any]:
     """Derive asteroseismic stellar mass and radius from scaling relations.
 
@@ -162,12 +163,21 @@ def seismic_mass_radius(
         Delta-nu / Delta-nu_sun = (rho / rho_sun)^1/2
     When one of the two observables is missing, the corresponding stellar
     prior (solar reference by default) closes the system.
+
+    .. note:: Systematic bias in Delta-nu
+        The classic Kjeldsen & Bedding (1995) scaling relation for Delta-nu
+        carries a known 5–15% systematic offset driven by near-surface effects.
+        A partial correction can be applied via ``dnu_correction_factor`` using
+        the tabulated values from Sharma et al. (2016, ApJ 822, 15).
+        ``dnu_correction_factor`` multiplies the raw Lomb-Scargle Delta-nu
+        estimate before the ratio is computed (default 1.0 = no correction).
     """
     numax_ratio = float(numax_uhz) / NUMAX_SUN_UHZ
     teff_ratio = float(teff_k) / TEFF_SUN_K
     method = "scaling-relations"
     if dnu_uhz is not None and dnu_uhz > 0:
-        dnu_ratio = float(dnu_uhz) / DNU_SUN_UHZ
+        dnu_corrected = float(dnu_uhz) * float(dnu_correction_factor)
+        dnu_ratio = dnu_corrected / DNU_SUN_UHZ
         if numax_uhz > 0:
             radius = numax_ratio * math.sqrt(teff_ratio) / (dnu_ratio**2)
             mass = (radius**3) * (dnu_ratio**2)
@@ -292,7 +302,12 @@ def _try_pysyd_crosscheck(
             "estimates": rows,
             "search_range_uhz": [float(numax_min_uhz), float(numax_max_uhz)],
         }
-    except Exception:
+    except Exception as exc:
+        import warnings
+        warnings.warn(
+            "pySYD crosscheck failed: {0!r} — falling back to whitened-GLS result".format(exc),
+            stacklevel=2,
+        )
         return None
 
 

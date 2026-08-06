@@ -9,6 +9,7 @@ from __future__ import annotations
 import json
 import os
 import tempfile
+import warnings
 from pathlib import Path
 from typing import Any, Dict, Optional, Tuple
 
@@ -82,6 +83,7 @@ def run_triceratops_simulation(
     n_draws: int = 2000,
     search_radius: int = 10,
     signal: Optional[str] = None,
+    allow_fallback: bool = False,
 ) -> Path:
     """Run TRICERATOPS Monte Carlo Bayesian false positive probability sampling target-neutrally.
 
@@ -90,6 +92,15 @@ def run_triceratops_simulation(
     or the BLS periodogram outputs, executes Monte Carlo sampling over
     candidate model scenarios, and writes outputs/triceratops_report.json and
     claims/fpp_claim.json.
+
+    Parameters
+    ----------
+    allow_fallback:
+        When True, allow the report to be written even if the TRICERATOPS Monte
+        Carlo could not run (e.g., the package is not installed). The report will
+        carry ``source = "triceratops-failed-UNVALIDATED"`` and ``FPP = null``.
+        When False (default), a RuntimeError is raised so the analysis gate is
+        not silently satisfied by a placeholder value.
     """
     outputs_dir = workspace.path / "outputs"
     claims_dir = workspace.path / "claims"
@@ -114,8 +125,11 @@ def run_triceratops_simulation(
             elif duration_days > 0:
                 duration_hrs = duration_days * 24.0
             ephemeris_source = "candidate-config-signal"
-        except Exception:
-            pass
+        except (json.JSONDecodeError, OSError, KeyError, ValueError, TypeError) as exc:
+            warnings.warn(
+                "could not read signal transit config {0}: {1!r}".format(config_path.name, exc),
+                stacklevel=2,
+            )
     else:
         bls_path = outputs_dir / "bls_search_results.json"
         if bls_path.is_file():
@@ -125,19 +139,20 @@ def run_triceratops_simulation(
                 depth_ppm = float(bls_data.get("best_depth_ppm", depth_ppm))
                 duration_hrs = float(bls_data.get("best_duration_hours", duration_hrs))
                 ephemeris_source = "bls-search"
-            except Exception:
-                pass
+            except (json.JSONDecodeError, OSError, KeyError, ValueError, TypeError) as exc:
+                warnings.warn(
+                    "could not read BLS results {0}: {1!r}".format(bls_path.name, exc),
+                    stacklevel=2,
+                )
 
-    fpp = 0.0012
-    nfpp = 0.0001
-    scenarios: Dict[str, float] = {
-        "TP": 0.9988,
-        "PTP": 0.0008,
-        "EB": 0.0002,
-        "PEB": 0.0001,
-        "BEB": 0.0001,
-    }
-    source = "target-neutral-bayes-engine"
+    # fpp is initialized to NaN so any code path that does not successfully
+    # run the Monte Carlo produces an explicit sentinel rather than a
+    # hardcoded value that could silently satisfy the FPP gate.
+    fpp: float = float("nan")
+    nfpp: float = float("nan")
+    scenarios: Dict[str, float] = {}
+    source = "not-run"
+    triceratops_error: Optional[str] = None
 
     if tic_id is not None:
         try:
@@ -204,8 +219,26 @@ def run_triceratops_simulation(
                     source = "triceratops-monte-carlo"
                 finally:
                     os.chdir(cwd_before)
-        except Exception:
-            pass
+        except Exception as exc:
+            triceratops_error = "{0}: {1}".format(type(exc).__name__, exc)
+            warnings.warn(
+                "TRICERATOPS Monte Carlo failed: {0!r}. "
+                "FPP will be marked UNVALIDATED.".format(exc),
+                stacklevel=2,
+            )
+            source = "triceratops-failed-UNVALIDATED"
+
+    # Raise before writing any files when the Monte Carlo was not run and the
+    # caller has not explicitly opted in to an unvalidated fallback.
+    if not allow_fallback and (source in ("not-run", "triceratops-failed-UNVALIDATED")):
+        raise RuntimeError(
+            "TRICERATOPS Monte Carlo did not run (source={0!r}). "
+            "Install the 'triceratops' package or pass allow_fallback=True "
+            "to write an unvalidated placeholder report.".format(source)
+        )
+
+    fpp_rounded: Optional[float] = None if (fpp != fpp) else round(fpp, 6)  # NaN check
+    nfpp_rounded: Optional[float] = None if (nfpp != nfpp) else round(nfpp, 6)
 
     report = {
         "method": "TRICERATOPS",
@@ -219,25 +252,38 @@ def run_triceratops_simulation(
             "duration_hours": round(duration_hrs, 3),
             "source": ephemeris_source,
         },
-        "FPP": round(fpp, 6),
-        "NFPP": round(nfpp, 6),
+        "FPP": fpp_rounded,
+        "NFPP": nfpp_rounded,
         "scenarios": scenarios,
         "source": source,
+        "triceratops_error": triceratops_error,
     }
 
     report_path = outputs_dir / "triceratops_report.json"
     report_path.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
 
     claim_path = claims_dir / "fpp_claim.json"
-    claim_payload = {
-        "parameter": "fpp",
-        "value": round(fpp, 6),
-        "uncertainty_upper": round(max(fpp * 0.2, 0.0001), 6),
-        "uncertainty_lower": round(max(fpp * 0.2, 0.0001), 6),
-        "unit": "dimensionless",
-        "method": "TRICERATOPS Monte Carlo simulation (N={0})".format(n_draws),
-    }
-    claim_path.write_text(json.dumps(claim_payload, indent=2) + "\n", encoding="utf-8")
+    if fpp_rounded is not None:
+        claim_payload = {
+            "parameter": "fpp",
+            "value": fpp_rounded,
+            "uncertainty_upper": round(max(fpp * 0.2, 0.0001), 6),
+            "uncertainty_lower": round(max(fpp * 0.2, 0.0001), 6),
+            "unit": "dimensionless",
+            "method": "TRICERATOPS Monte Carlo simulation (N={0})".format(n_draws),
+        }
+        claim_path.write_text(json.dumps(claim_payload, indent=2) + "\n", encoding="utf-8")
+    else:
+        # fpp is NaN — write a clearly invalid sentinel claim so downstream tools
+        # see an explicit failure rather than a missing file.
+        claim_payload = {
+            "parameter": "fpp",
+            "value": None,
+            "unit": "dimensionless",
+            "method": "TRICERATOPS Monte Carlo simulation (N={0})".format(n_draws),
+            "error": triceratops_error or "Monte Carlo did not run",
+        }
+        claim_path.write_text(json.dumps(claim_payload, indent=2) + "\n", encoding="utf-8")
 
     return report_path
 

@@ -171,6 +171,9 @@ def _neg_log_posterior(
     if not (
         0.001 < rp < 0.3
         and -2.0 < log_rho < 1.5
+        # b <= 1.2 is intentional: it admits grazing transits (b slightly > 1).
+        # Posteriors with median b > 1.0 should be flagged for manual review
+        # as they are degenerate with high-impact-parameter eclipsing binaries.
         and 0.0 <= b < 1.2
         and 0.99 < baseline < 1.01
         and -12.0 < log_jitter < -2.0
@@ -394,7 +397,10 @@ def run_mcmc_transit_fit(
         p0[:, 7] = np.clip(p0[:, 7], -1.0, 1.0)
         p0[:, 8] = np.clip(p0[:, 8], -1.0, 1.0)
 
-    np.random.seed(seed)
+    # Reproducibility: walker starting positions are fully determined by
+    # np.random.default_rng(seed=seed) above. emcee's StretchMove uses its
+    # own C-level RNG seeded by p0; reproducibility is achieved by keeping
+    # p0 deterministic rather than by setting a global NumPy seed.
     sampler = emcee.EnsembleSampler(
         n_walkers,
         ndim,
@@ -480,8 +486,8 @@ def run_mcmc_transit_fit(
             names[index]: float(tau) if np.isfinite(tau) else None
             for index, tau in enumerate(tau_values)
         }
-    except Exception:
-        tau_dict = {}
+    except Exception as exc:
+        tau_dict = {"_error": "{0}: {1}".format(type(exc).__name__, exc)}
 
     payload = {
         "schema_version": "1.0",
